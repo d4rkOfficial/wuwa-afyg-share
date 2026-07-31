@@ -15,7 +15,7 @@ begin
         perform cron.schedule(
             'cleanup-expired-projects',
             '*/5 * * * *',
-            $$ delete from public.projects where expires_at is not null and expires_at < now() $$
+            $cmd$ delete from public.projects where expires_at is not null and expires_at < now() $cmd$
         );
     end if;
 end $$;
