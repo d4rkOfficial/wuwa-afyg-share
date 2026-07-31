@@ -1,26 +1,54 @@
-@import "tailwindcss";
+@import 'tailwindcss';
 
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+    --bg: #0e0e10;
+    --fg: #e4e4e7;
+    --muted: #71717a;
+    --card: rgba(255, 255, 255, 0.02);
+    --card-hover: rgba(255, 255, 255, 0.05);
+    --card-border: rgba(255, 255, 255, 0.1);
+    --btn-bg: linear-gradient(135deg, #6366f1, #8b5cf6);
+    --btn-text: #ffffff;
+    --accent: #6366f1;
+    --accent-text: #a5b4fc;
+    --input-bg: rgba(255, 255, 255, 0.05);
+    --danger: #ef4444;
+    --danger-text: #fca5a5;
+    --element-冷凝: #38bdf8;
+    --element-热熔: #fb923c;
+    --element-导电: #a855f7;
+    --element-气动: #34d399;
+    --element-衍射: #facc15;
+    --element-湮灭: #f472b6;
 }
 
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+html.light {
+    --bg: #fafafa;
+    --fg: #18181b;
+    --muted: #8b8b93;
+    --card: #ffffff;
+    --card-hover: #f4f4f5;
+    --card-border: #e4e4e7;
+    --btn-bg: linear-gradient(135deg, #6366f1, #8b5cf6);
+    --btn-text: #ffffff;
+    --accent: #6366f1;
+    --accent-text: #4f46e5;
+    --input-bg: #ffffff;
+    --danger: #dc2626;
+    --danger-text: #dc2626;
 }
 
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+    font-family:
+        var(--font-geist-sans),
+        ui-sans-serif,
+        system-ui,
+        -apple-system,
+        'PingFang SC',
+        'Microsoft YaHei',
+        sans-serif;
+}
+
+::selection {
+    background: color-mix(in srgb, var(--accent) 30%, transparent);
 }
