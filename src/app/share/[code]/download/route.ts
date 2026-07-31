@@ -1,4 +1,7 @@
 import { createClient } from '@/lib/supabase/server'
+import { CORS_HEADERS, handleOptions } from '@/lib/api/cors'
+
+export { handleOptions as OPTIONS }
 
 export async function GET(_req: Request, { params }: { params: Promise<{ code: string }> }) {
     const { code } = await params
@@ -10,7 +13,7 @@ export async function GET(_req: Request, { params }: { params: Promise<{ code: s
         .eq('code', code)
         .maybeSingle()
 
-    if (!data) return new Response('分享已失效', { status: 404 })
+    if (!data) return new Response('分享已失效', { status: 404, headers: CORS_HEADERS })
 
     await supabase.rpc('bump_counter', { p_id: data.id, p_col: 'clones' })
 
@@ -19,7 +22,8 @@ export async function GET(_req: Request, { params }: { params: Promise<{ code: s
     return new Response(text, {
         headers: {
             'Content-Type': 'application/json; charset=utf-8',
-            'Content-Disposition': `attachment; filename*=UTF-8''${filename}`
+            'Content-Disposition': `attachment; filename*=UTF-8''${filename}`,
+            ...CORS_HEADERS
         }
     })
 }
