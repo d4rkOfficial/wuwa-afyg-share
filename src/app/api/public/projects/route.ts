@@ -9,18 +9,32 @@ import { siteUrl } from '@/lib/utils/site'
 
 export { handleOptions as OPTIONS }
 
-export async function GET() {
+export async function GET(req: Request) {
     if (!hasEnv()) return Response.json({ error: '服务未配置' }, { status: 503, headers: CORS_HEADERS })
     const supabase = await createClient()
 
+    const url = new URL(req.url)
+    const page = Math.max(1, parseInt(url.searchParams.get('page') ?? '1', 10) || 1)
+    const perPage = Math.min(50, Math.max(1, parseInt(url.searchParams.get('perPage') ?? '12', 10) || 12))
+    const q = (url.searchParams.get('q') ?? '').trim().replace(/[%_\\]/g, '\\$&')
+    const sort = url.searchParams.get('sort') ?? 'newest'
+
     const now = new Date().toISOString()
-    const { data, error } = await supabase
+    let query = supabase
         .from('projects')
-        .select('id, code, author_name, title, tags, game_version, team_preview, created_at')
+        .select('id, code, author_name, title, tags, game_version, team_preview, created_at, clone_count, view_count', {
+            count: 'exact'
+        })
         .eq('published', true)
         .or(`expires_at.is.null,expires_at.gt.${now}`)
-        .order('created_at', { ascending: false })
-        .limit(100)
+
+    if (q) query = query.or(`title.ilike.%${q}%,author_name.ilike.%${q}%`)
+
+    if (sort === 'heat') query = query.order('clone_count', { ascending: false })
+    query = query.order('created_at', { ascending: false })
+
+    const from = (page - 1) * perPage
+    const { data, count, error } = await query.range(from, from + perPage - 1)
 
     if (error) return Response.json({ error: error.message }, { status: 500, headers: CORS_HEADERS })
 
@@ -32,9 +46,10 @@ export async function GET() {
         tags: p.tags ?? [],
         gameVersion: p.game_version,
         teamPreview: p.team_preview,
+        downloads: p.clone_count,
         createdAt: p.created_at
     }))
-    return Response.json({ projects }, { headers: CORS_HEADERS })
+    return Response.json({ projects, total: count ?? 0, page, perPage }, { headers: CORS_HEADERS })
 }
 
 export async function POST(req: Request) {
