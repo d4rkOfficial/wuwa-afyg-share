@@ -18,6 +18,7 @@ export async function GET(req: Request) {
     const perPage = Math.min(50, Math.max(1, parseInt(url.searchParams.get('perPage') ?? '12', 10) || 12))
     const q = (url.searchParams.get('q') ?? '').trim().replace(/[%_\\]/g, '\\$&')
     const sort = url.searchParams.get('sort') ?? 'newest'
+    const excludeAnon = url.searchParams.get('excludeAnon') === '1'
 
     const now = new Date().toISOString()
     let query = supabase
@@ -27,6 +28,8 @@ export async function GET(req: Request) {
         })
         .eq('published', true)
         .or(`expires_at.is.null,expires_at.gt.${now}`)
+
+    if (excludeAnon) query = query.not('author_id', 'is', null)
 
     if (q) query = query.or(`title.ilike.%${q}%,author_name.ilike.%${q}%`)
 
