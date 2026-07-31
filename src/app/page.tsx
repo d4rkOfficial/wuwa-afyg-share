@@ -89,7 +89,7 @@ export default async function HomePage({
                             href={href}
                             className={`rounded-lg px-3 py-1.5 text-sm transition-colors ${
                                 active
-                                    ? 'bg-(--accent) text-white'
+                                    ? 'bg-(--accent) text-(--accent-fg)'
                                     : 'border border-(--card-border) bg-(--card) text-(--muted) hover:text-(--fg)'
                             }`}
                         >

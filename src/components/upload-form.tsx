@@ -159,7 +159,7 @@ export default function UploadForm() {
                                     onClick={() => setExpiresDays(opt.value)}
                                     className={`rounded-lg px-3 py-1.5 text-sm transition-colors ${
                                         expiresDays === opt.value
-                                            ? 'bg-(--accent) text-white'
+                                            ? 'bg-(--accent) text-(--accent-fg)'
                                             : 'border border-(--card-border) bg-(--card) text-(--muted) hover:text-(--fg)'
                                     }`}
                                 >
