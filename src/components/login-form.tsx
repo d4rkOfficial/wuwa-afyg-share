@@ -61,9 +61,8 @@ export default function LoginForm({ redirect, error }: Props) {
                     <div className="flex gap-2">
                         <input
                             value={code}
-                            onChange={(e) => setCode(e.target.value.replace(/\D/g, '').slice(0, 6))}
-                            placeholder="6 位验证码"
-                            inputMode="numeric"
+                            onChange={(e) => setCode(e.target.value.trim().slice(0, 64))}
+                            placeholder="输入邮件中的验证码"
                             autoComplete="one-time-code"
                             autoFocus
                             required
@@ -71,7 +70,7 @@ export default function LoginForm({ redirect, error }: Props) {
                         />
                         <button
                             type="submit"
-                            disabled={pending || code.length !== 6}
+                            disabled={pending || !code.trim()}
                             className="inline-flex items-center gap-1.5 rounded-lg px-4 py-2.5 text-sm font-medium text-(--btn-text) disabled:opacity-50"
                             style={{ background: 'var(--btn-bg)' }}
                         >
