@@ -1,0 +1,13 @@
+name: keep-alive
+
+on:
+    schedule:
+        - cron: '0 2 * * *'
+    workflow_dispatch:
+
+jobs:
+    ping:
+        runs-on: ubuntu-latest
+        steps:
+            - name: Ping site
+              run: curl -sSf -o /dev/null https://wuwa-afyg-share.200503.xyz/ || true
