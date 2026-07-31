@@ -2,7 +2,7 @@
 
 import { useState, useTransition } from 'react'
 import { Icon } from '@iconify/react'
-import { signInWithGithub, signInWithMagicLink } from '@/lib/actions/auth'
+import { signInWithGithub, signInWithMagicLink, verifyEmailOtp } from '@/lib/actions/auth'
 
 interface Props {
     redirect: string
@@ -12,6 +12,8 @@ interface Props {
 export default function LoginForm({ redirect, error }: Props) {
     const [email, setEmail] = useState('')
     const [sent, setSent] = useState(false)
+    const [code, setCode] = useState('')
+    const [codeErr, setCodeErr] = useState<string | null>(null)
     const [err, setErr] = useState<string | null>(error === 'auth' ? '登录失败，请重试' : null)
     const [pending, startTransition] = useTransition()
 
@@ -30,7 +32,17 @@ export default function LoginForm({ redirect, error }: Props) {
                 setErr(res.error)
                 return
             }
+            setCode('')
+            setCodeErr(null)
             setSent(true)
+        })
+    }
+
+    function onVerifyCode(e: React.FormEvent) {
+        e.preventDefault()
+        startTransition(async () => {
+            const res = await verifyEmailOtp(email, code, redirect)
+            if (res.error) setCodeErr(res.error)
         })
     }
 
@@ -39,7 +51,35 @@ export default function LoginForm({ redirect, error }: Props) {
             <div className="rounded-xl border border-(--card-border) bg-(--card) p-8 text-center">
                 <Icon icon="mdi:email-check-outline" className="mx-auto mb-3 size-10 text-(--accent)" />
                 <p className="font-medium">验证邮件已发送</p>
-                <p className="mt-1 text-sm text-(--muted)">请前往 {email} 查收并点击链接完成登录。</p>
+                <p className="mt-1 text-sm text-(--muted)">请前往 {email} 查收并点击链接完成登录，或输入邮件中的验证码：</p>
+                <form onSubmit={onVerifyCode} className="mt-4 flex flex-col gap-2">
+                    {codeErr && (
+                        <div className="rounded-lg border border-red-500/30 bg-red-500/10 px-3 py-2 text-sm text-red-400">
+                            {codeErr}
+                        </div>
+                    )}
+                    <div className="flex gap-2">
+                        <input
+                            value={code}
+                            onChange={(e) => setCode(e.target.value.replace(/\D/g, '').slice(0, 6))}
+                            placeholder="6 位验证码"
+                            inputMode="numeric"
+                            autoComplete="one-time-code"
+                            autoFocus
+                            required
+                            className="flex-1 rounded-lg border border-(--card-border) bg-(--input-bg) px-3 py-2.5 text-center text-lg tracking-widest outline-none transition-colors placeholder:text-sm placeholder:tracking-normal focus:border-(--accent)/60"
+                        />
+                        <button
+                            type="submit"
+                            disabled={pending || code.length !== 6}
+                            className="inline-flex items-center gap-1.5 rounded-lg px-4 py-2.5 text-sm font-medium text-(--btn-text) disabled:opacity-50"
+                            style={{ background: 'var(--btn-bg)' }}
+                        >
+                            <Icon icon="mdi:login" className="size-4" />
+                            登录
+                        </button>
+                    </div>
+                </form>
             </div>
         )
     }

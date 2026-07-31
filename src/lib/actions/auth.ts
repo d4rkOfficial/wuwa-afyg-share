@@ -39,6 +39,20 @@ export async function signInWithMagicLink(email: string, redirectTo = '/'): Prom
     return {}
 }
 
+export async function verifyEmailOtp(email: string, code: string, redirectTo = '/'): Promise<ActionResult> {
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return { error: '邮箱格式不正确' }
+    const supabase = await requireClient()
+    const { error } = await supabase.auth.verifyOtp({
+        email,
+        token: code.trim(),
+        type: 'magiclink'
+    })
+    if (error) return { error: error.message }
+    const target = redirectTo.startsWith('/') && !redirectTo.startsWith('//') ? redirectTo : '/'
+    redirect(target)
+    return {}
+}
+
 export async function signOut(): Promise<void> {
     const supabase = await requireClient()
     await supabase.auth.signOut()
