@@ -55,10 +55,6 @@ export default function ProjectCard({ project }: { project: ProjectListItem }) {
                     <Icon icon="mdi:content-copy" className="size-3.5" />
                     {formatCount(project.clone_count)}
                 </span>
-                <span className="flex items-center gap-0.5">
-                    <Icon icon="mdi:heart-outline" className="size-3.5" />
-                    {formatCount(project.like_count ?? 0)}
-                </span>
             </div>
         </Link>
     )

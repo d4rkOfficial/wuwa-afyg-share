@@ -4,16 +4,26 @@ import ThemeToggle from '@/components/theme-toggle'
 import { createClient, hasEnv } from '@/lib/supabase/server'
 
 export default async function Header() {
-    let user: { email?: string | null; user_metadata?: Record<string, unknown> } | null = null
+    let user: { id?: string; email?: string | null; user_metadata?: Record<string, unknown> } | null = null
+    let profileName: string | null = null
     if (hasEnv()) {
         const supabase = await createClient()
         const {
             data: { user: u }
         } = await supabase.auth.getUser()
         user = u
+        if (user) {
+            const { data: profile } = await supabase
+                .from('profiles')
+                .select('username')
+                .eq('id', user.id)
+                .maybeSingle()
+            profileName = profile?.username ?? null
+        }
     }
 
-    const displayName = (user?.user_metadata?.name ??
+    const displayName = (profileName ??
+        user?.user_metadata?.name ??
         user?.user_metadata?.full_name ??
         user?.email?.split('@')[0] ??
         '') as string

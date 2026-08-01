@@ -43,7 +43,7 @@ function sanitizeTags(tags: string[]): string[] {
     return out
 }
 
-function authorName(user: { user_metadata?: Record<string, unknown>; email?: string | null }): string {
+function fallbackAuthorName(user: { user_metadata?: Record<string, unknown>; email?: string | null }): string {
     const meta = user.user_metadata ?? {}
     const raw = (meta.name ?? meta.full_name ?? user.email?.split('@')[0]) as string | undefined
     return raw?.trim().slice(0, 20) || '匿名'
@@ -74,7 +74,12 @@ export async function publishProject(input: PublishInput): Promise<ActionResult<
     if (fileSize > 1024 * 1024) return { error: '工程文件超过 1MB 限制' }
 
     const name = project.name.trim()
-    const author = authorName(user)
+    const { data: profile } = await supabase
+        .from('profiles')
+        .select('username')
+        .eq('id', user.id)
+        .maybeSingle()
+    const author = profile?.username?.trim().slice(0, 20) || fallbackAuthorName(user)
 
     for (let i = 0; i < 5; i++) {
         const code = generateCode()
@@ -189,33 +194,4 @@ export async function deleteProject(id: string): Promise<ActionResult> {
     revalidatePath('/')
     revalidatePath('/me')
     return {}
-}
-
-export async function toggleLike(projectId: string): Promise<ActionResult<{ liked: boolean }>> {
-    const auth = await requireUser()
-    if (!auth.user) return { error: auth.error ?? '请先登录' }
-    const { supabase, user } = auth
-
-    const { data: existing } = await supabase
-        .from('likes')
-        .select('project_id')
-        .eq('project_id', projectId)
-        .eq('user_id', user.id)
-        .maybeSingle()
-
-    if (existing) {
-        const { error } = await supabase
-            .from('likes')
-            .delete()
-            .eq('project_id', projectId)
-            .eq('user_id', user.id)
-        if (error) return { error: error.message }
-        revalidatePath('/')
-        return { data: { liked: false } }
-    }
-
-    const { error } = await supabase.from('likes').insert({ project_id: projectId, user_id: user.id })
-    if (error) return { error: error.message }
-    revalidatePath('/')
-    return { data: { liked: true } }
 }

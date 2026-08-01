@@ -4,7 +4,6 @@ import type { Metadata } from 'next'
 import { Icon } from '@iconify/react'
 import TeamBanner from '@/components/team-banner'
 import TeamPreview from '@/components/team-preview'
-import LikeButton from '@/components/like-button'
 import CopyButton from '@/components/copy-button'
 import ExpiryCountdown from '@/components/expiry-countdown'
 import SetupNotice from '@/components/setup-notice'
@@ -56,13 +55,6 @@ export default async function SharePage({ params }: { params: Promise<{ code: st
     const project = data as ProjectRow
     await supabase.rpc('bump_counter', { p_id: project.id, p_col: 'views' })
 
-    const { data: likes } = await supabase
-        .from('likes')
-        .select('user_id')
-        .eq('project_id', project.id)
-    const likeCount = likes?.length ?? 0
-    const likedByMe = user ? (likes ?? []).some((l) => l.user_id === user.id) : false
-
     const names = teamDisplayNames(project.team_preview)
     // eslint-disable-next-line react-hooks/purity -- 动态服务端组件按请求时间判断过期
     const isExpired = project.expires_at !== null && new Date(project.expires_at).getTime() <= Date.now()
@@ -92,15 +84,6 @@ export default async function SharePage({ params }: { params: Promise<{ code: st
                             {project.game_version && <span>v{project.game_version}</span>}
                             {project.expires_at && !isExpired && <ExpiryCountdown expiresAt={project.expires_at} />}
                         </div>
-                    </div>
-                    <div className="flex shrink-0 items-center gap-2">
-                        <LikeButton
-                            projectId={project.id}
-                            initialCount={likeCount}
-                            initialLiked={likedByMe}
-                            loggedIn={Boolean(user)}
-                            size="lg"
-                        />
                     </div>
                 </div>
 

@@ -1,11 +1,9 @@
-import { shortName } from '@/lib/utils/character'
+import { charElement } from '@/lib/data/char-elements'
 
 interface Props {
     names: string[]
     size?: 'sm' | 'lg'
 }
-
-const PALETTE = ['#6366f1', '#38bdf8', '#34d399']
 
 export default function TeamBanner({ names, size = 'sm' }: Props) {
     const slots = [0, 1, 2]
@@ -13,7 +11,6 @@ export default function TeamBanner({ names, size = 'sm' }: Props) {
         <div className="flex flex-wrap items-center gap-2">
             {slots.map((i) => {
                 const name = names[i]
-                const color = PALETTE[i]
                 if (!name) {
                     return (
                         <span
@@ -24,20 +21,30 @@ export default function TeamBanner({ names, size = 'sm' }: Props) {
                         </span>
                     )
                 }
+                const el = charElement(name)
+                if (!el) {
+                    return (
+                        <span
+                            key={i}
+                            className="inline-flex items-center rounded-lg border border-(--card-border) bg-(--card) px-3 py-1.5 text-sm text-(--fg)"
+                        >
+                            {name}
+                        </span>
+                    )
+                }
+                const elVar = `var(--element-${el})`
                 return (
                     <span
                         key={i}
-                        className="inline-flex items-center gap-1.5 rounded-lg border px-3 py-1.5 text-sm"
-                        style={{ background: `${color}1f`, color, borderColor: `${color}4d` }}
+                        className={`inline-flex items-center rounded-lg border px-3 py-1.5 text-sm font-medium ${
+                            size === 'lg' ? 'px-4 py-2' : ''
+                        }`}
+                        style={{
+                            background: `color-mix(in srgb, ${elVar} 15%, transparent)`,
+                            color: elVar,
+                            borderColor: `color-mix(in srgb, ${elVar} 45%, transparent)`
+                        }}
                     >
-                        <span
-                            className={`flex size-5 shrink-0 items-center justify-center rounded-md font-semibold text-white ${
-                                size === 'lg' ? 'size-6' : ''
-                            }`}
-                            style={{ background: color }}
-                        >
-                            {shortName(name)}
-                        </span>
                         {name}
                     </span>
                 )

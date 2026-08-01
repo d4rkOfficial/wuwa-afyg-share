@@ -1,6 +1,7 @@
 import { Icon } from '@iconify/react'
 import type { CharSlot, PhaseKey } from '@/lib/types/project'
 import { PHASE_LABELS } from '@/lib/types/project'
+import { charElement } from '@/lib/data/char-elements'
 
 interface Props {
     slots: CharSlot[]
@@ -29,7 +30,20 @@ export default function TeamPreview({ slots, locked }: Props) {
                                 <span className="flex size-7 items-center justify-center rounded-lg bg-(--card-hover) text-xs font-semibold text-(--muted)">
                                     {i + 1}
                                 </span>
-                                <span className="font-medium">{slot.character ?? '未选择'}</span>
+                                {slot.character ? (
+                                    <span
+                                        className="font-medium"
+                                        style={
+                                            charElement(slot.character)
+                                                ? { color: `var(--element-${charElement(slot.character)})` }
+                                                : undefined
+                                        }
+                                    >
+                                        {slot.character}
+                                    </span>
+                                ) : (
+                                    <span className="text-(--muted)">未选择</span>
+                                )}
                             </div>
 
                             <dl className="space-y-2 text-sm">

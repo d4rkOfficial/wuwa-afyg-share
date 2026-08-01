@@ -31,6 +31,29 @@ export async function updateSession(request: NextRequest) {
     } = await supabase.auth.getUser()
 
     const path = request.nextUrl.pathname
+
+    // 首次登录强制设置用户名：登录后所有页面重定向到 /setup-username
+    if (
+        user &&
+        !path.startsWith('/api') &&
+        !path.startsWith('/setup-username') &&
+        !path.startsWith('/login') &&
+        !path.startsWith('/auth/')
+    ) {
+        const { data: profile } = await supabase
+            .from('profiles')
+            .select('id')
+            .eq('id', user.id)
+            .maybeSingle()
+        if (!profile) {
+            const url = request.nextUrl.clone()
+            url.pathname = '/setup-username'
+            url.search = ''
+            url.searchParams.set('redirect', path + request.nextUrl.search)
+            return NextResponse.redirect(url)
+        }
+    }
+
     const isProtected = path.startsWith('/upload') || path.startsWith('/me')
 
     if (!user && isProtected) {

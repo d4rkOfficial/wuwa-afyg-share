@@ -3,6 +3,7 @@ import { redirect } from 'next/navigation'
 import type { Metadata } from 'next'
 import { Icon } from '@iconify/react'
 import ManageProjectRow from '@/components/manage-project-row'
+import UsernameEditor from '@/components/username-editor'
 import { createClient, hasEnv } from '@/lib/supabase/server'
 import { signOut } from '@/lib/actions/auth'
 import { LIST_COLUMNS } from '@/lib/project/query'
@@ -30,8 +31,16 @@ export default async function MePage() {
         .order('created_at', { ascending: false })
     const projects = (data ?? []) as ProjectListItem[]
 
+    const { data: profile } = await supabase
+        .from('profiles')
+        .select('username')
+        .eq('id', user.id)
+        .maybeSingle()
+
     return (
         <div className="mx-auto max-w-3xl space-y-6">
+            {profile?.username && <UsernameEditor initial={profile.username} />}
+
             <div className="flex items-center justify-between">
                 <div>
                     <h1 className="text-2xl font-bold">我的工程</h1>

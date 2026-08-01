@@ -1,12 +1,15 @@
 import Link from 'next/link'
 import { Icon } from '@iconify/react'
 import ProjectCard from '@/components/project-card'
+import Pagination from '@/components/pagination'
 import SetupNotice from '@/components/setup-notice'
 import { createClient, hasEnv } from '@/lib/supabase/server'
 import { LIST_COLUMNS } from '@/lib/project/query'
 import type { ProjectListItem } from '@/lib/types/db'
 
 export const dynamic = 'force-dynamic'
+
+const PER_PAGE = 12
 
 export default async function HomePage({
     searchParams
@@ -16,37 +19,24 @@ export default async function HomePage({
     const sp = await searchParams
     const q = typeof sp.q === 'string' ? sp.q.trim() : ''
     const sort = typeof sp.sort === 'string' && sp.sort === 'hot' ? 'hot' : 'latest'
+    const page = Math.max(1, parseInt(typeof sp.page === 'string' ? sp.page : '1', 10) || 1)
 
     if (!hasEnv()) return <SetupNotice />
 
     const supabase = await createClient()
-    const {
-        data: { user }
-    } = await supabase.auth.getUser()
 
-    let query = supabase.from('projects').select(LIST_COLUMNS).eq('published', true)
+    let query = supabase
+        .from('projects')
+        .select(LIST_COLUMNS, { count: 'exact' })
+        .eq('published', true)
+        .not('author_id', 'is', null)
     if (q) query = query.ilike('title', `%${q}%`)
-    query = query.order(sort === 'hot' ? 'clone_count' : 'created_at', { ascending: false }).limit(30)
+    query = query.order(sort === 'hot' ? 'clone_count' : 'created_at', { ascending: false })
 
-    const { data, error } = await query
+    const from = (page - 1) * PER_PAGE
+    const { data, count, error } = await query.range(from, from + PER_PAGE - 1)
     const items = (data ?? []) as ProjectListItem[]
-
-    if (items.length > 0) {
-        const { data: likes } = await supabase
-            .from('likes')
-            .select('project_id, user_id')
-            .in('project_id', items.map((i) => i.id))
-        const countMap = new Map<string, number>()
-        const mySet = new Set<string>()
-        for (const l of likes ?? []) {
-            countMap.set(l.project_id, (countMap.get(l.project_id) ?? 0) + 1)
-            if (user && l.user_id === user.id) mySet.add(l.project_id)
-        }
-        for (const item of items) {
-            item.like_count = countMap.get(item.id) ?? 0
-            item.liked_by_me = mySet.has(item.id)
-        }
-    }
+    const totalPages = Math.max(1, Math.ceil((count ?? 0) / PER_PAGE))
 
     return (
         <div className="space-y-6">
@@ -82,7 +72,7 @@ export default async function HomePage({
                     ] as const
                 ).map(({ key, label }) => {
                     const active = sort === key
-                    const href = `/?sort=${key}${q ? `&q=${encodeURIComponent(q)}` : ''}`
+                    const href = `/?sort=${key}&page=1${q ? `&q=${encodeURIComponent(q)}` : ''}`
                     return (
                         <Link
                             key={key}
@@ -117,11 +107,14 @@ export default async function HomePage({
                     </Link>
                 </div>
             ) : (
-                <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-                    {items.map((p) => (
-                        <ProjectCard key={p.id} project={p} />
-                    ))}
-                </div>
+                <>
+                    <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                        {items.map((p) => (
+                            <ProjectCard key={p.id} project={p} />
+                        ))}
+                    </div>
+                    <Pagination page={page} totalPages={totalPages} q={q} sort={sort} />
+                </>
             )}
         </div>
     )

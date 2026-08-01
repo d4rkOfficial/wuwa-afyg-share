@@ -20,14 +20,6 @@ export interface ProjectRow {
     clone_count: number
     created_at: string
     updated_at: string
-    like_count?: number
-    liked_by_me?: boolean
-}
-
-export interface LikeRow {
-    project_id: string
-    user_id: string
-    created_at: string
 }
 
 // 列表页用投影（不含 project_json，避免大字段）
