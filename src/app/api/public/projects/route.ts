@@ -2,6 +2,7 @@ import { createClient, hasEnv } from '@/lib/supabase/server'
 import { createServiceClient } from '@/lib/supabase/service'
 import { parseProjectFile, safeJsonParse } from '@/lib/project/parse'
 import { extractTeamPreview } from '@/lib/project/extract'
+import { compressProjectText, assertRawSize } from '@/lib/project/compress'
 import { generateCode } from '@/lib/utils/slug'
 import { EXPORT_VERSION, type ProjectData } from '@/lib/types/project'
 import { CORS_HEADERS, handleOptions } from '@/lib/api/cors'
@@ -84,8 +85,15 @@ export async function POST(req: Request) {
     const file = { version: EXPORT_VERSION, exportedAt: Date.now(), project }
     const fileText = JSON.stringify(file)
     const fileSize = new TextEncoder().encode(fileText).length
-    if (fileSize > 1024 * 1024) {
-        return Response.json({ error: '工程文件超过 1MB 限制' }, { status: 413, headers: CORS_HEADERS })
+    let blobHex: string
+    try {
+        assertRawSize(fileText)
+        blobHex = compressProjectText(fileText).blobHex
+    } catch (e) {
+        return Response.json(
+            { error: e instanceof Error ? e.message : '工程文件过大' },
+            { status: 413, headers: CORS_HEADERS }
+        )
     }
 
     const name = project.name.trim().slice(0, 60) || '未命名工程'
@@ -103,7 +111,7 @@ export async function POST(req: Request) {
                 description: '',
                 tags: [],
                 team_preview: preview,
-                project_json: JSON.parse(fileText),
+                project_blob: blobHex,
                 file_size: fileSize,
                 published: true,
                 expires_at: expiresAt

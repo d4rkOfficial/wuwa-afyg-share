@@ -1,5 +1,6 @@
 import { createClient } from '@/lib/supabase/server'
 import { CORS_HEADERS, handleOptions } from '@/lib/api/cors'
+import { decompressProject } from '@/lib/project/compress'
 
 export { handleOptions as OPTIONS }
 
@@ -9,7 +10,7 @@ export async function GET(_req: Request, { params }: { params: Promise<{ code: s
 
     const { data } = await supabase
         .from('projects')
-        .select('id, title, project_json')
+        .select('id, title, project_blob')
         .eq('code', code)
         .maybeSingle()
 
@@ -17,7 +18,7 @@ export async function GET(_req: Request, { params }: { params: Promise<{ code: s
 
     await supabase.rpc('bump_counter', { p_id: data.id, p_col: 'clones' })
 
-    const text = JSON.stringify(data.project_json)
+    const text = decompressProject(data.project_blob)
     const filename = encodeURIComponent(`${data.title}.json`)
     return new Response(text, {
         headers: {

@@ -4,6 +4,7 @@ import { revalidatePath } from 'next/cache'
 import { createClient, hasEnv } from '@/lib/supabase/server'
 import { parseProjectFile, safeJsonParse } from '@/lib/project/parse'
 import { extractTeamPreview } from '@/lib/project/extract'
+import { compressProjectText, assertRawSize } from '@/lib/project/compress'
 import { generateCode } from '@/lib/utils/slug'
 import { EXPORT_VERSION, type ProjectData } from '@/lib/types/project'
 
@@ -71,7 +72,8 @@ export async function publishProject(input: PublishInput): Promise<ActionResult<
     const file = { version: EXPORT_VERSION, exportedAt: Date.now(), project }
     const fileText = JSON.stringify(file)
     const fileSize = new TextEncoder().encode(fileText).length
-    if (fileSize > 1024 * 1024) return { error: '工程文件超过 1MB 限制' }
+    assertRawSize(fileText)
+    const { blobHex } = compressProjectText(fileText)
 
     const name = project.name.trim()
     const { data: profile } = await supabase
@@ -93,7 +95,7 @@ export async function publishProject(input: PublishInput): Promise<ActionResult<
                 description,
                 tags,
                 team_preview: preview,
-                project_json: JSON.parse(fileText),
+                project_blob: blobHex,
                 file_size: fileSize,
                 expires_at: expiresAt
             })

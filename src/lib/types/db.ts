@@ -1,6 +1,6 @@
 // 数据库行类型（与 supabase/migrations/0001_init.sql 保持一致，手动维护）
 
-import type { ProjectFile, TeamPreview } from '@/lib/types/project'
+import type { TeamPreview } from '@/lib/types/project'
 
 export interface ProjectRow {
     id: string
@@ -12,7 +12,6 @@ export interface ProjectRow {
     tags: string[]
     game_version: string | null
     team_preview: TeamPreview | null
-    project_json: ProjectFile
     file_size: number
     published: boolean
     expires_at: string | null
@@ -22,5 +21,5 @@ export interface ProjectRow {
     updated_at: string
 }
 
-// 列表页用投影（不含 project_json，避免大字段）
-export type ProjectListItem = Omit<ProjectRow, 'project_json'>
+// 列表页用投影（不含大字段 project_blob）
+export type ProjectListItem = Omit<ProjectRow, 'file_size'>

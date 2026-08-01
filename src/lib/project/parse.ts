@@ -1,5 +1,6 @@
 import type { CharSlot, EchoSlot, PhaseKey, PhaseState, ProjectData } from '@/lib/types/project'
 import { PHASE_KEYS } from '@/lib/types/project'
+import { MAX_RAW_BYTES } from '@/lib/project/compress'
 
 export class ProjectParseError extends Error {
     constructor(message: string) {
@@ -118,10 +119,10 @@ export function parseProjectFile(raw: unknown): ProjectData {
 }
 
 /** 解析前先校验为 JSON 且不超过尺寸上限 */
-export function safeJsonParse(text: string): unknown {
+export function safeJsonParse(text: string, maxBytes = MAX_RAW_BYTES): unknown {
     const bytes = new TextEncoder().encode(text).length
-    if (bytes > 1024 * 1024) {
-        throw new ProjectParseError('文件超过 1MB 限制')
+    if (bytes > maxBytes) {
+        throw new ProjectParseError(`文件超过 ${maxBytes / 1024 / 1024}MB 限制`)
     }
     try {
         return JSON.parse(text)
