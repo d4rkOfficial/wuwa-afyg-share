@@ -116,6 +116,9 @@ export default function UploadForm() {
                                 {(new TextEncoder().encode(fileText).length / 1024).toFixed(1)} KB
                             </span>
                         </div>
+                        <p className="text-xs text-amber-500/90">
+                            提示：项目名建议不要直接写三个角色名（如「绯雪 / 守岸人 / 维里奈」），此类名称可被自动检测出来；可在工具内重命名工程后再导出。
+                        </p>
                         <TeamBanner names={names} />
                         {preview.lockedTeamNames && (
                             <p className="text-xs text-(--muted)">已锁定配队：{preview.lockedTeamNames.join(' / ')}</p>
@@ -133,7 +136,7 @@ export default function UploadForm() {
                         <textarea
                             value={description}
                             onChange={(e) => setDescription(e.target.value)}
-                            placeholder="简单介绍这个工程（配队思路、环境、结论等）"
+                            placeholder="简单介绍这个工程，比如说有无参考轴视频？"
                             rows={3}
                             maxLength={500}
                             className="w-full rounded-xl border border-(--card-border) bg-(--input-bg) px-3 py-2.5 text-sm outline-none transition-colors placeholder:text-(--muted) focus:border-(--accent)/60"
@@ -145,7 +148,7 @@ export default function UploadForm() {
                         <input
                             value={tagsText}
                             onChange={(e) => setTagsText(e.target.value)}
-                            placeholder="配队思路, 大毕业, 深塔"
+                            placeholder="椰果轴,轮椅轴,"
                             className="w-full rounded-xl border border-(--card-border) bg-(--input-bg) px-3 py-2.5 text-sm outline-none transition-colors placeholder:text-(--muted) focus:border-(--accent)/60"
                         />
                     </div>
