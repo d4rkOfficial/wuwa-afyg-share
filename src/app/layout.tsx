@@ -2,6 +2,8 @@ import type { Metadata } from 'next'
 import { Geist } from 'next/font/google'
 import './globals.css'
 import Header from '@/components/header'
+import { Toaster } from '@/components/ui/toast'
+import PageLoadingOverlay from '@/components/ui/page-loading-overlay'
 
 const geistSans = Geist({
     variable: '--font-geist-sans',
@@ -29,6 +31,8 @@ export default function RootLayout({
                 <footer className="border-t border-(--card-border) py-6 text-center text-xs text-(--muted)">
                     椰果工坊 · 配合 椰果工具箱 使用
                 </footer>
+                <Toaster />
+                <PageLoadingOverlay />
             </body>
         </html>
     )

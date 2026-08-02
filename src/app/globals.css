@@ -15,6 +15,14 @@
     --input-bg: rgba(255, 255, 255, 0.05);
     --danger: #ef4444;
     --danger-text: #fca5a5;
+    --success: #34d399;
+    --success-text: #6ee7b7;
+    --warning: #fbbf24;
+    --warning-text: #fcd34d;
+    --info: #38bdf8;
+    --info-text: #7dd3fc;
+    --code-bg: rgba(0, 0, 0, 0.25);
+    --code-bg-strong: rgba(0, 0, 0, 0.4);
     --element-冷凝: #38bdf8;
     --element-热熔: #fb923c;
     --element-导电: #a855f7;
@@ -38,6 +46,14 @@ html.light {
     --input-bg: #ffffff;
     --danger: #dc2626;
     --danger-text: #dc2626;
+    --success: #059669;
+    --success-text: #059669;
+    --warning: #d97706;
+    --warning-text: #d97706;
+    --info: #0284c7;
+    --info-text: #0284c7;
+    --code-bg: rgba(0, 0, 0, 0.05);
+    --code-bg-strong: rgba(0, 0, 0, 0.1);
 }
 
 body {
@@ -99,4 +115,66 @@ select {
     background-position: right 6px center;
     background-size: 14px;
     padding-right: 24px;
+}
+
+/* 管理员 Buff 集管理页：黑体加粗，便于阅读 */
+.buff-admin-shell,
+.buff-admin-shell * {
+    font-family:
+        'PingFang SC',
+        'Microsoft YaHei',
+        'Hiragino Sans GB',
+        'Source Han Sans CN',
+        'Noto Sans CJK SC',
+        sans-serif;
+}
+.buff-admin-shell {
+    font-weight: 600;
+}
+.buff-admin-shell input,
+.buff-admin-shell textarea,
+.buff-admin-shell select {
+    font-weight: 600;
+}
+
+/* 管理页编辑框：不内部滚动，高度随内容自动扩展 */
+.buff-admin-shell textarea {
+    resize: none;
+    overflow: hidden;
+    field-sizing: content;
+    min-height: 5rem;
+}
+
+/* 统一工具栏按钮样式 */
+.toolbar-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.375rem;
+    border-radius: 0.5rem;
+    padding: 0.375rem 0.75rem;
+    font-size: 0.75rem;
+    line-height: 1.25rem;
+    transition: filter 0.15s ease, opacity 0.15s ease;
+    cursor: pointer;
+}
+.toolbar-btn:hover {
+    filter: brightness(1.1);
+}
+.toolbar-btn:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+}
+.toolbar-btn-primary {
+    background: var(--btn-bg);
+    color: var(--btn-text);
+    font-weight: 600;
+}
+.toolbar-btn-ghost {
+    color: var(--muted);
+    border: 1px solid var(--card-border);
+    background: transparent;
+}
+.toolbar-btn-ghost:hover {
+    color: var(--fg);
+    background: var(--card-hover);
 }

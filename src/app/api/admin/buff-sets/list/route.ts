@@ -1,4 +1,4 @@
-import { requireAdmin } from '@/lib/supabase/admin'
+import { requireUser } from '@/lib/supabase/admin'
 import { fetchToolList } from '@/lib/ai/info'
 import { BUFF_ENTITY_TYPES } from '@/lib/consts/buff-zones'
 import type { BuffEntityType } from '@/lib/types/db'
@@ -11,7 +11,7 @@ interface ListRequestBody {
 }
 
 export async function POST(req: Request) {
-    const auth = await requireAdmin()
+    const auth = await requireUser()
     if (!auth.ok) {
         return new Response(JSON.stringify({ type: 'error', message: auth.error ?? '无权限' }), {
             status: 401,

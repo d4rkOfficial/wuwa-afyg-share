@@ -1,7 +1,7 @@
 'use server'
 
 import { revalidatePath } from 'next/cache'
-import { createClient, hasEnv } from '@/lib/supabase/server'
+import { requireUser } from '@/lib/supabase/admin'
 import { BUFF_ENTITY_TYPES, BUFF_ZONE_MAP, BUFF_REF_ZONE_MAP, BUFF_SCOPES } from '@/lib/consts/buff-zones'
 import type { BuffEntityType, BuffScope } from '@/lib/types/db'
 
@@ -11,20 +11,11 @@ export interface ActionResult<T = undefined> {
     debug?: string
 }
 
-async function requireAdmin() {
-    if (!hasEnv()) return { supabase: null, error: '服务未配置' }
-    const supabase = await createClient()
-    const {
-        data: { user }
-    } = await supabase.auth.getUser()
-    if (!user) return { supabase, error: '请先登录' }
-    const { data: profile } = await supabase
-        .from('profiles')
-        .select('is_admin')
-        .eq('id', user.id)
-        .maybeSingle()
-    if (!profile?.is_admin) return { supabase, error: '无权限：仅管理员可编辑 Buff 集' }
-    return { supabase, error: null as string | null }
+// 登录用户即可编辑 buff 集
+async function withUser() {
+    const r = await requireUser()
+    if (!r.ok || !r.supabase) return { supabase: null as never, error: r.error ?? '无权限' }
+    return { supabase: r.supabase, error: null as string | null }
 }
 
 interface ZoneRefInput {
@@ -96,7 +87,7 @@ function normalizeScope(scope: unknown): BuffScope {
 }
 
 export async function upsertBuffSet(input: InputBuff): Promise<ActionResult> {
-    const auth = await requireAdmin()
+    const auth = await withUser()
     if (auth.error || !auth.supabase) return { error: auth.error ?? '无权限' }
     const supabase = auth.supabase
 
@@ -130,7 +121,7 @@ export async function deleteBuffPreset(
     entityName: string,
     buffName: string
 ): Promise<ActionResult> {
-    const auth = await requireAdmin()
+    const auth = await withUser()
     if (auth.error || !auth.supabase) return { error: auth.error ?? '无权限' }
     const supabase = auth.supabase
 
@@ -160,7 +151,7 @@ export interface UpsertEntityInput {
 }
 
 export async function upsertBuffEntity(input: UpsertEntityInput): Promise<ActionResult<{ saved: number }>> {
-    const auth = await requireAdmin()
+    const auth = await withUser()
     if (auth.error || !auth.supabase) return { error: auth.error ?? '无权限' }
     const supabase = auth.supabase
 
@@ -210,7 +201,7 @@ export async function deleteBuffEntity(
     entityType: BuffEntityType,
     entityName: string
 ): Promise<ActionResult> {
-    const auth = await requireAdmin()
+    const auth = await withUser()
     if (auth.error || !auth.supabase) return { error: auth.error ?? '无权限' }
     const supabase = auth.supabase
 

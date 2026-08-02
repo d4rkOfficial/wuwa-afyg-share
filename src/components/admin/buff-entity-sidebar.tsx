@@ -2,7 +2,7 @@
 
 import { useState } from 'react'
 import { Icon } from '@iconify/react'
-import { BUFF_ENTITY_TYPES, BUFF_ENTITY_LABELS } from '@/lib/consts/buff-zones'
+import { BUFF_ENTITY_LABELS } from '@/lib/consts/buff-zones'
 import type { BuffEntityType } from '@/lib/types/db'
 
 interface Props {
@@ -52,6 +52,16 @@ function entityKey(entityType: BuffEntityType, entityName: string) {
     return `${entityType}/${entityName}`
 }
 
+// 主类型 tab（套装合并为一项，内部再选件数）
+const MAIN_TABS: Array<{ type: BuffEntityType; label: string }> = [
+    { type: 'character', label: '角色' },
+    { type: 'weapon', label: '武器' },
+    { type: 'echo', label: '首位声骸' },
+    { type: '1set', label: '套装' }
+]
+
+const SET_PIECES: BuffEntityType[] = ['1set', '2set', '3set', '4set', '5set']
+
 export default function BuffEntitySidebar({
     toolBase,
     existingCountMap,
@@ -60,11 +70,15 @@ export default function BuffEntitySidebar({
     onNew
 }: Props) {
     const [loading, setLoading] = useState(false)
-    const [tab, setTab] = useState<BuffEntityType>('character')
+    const [mainTab, setMainTab] = useState<BuffEntityType>('character')
+    const [setPiece, setSetPiece] = useState<BuffEntityType>('1set')
     const [search, setSearch] = useState('')
     const [catalog, setCatalog] = useState<string[] | null>(null)
     const [error, setError] = useState<string | null>(null)
     const [loadedFor, setLoadedFor] = useState<BuffEntityType | null>(null)
+
+    // 当前实际生效的实体类型
+    const activeType: BuffEntityType = mainTab === '1set' ? setPiece : mainTab
 
     async function load(type: BuffEntityType) {
         setLoading(true)
@@ -101,10 +115,17 @@ export default function BuffEntitySidebar({
         }
     }
 
-    function switchTab(type: BuffEntityType) {
-        setTab(type)
+    function switchMainTab(type: BuffEntityType) {
+        setMainTab(type)
         setSearch('')
-        if (loadedFor !== type) load(type)
+        const target = type === '1set' ? setPiece : type
+        if (loadedFor !== target) load(target)
+    }
+
+    function switchSetPiece(piece: BuffEntityType) {
+        setSetPiece(piece)
+        setSearch('')
+        if (loadedFor !== piece) load(piece)
     }
 
     const filtered = (catalog ?? []).filter((name) => name.includes(search.trim()))
@@ -114,7 +135,7 @@ export default function BuffEntitySidebar({
             {/* 新增按钮 */}
             <button
                 onClick={onNew}
-                className="mb-2 flex w-full items-center justify-center gap-1 rounded-lg px-3 py-1.5 text-xs font-medium text-(--btn-text) transition-all hover:brightness-110"
+                className="toolbar-btn toolbar-btn-primary mb-2 w-full justify-center"
                 style={{ background: 'var(--btn-bg)' }}
             >
                 <Icon icon="mdi:plus" className="size-3.5" />
@@ -129,24 +150,45 @@ export default function BuffEntitySidebar({
                 className="mb-2 w-full rounded-lg border border-(--card-border) bg-(--input-bg) px-2 py-1.5 text-sm outline-none focus:border-(--accent)/60"
             />
 
-            {/* 类型 tabs */}
-            <div className="mb-2 flex flex-wrap gap-1">
-                {BUFF_ENTITY_TYPES.map((t) => (
+            {/* 主类型 tabs */}
+            <div className="mb-1.5 flex flex-wrap gap-1">
+                {MAIN_TABS.map((t) => (
                     <button
-                        key={t}
-                        onClick={() => switchTab(t)}
+                        key={t.type}
+                        onClick={() => switchMainTab(t.type)}
                         className={`rounded-md px-2 py-1 text-[11px] transition-colors ${
-                            tab === t ? 'bg-(--accent)/15 text-(--accent-text)' : 'text-(--muted) hover:bg-(--card-hover)'
+                            mainTab === t.type
+                                ? 'bg-(--accent)/15 text-(--accent-text)'
+                                : 'text-(--muted) hover:bg-(--card-hover)'
                         }`}
                     >
-                        {BUFF_ENTITY_LABELS[t]}
+                        {t.label}
                     </button>
                 ))}
             </div>
 
+            {/* 套装件数二级选择 */}
+            {mainTab === '1set' && (
+                <div className="mb-1.5 flex flex-wrap gap-1 pl-0.5">
+                    {SET_PIECES.map((p) => (
+                        <button
+                            key={p}
+                            onClick={() => switchSetPiece(p)}
+                            className={`rounded-md px-1.5 py-0.5 text-[10px] transition-colors ${
+                                setPiece === p
+                                    ? 'bg-(--accent)/15 text-(--accent-text)'
+                                    : 'text-(--muted) hover:bg-(--card-hover)'
+                            }`}
+                        >
+                            {BUFF_ENTITY_LABELS[p]}
+                        </button>
+                    ))}
+                </div>
+            )}
+
             {/* 列表 */}
             <div className="min-h-0 flex-1 space-y-0.5 overflow-y-auto pr-0.5">
-                {error && <div className="rounded-lg bg-red-500/10 px-2 py-2 text-xs text-red-400">{error}</div>}
+                {error && <div className="rounded-lg bg-(--danger)/15 px-2 py-2 text-xs text-(--danger)">{error}</div>}
                 {!error && catalog === null && loading && (
                     <div className="px-2 py-3 text-center text-xs text-(--muted)">加载中…</div>
                 )}
@@ -154,13 +196,13 @@ export default function BuffEntitySidebar({
                     <div className="px-2 py-3 text-center text-xs text-(--muted)">无匹配实体</div>
                 )}
                 {filtered.map((name) => {
-                    const key = entityKey(tab, name)
+                    const key = entityKey(activeType, name)
                     const count = existingCountMap[key] ?? 0
-                    const active = selected?.entityType === tab && selected.entityName === name
+                    const active = selected?.entityType === activeType && selected.entityName === name
                     return (
                         <button
                             key={name}
-                            onClick={() => onSelect({ entityType: tab, entityName: name })}
+                            onClick={() => onSelect({ entityType: activeType, entityName: name })}
                             className={`flex w-full items-center gap-2 rounded-lg px-2 py-1.5 text-left text-sm transition-colors ${
                                 active ? 'bg-(--accent)/15 text-(--accent-text)' : 'text-(--fg) hover:bg-(--card-hover)'
                             }`}

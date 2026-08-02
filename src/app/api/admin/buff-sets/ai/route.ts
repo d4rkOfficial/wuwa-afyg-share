@@ -1,4 +1,4 @@
-import { requireAdmin } from '@/lib/supabase/admin'
+import { requireUser } from '@/lib/supabase/admin'
 import { fetchToolInfo, prepareAiInfo } from '@/lib/ai/info'
 import { chatCompletionStream, DeepSeekError, sanitizeBuffs, type ChatMessage } from '@/lib/ai/deepseek'
 import { renderSystemPrompt, renderUserPrompt, DEFAULT_SYSTEM_PROMPT, DEFAULT_USER_PROMPT_TEMPLATE } from '@/lib/ai/prompts'
@@ -28,7 +28,7 @@ function toolInfoEntity(entityType: BuffEntityType): string {
 }
 
 export async function POST(req: Request) {
-    const auth = await requireAdmin()
+    const auth = await requireUser()
     if (!auth.ok) {
         return new Response(JSON.stringify({ type: 'error', message: auth.error ?? '无权限' }), {
             status: 401,

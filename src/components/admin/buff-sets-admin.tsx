@@ -124,103 +124,128 @@ export default function BuffSetsAdmin({ rows }: Props) {
 
             {/* 右侧侧栏 */}
             <div className="shrink-0 lg:order-last lg:w-72">
-                {/* 配置折叠面板 */}
-                <details className="mb-3 rounded-xl border border-(--card-border) bg-(--card) p-3" open={showConfig}>
-                    <summary
-                        onClick={(e) => {
-                            e.preventDefault()
-                            setShowConfig((v) => !v)
-                        }}
-                        className="flex cursor-pointer select-none items-center justify-between text-left text-xs font-medium text-(--muted)"
-                    >
-                        <span className="flex items-center gap-1.5">
-                            <Icon icon="mdi:cog-outline" className="size-4" />
-                            连接配置
-                        </span>
-                        <Icon icon={showConfig ? 'mdi:chevron-up' : 'mdi:chevron-down'} className="size-4" />
-                    </summary>
-                    {showConfig && (
-                        <div className="mt-3 space-y-2">
-                            <label className="flex flex-col gap-1 text-xs text-(--muted)">
-                                工具箱地址
-                                <input
-                                    type="url"
-                                    value={toolBase}
-                                    onChange={(e) => persistToolBase(e.target.value)}
-                                    placeholder="http://localhost:5173"
-                                    className="w-full rounded-lg border border-(--card-border) bg-(--input-bg) px-2 py-1.5 text-sm outline-none focus:border-(--accent)/60"
-                                />
-                            </label>
-                            <label className="flex flex-col gap-1 text-xs text-(--muted)">
-                                DeepSeek API Key
-                                <input
-                                    type="password"
-                                    value={apiKey}
-                                    onChange={(e) => persistApiKey(e.target.value)}
-                                    placeholder="sk-..."
-                                    className="w-full rounded-lg border border-(--card-border) bg-(--input-bg) px-2 py-1.5 text-sm outline-none focus:border-(--accent)/60"
-                                />
-                            </label>
-                            <div className="flex flex-col gap-1">
-                                <div className="flex items-center justify-between">
-                                    <span className="text-xs text-(--muted)">系统提示词模板</span>
-                                    <button
-                                        onClick={() => persistSystemPrompt(DEFAULT_SYSTEM_PROMPT)}
-                                        className="text-[10px] text-(--accent-text) hover:underline"
-                                    >
-                                        恢复默认
-                                    </button>
-                                </div>
-                                <textarea
-                                    value={systemPrompt}
-                                    onChange={(e) => persistSystemPrompt(e.target.value)}
-                                    rows={10}
-                                    placeholder="支持 {ZONE_LIST} 占位符"
-                                    className="w-full resize-y rounded-lg border border-(--card-border) bg-(--input-bg) px-2 py-1.5 font-mono text-[11px] leading-relaxed outline-none focus:border-(--accent)/60"
-                                />
+                {/* 连接配置按钮 */}
+                <button
+                    onClick={() => setShowConfig(true)}
+                    className="toolbar-btn toolbar-btn-ghost mb-3 w-full justify-between"
+                >
+                    <span className="flex items-center gap-1.5">
+                        <Icon icon="mdi:cog-outline" className="size-4" />
+                        连接配置
+                        {!toolBase.trim() && (
+                            <span className="ml-1 rounded bg-(--warning)/15 px-1 py-0.5 text-[9px] text-(--warning)">未配置</span>
+                        )}
+                    </span>
+                    <Icon icon="mdi:cog" className="size-4" />
+                </button>
+
+                {/* 连接配置弹窗（整个弹窗随内容滚动） */}
+                {showConfig && (
+                    <div className="fixed inset-0 z-50 overflow-y-auto">
+                        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm" onClick={() => setShowConfig(false)} />
+                        <div className="relative mx-auto my-8 w-[calc(100vw-2rem)] max-w-xl rounded-xl border border-(--card-border) bg-(--card) p-4 shadow-2xl">
+                            <div className="mb-3 flex items-center justify-between">
+                                <span className="text-sm font-semibold text-(--fg)">连接配置</span>
+                                <button onClick={() => setShowConfig(false)} className="rounded p-1 text-(--muted) hover:text-(--fg)">
+                                    <Icon icon="mdi:close" className="size-5" />
+                                </button>
                             </div>
-                            <div className="flex flex-col gap-1">
-                                <div className="flex items-center justify-between">
-                                    <span className="text-xs text-(--muted)">用户消息模板</span>
-                                    <button
-                                        onClick={() => persistUserPromptTemplate(DEFAULT_USER_PROMPT_TEMPLATE)}
-                                        className="text-[10px] text-(--accent-text) hover:underline"
-                                    >
-                                        恢复默认
-                                    </button>
+
+                            <div className="space-y-3">
+                                <label className="flex flex-col gap-1 text-xs text-(--muted)">
+                                    工具箱地址
+                                    <input
+                                        type="url"
+                                        value={toolBase}
+                                        onChange={(e) => persistToolBase(e.target.value)}
+                                        placeholder="http://localhost:5173"
+                                        className="w-full rounded-lg border border-(--card-border) bg-(--input-bg) px-2 py-1.5 text-sm outline-none focus:border-(--accent)/60"
+                                    />
+                                </label>
+                                <label className="flex flex-col gap-1 text-xs text-(--muted)">
+                                    DeepSeek API Key
+                                    <input
+                                        type="password"
+                                        value={apiKey}
+                                        onChange={(e) => persistApiKey(e.target.value)}
+                                        placeholder="sk-..."
+                                        className="w-full rounded-lg border border-(--card-border) bg-(--input-bg) px-2 py-1.5 text-sm outline-none focus:border-(--accent)/60"
+                                    />
+                                </label>
+                                <div className="flex flex-col gap-1">
+                                    <div className="flex items-center justify-between">
+                                        <span className="text-xs text-(--muted)">系统提示词模板</span>
+                                        <button
+                                            onClick={() => persistSystemPrompt(DEFAULT_SYSTEM_PROMPT)}
+                                            className="text-[10px] text-(--accent-text) hover:underline"
+                                        >
+                                            恢复默认
+                                        </button>
+                                    </div>
+                                    <textarea
+                                        value={systemPrompt}
+                                        onChange={(e) => persistSystemPrompt(e.target.value)}
+                                        
+                                        placeholder="支持 {ZONE_LIST} 占位符"
+                                        className="w-full rounded-lg border border-(--card-border) bg-(--input-bg) px-2 py-1.5 font-mono text-[11px] leading-relaxed outline-none focus:border-(--accent)/60"
+                                        style={{ minHeight: '200px' }}
+                                    />
                                 </div>
-                                <textarea
-                                    value={userPromptTemplate}
-                                    onChange={(e) => persistUserPromptTemplate(e.target.value)}
-                                    rows={6}
-                                    placeholder="支持 {ENTITY_TYPE} {ENTITY_NAME} {INFO}"
-                                    className="w-full resize-y rounded-lg border border-(--card-border) bg-(--input-bg) px-2 py-1.5 font-mono text-[11px] leading-relaxed outline-none focus:border-(--accent)/60"
-                                />
-                            </div>
-                            <div className="flex flex-col gap-1">
-                                <div className="flex items-center justify-between">
-                                    <span className="text-xs text-(--muted)">黑话词典（每行：原叫法=黑话；行尾可用 // 注释）</span>
-                                    <button
-                                        onClick={() => persistSlangDict(DEFAULT_SLANG_DICT)}
-                                        className="text-[10px] text-(--accent-text) hover:underline"
-                                    >
-                                        恢复默认
-                                    </button>
+                                <div className="flex flex-col gap-1">
+                                    <div className="flex items-center justify-between">
+                                        <span className="text-xs text-(--muted)">用户消息模板</span>
+                                        <button
+                                            onClick={() => persistUserPromptTemplate(DEFAULT_USER_PROMPT_TEMPLATE)}
+                                            className="text-[10px] text-(--accent-text) hover:underline"
+                                        >
+                                            恢复默认
+                                        </button>
+                                    </div>
+                                    <textarea
+                                        value={userPromptTemplate}
+                                        onChange={(e) => persistUserPromptTemplate(e.target.value)}
+                                        
+                                        placeholder="支持 {ENTITY_TYPE} {ENTITY_NAME} {INFO}"
+                                        className="w-full rounded-lg border border-(--card-border) bg-(--input-bg) px-2 py-1.5 font-mono text-[11px] leading-relaxed outline-none focus:border-(--accent)/60"
+                                        style={{ minHeight: '100px' }}
+                                    />
                                 </div>
-                                <textarea
-                                    value={slangDict}
-                                    onChange={(e) => persistSlangDict(e.target.value)}
-                                    rows={5}
-                                    placeholder={'光合能量=回路能量 // 注释'}
-                                    className="w-full resize-y rounded-lg border border-(--card-border) bg-(--input-bg) px-2 py-1.5 font-mono text-[11px] leading-relaxed outline-none focus:border-(--accent)/60"
-                                />
+                                <div className="flex flex-col gap-1">
+                                    <div className="flex items-center justify-between">
+                                        <span className="text-xs text-(--muted)">黑话词典（每行：原叫法=黑话；行尾可用 // 注释）</span>
+                                        <button
+                                            onClick={() => persistSlangDict(DEFAULT_SLANG_DICT)}
+                                            className="text-[10px] text-(--accent-text) hover:underline"
+                                        >
+                                            恢复默认
+                                        </button>
+                                    </div>
+                                    <textarea
+                                        value={slangDict}
+                                        onChange={(e) => persistSlangDict(e.target.value)}
+                                        
+                                        placeholder={'光合能量=回路能量 // 注释'}
+                                        className="w-full rounded-lg border border-(--card-border) bg-(--input-bg) px-2 py-1.5 font-mono text-[11px] leading-relaxed outline-none focus:border-(--accent)/60"
+                                        style={{ minHeight: '100px' }}
+                                    />
+                                </div>
+                                <p className="text-[10px] text-(--muted)">
+                                    提示词与词典仅存本机浏览器。可在编辑时对生成结果追问。
+                                </p>
                             </div>
-                            <p className="text-[10px] text-(--muted)">
-                                提示词与词典仅存本机浏览器。可在编辑时对生成结果追问。
-                            </p>
+
+                            <div className="mt-3 flex justify-end border-t border-(--card-border) pt-3">
+                                <button
+                                    onClick={() => setShowConfig(false)}
+                                    className="rounded-lg px-4 py-1.5 text-sm font-medium text-(--btn-text) transition-all hover:brightness-110"
+                                    style={{ background: 'var(--btn-bg)' }}
+                                >
+                                    完成
+                                </button>
+                            </div>
                         </div>
-                    )}
-                </details>
+                    </div>
+                )}
 
                 <div className="lg:h-[calc(100vh-16rem)]">
                     <BuffEntitySidebar
