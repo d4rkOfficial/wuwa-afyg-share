@@ -2,7 +2,7 @@ import Link from 'next/link'
 import { Icon } from '@iconify/react'
 import SetupNotice from '@/components/setup-notice'
 import { createClient, hasEnv } from '@/lib/supabase/server'
-import { BUFF_ENTITY_LABELS, BUFF_ZONE_MAP, BUFF_ENTITY_TYPES } from '@/lib/consts/buff-zones'
+import { BUFF_ENTITY_LABELS, BUFF_ZONE_MAP, BUFF_ENTITY_TYPES, BUFF_SCOPE_LABELS } from '@/lib/consts/buff-zones'
 import type { BuffSetRow } from '@/lib/types/db'
 
 export const dynamic = 'force-dynamic'
@@ -11,7 +11,9 @@ export default async function BuffSetsPage() {
     if (!hasEnv()) return <SetupNotice />
 
     const supabase = await createClient()
-    const { data, error } = await supabase.from('buff_sets').select('entity_type, entity_name, buff_name, buff_set')
+    const { data, error } = await supabase
+        .from('buff_sets')
+        .select('entity_type, entity_name, buff_name, scope, exclusive, buff_set')
 
     const rows = (data ?? []) as BuffSetRow[]
 
@@ -55,13 +57,30 @@ export default async function BuffSetsPage() {
                                         <span className="font-medium text-(--fg)">{item.entity_name}</span>
                                         <span className="text-xs text-(--muted)">{item.buff_name}</span>
                                     </div>
+                                    <div className="mb-2 flex flex-wrap gap-1">
+                                        <span className="rounded bg-(--accent)/10 px-1.5 py-0.5 text-[10px] text-(--accent-text)">
+                                            {BUFF_SCOPE_LABELS[item.scope] ?? item.scope}
+                                        </span>
+                                        {item.exclusive && (
+                                            <span className="rounded bg-amber-500/10 px-1.5 py-0.5 text-[10px] text-amber-400">
+                                                效应专属
+                                            </span>
+                                        )}
+                                    </div>
                                     <ul className="space-y-1">
                                         {item.buff_set.map((zone, i) => (
-                                            <li key={i} className="flex items-center justify-between text-sm">
-                                                <span className="text-(--muted)">{zoneLabel(zone.zoneId)}</span>
-                                                <span className="text-(--fg)">
+                                            <li key={i} className="flex items-center justify-between gap-2 text-sm">
+                                                <span className="truncate text-(--muted)">
+                                                    {zoneLabel(zone.zoneId)}
+                                                    {zone.ref && (
+                                                        <span className="ml-1 text-[10px] text-sky-400">
+                                                            引用{zoneLabel(zone.ref.targetZoneId)}×{zone.ref.pct}%
+                                                        </span>
+                                                    )}
+                                                </span>
+                                                <span className="shrink-0 text-(--fg)">
                                                     {zone.override ? '覆盖+ ' : '+ '}
-                                                    {zone.value}
+                                                    {zone.ref ? '引用' : zone.value}
                                                 </span>
                                             </li>
                                         ))}

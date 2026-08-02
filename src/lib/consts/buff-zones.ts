@@ -1,4 +1,4 @@
-import type { BuffEntityType } from '@/lib/types/db'
+import type { BuffEntityType, BuffScope } from '@/lib/types/db'
 
 export interface BuffZoneDef {
     id: string
@@ -47,4 +47,30 @@ export const BUFF_ENTITY_LABELS: Record<BuffEntityType, string> = {
     '3set': '套装 3件',
     '4set': '套装 4件',
     '5set': '套装 5件'
+}
+
+// 引用乘区白名单（对齐 wuwa-afyg-tool 的 ZONE_REF_DEFS）
+export const BUFF_REF_ZONES: Array<{ id: string; label: string; unit: '%' | 'flat' }> = [
+    { id: 'baseAtk', label: '攻击白值', unit: 'flat' },
+    { id: 'totalAtk', label: '当前攻击', unit: 'flat' },
+    { id: 'baseHp', label: '生命白值', unit: 'flat' },
+    { id: 'totalHp', label: '生命上限', unit: 'flat' },
+    { id: 'baseDef', label: '防御白值', unit: 'flat' },
+    { id: 'totalDef', label: '当前防御', unit: 'flat' },
+    { id: 'recharge', label: '共鸣效率', unit: '%' },
+    { id: 'tuneBreakBoost', label: '谐度破坏增幅', unit: 'flat' },
+    { id: 'offTuneBuildupRate', label: '偏谐值累积效率', unit: '%' },
+    { id: 'critRate', label: '暴击率', unit: '%' },
+    { id: 'critDmg', label: '暴击伤害', unit: '%' }
+]
+
+export const BUFF_REF_ZONE_MAP = new Map(BUFF_REF_ZONES.map((z) => [z.id, z]))
+
+export const BUFF_SCOPES: BuffScope[] = ['self', 'self_except', 'team', 'effect_only']
+
+export const BUFF_SCOPE_LABELS: Record<BuffScope, string> = {
+    self: '对自己',
+    self_except: '自己除外',
+    team: '对全队',
+    effect_only: '效应专属'
 }

@@ -26,7 +26,7 @@ export async function GET(req: Request) {
 
     let query = supabase
         .from('buff_sets')
-        .select('entity_type, entity_name, buff_name, buff_set')
+        .select('entity_type, entity_name, buff_name, scope, exclusive, buff_set')
 
     if (entityType && ENTITY_TYPES.has(entityType)) query = query.eq('entity_type', entityType)
     if (entityName) query = query.eq('entity_name', entityName)

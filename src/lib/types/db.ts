@@ -31,12 +31,27 @@ export interface ProfileRow {
     created_at: string
 }
 
-// Buff 集数据行类型（0009_buff_sets.sql）
+// Buff 集数据行类型（0009_buff_sets.sql / 0011_buff_sets_meta.sql）
 export type BuffEntityType = 'character' | 'weapon' | 'echo' | '1set' | '2set' | '3set' | '4set' | '5set'
+
+// 受影响者：自己 / 自己除外 / 全队 / 效应专属
+export type BuffScope = 'self' | 'self_except' | 'team' | 'effect_only'
+
+export interface BuffZoneRef {
+    targetZoneId: string
+    pct: number
+    threshold?: number
+    lower?: number
+    upper?: number
+    discrete?: boolean
+    divisor?: number
+    multiplier?: number
+}
 
 export interface BuffZoneValue {
     zoneId: string
     value: number
+    ref?: BuffZoneRef
     override?: boolean
 }
 
@@ -44,5 +59,7 @@ export interface BuffSetRow {
     entity_type: BuffEntityType
     entity_name: string
     buff_name: string
+    scope: BuffScope
+    exclusive: boolean
     buff_set: BuffZoneValue[]
 }
