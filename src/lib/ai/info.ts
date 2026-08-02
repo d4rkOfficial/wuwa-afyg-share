@@ -71,3 +71,21 @@ export async function fetchToolInfo(toolBase: string, entityType: BuffEntityType
     const json = await res.json()
     return (json as { error?: string }).error ? null : json
 }
+
+// 交给 AI 前裁剪噪音字段：
+// - 武器：主词条(lv90BaseAtk)、副词条(substat) 不算 buff，只保留效果 effect
+// - 角色：lv90BaseStats（基础生命/攻击/防御）不算 buff，剔除
+export function prepareAiInfo(entityType: BuffEntityType, info: unknown): unknown {
+    if (info && typeof info === 'object') {
+        const o = info as Record<string, unknown>
+        if (entityType === 'weapon') {
+            return { effect: o.effect }
+        }
+        if (entityType === 'character') {
+            const rest: Record<string, unknown> = { ...o }
+            delete rest.lv90BaseStats
+            return rest
+        }
+    }
+    return info
+}

@@ -169,7 +169,7 @@ export function sanitizeBuffs(buffs: GeneratedBuff[]): GeneratedBuff[] {
         if (!zones.length) continue
         const scope: BuffScope =
             b.scope && BUFF_SCOPES.includes(b.scope as BuffScope) ? (b.scope as BuffScope) : 'team'
-        const exclusive = !!b.exclusive
+        const exclusive = scope === 'effect_only' || !!b.exclusive
         seen.add(name)
         out.push({ buffName: name, scope, exclusive, zones })
     }

@@ -123,19 +123,22 @@ export default function BuffSetsAdmin({ rows }: Props) {
             </div>
 
             {/* 右侧侧栏 */}
-            <div className="lg:w-80 shrink-0">
+            <div className="shrink-0 lg:order-last lg:w-72">
                 {/* 配置折叠面板 */}
-                <div className="mb-3 rounded-xl border border-(--card-border) bg-(--card) p-3">
-                    <button
-                        onClick={() => setShowConfig((v) => !v)}
-                        className="flex w-full items-center justify-between text-left text-xs font-medium text-(--muted)"
+                <details className="mb-3 rounded-xl border border-(--card-border) bg-(--card) p-3" open={showConfig}>
+                    <summary
+                        onClick={(e) => {
+                            e.preventDefault()
+                            setShowConfig((v) => !v)
+                        }}
+                        className="flex cursor-pointer select-none items-center justify-between text-left text-xs font-medium text-(--muted)"
                     >
                         <span className="flex items-center gap-1.5">
                             <Icon icon="mdi:cog-outline" className="size-4" />
                             连接配置
                         </span>
                         <Icon icon={showConfig ? 'mdi:chevron-up' : 'mdi:chevron-down'} className="size-4" />
-                    </button>
+                    </summary>
                     {showConfig && (
                         <div className="mt-3 space-y-2">
                             <label className="flex flex-col gap-1 text-xs text-(--muted)">
@@ -196,7 +199,7 @@ export default function BuffSetsAdmin({ rows }: Props) {
                             </div>
                             <div className="flex flex-col gap-1">
                                 <div className="flex items-center justify-between">
-                                    <span className="text-xs text-(--muted)">黑话词典（每行：原叫法→黑话）</span>
+                                    <span className="text-xs text-(--muted)">黑话词典（每行：原叫法=黑话；行尾可用 // 注释）</span>
                                     <button
                                         onClick={() => persistSlangDict(DEFAULT_SLANG_DICT)}
                                         className="text-[10px] text-(--accent-text) hover:underline"
@@ -208,7 +211,7 @@ export default function BuffSetsAdmin({ rows }: Props) {
                                     value={slangDict}
                                     onChange={(e) => persistSlangDict(e.target.value)}
                                     rows={5}
-                                    placeholder={'光合能量→回路能量'}
+                                    placeholder={'光合能量=回路能量 // 注释'}
                                     className="w-full resize-y rounded-lg border border-(--card-border) bg-(--input-bg) px-2 py-1.5 font-mono text-[11px] leading-relaxed outline-none focus:border-(--accent)/60"
                                 />
                             </div>
@@ -217,7 +220,7 @@ export default function BuffSetsAdmin({ rows }: Props) {
                             </p>
                         </div>
                     )}
-                </div>
+                </details>
 
                 <div className="lg:h-[calc(100vh-16rem)]">
                     <BuffEntitySidebar

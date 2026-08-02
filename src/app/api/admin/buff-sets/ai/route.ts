@@ -1,5 +1,5 @@
 import { requireAdmin } from '@/lib/supabase/admin'
-import { fetchToolInfo } from '@/lib/ai/info'
+import { fetchToolInfo, prepareAiInfo } from '@/lib/ai/info'
 import { chatCompletionStream, DeepSeekError, sanitizeBuffs, type ChatMessage } from '@/lib/ai/deepseek'
 import { renderSystemPrompt, renderUserPrompt, DEFAULT_SYSTEM_PROMPT, DEFAULT_USER_PROMPT_TEMPLATE } from '@/lib/ai/prompts'
 import { BUFF_ENTITY_TYPES } from '@/lib/consts/buff-zones'
@@ -86,7 +86,9 @@ export async function POST(req: Request) {
 
             try {
                 // 组装消息：首轮渲染 info；追问用历史 + 新消息
-                const messages: ChatMessage[] = [{ role: 'system', content: renderSystemPrompt(systemTemplate, slangDict) }]
+                const systemContent = renderSystemPrompt(systemTemplate, slangDict)
+                const messages: ChatMessage[] = [{ role: 'system', content: systemContent }]
+                push({ type: 'prompt', kind: 'system', text: systemContent })
 
                 const infoUrl = `${toolBase}/api/v1/info/${toolInfoEntity(entityType)}/${encodeURIComponent(entityName)}`
                 pushLog(`拉取工具箱 info：${infoUrl}`)
@@ -97,14 +99,21 @@ export async function POST(req: Request) {
                 }
                 pushLog(`工具箱 info 获取成功（${JSON.stringify(info).length} 字符）`, 'success')
 
-                const initialUser = renderUserPrompt(userTemplate, { entityType, entityName, info })
+                const initialUser = renderUserPrompt(userTemplate, {
+                    entityType,
+                    entityName,
+                    info: prepareAiInfo(entityType, info)
+                })
                 messages.push({ role: 'user', content: initialUser })
+                push({ type: 'prompt', kind: 'user', text: initialUser })
 
                 if (history.length > 0) {
                     messages.push(...history)
+                    push({ type: 'prompt', kind: 'history', text: JSON.stringify(history) })
                 }
                 if (newUserMessage) {
                     messages.push({ role: 'user', content: newUserMessage })
+                    push({ type: 'prompt', kind: 'user', text: newUserMessage })
                 }
 
                 pushLog(`请求 DeepSeek（model=deepseek-v4-flash, max_tokens=65536, 消息数=${messages.length}）…`)

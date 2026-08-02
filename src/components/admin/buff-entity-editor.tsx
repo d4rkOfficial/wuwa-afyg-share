@@ -22,7 +22,7 @@ interface LogEntry {
 }
 
 interface StreamEvent {
-    type: 'log' | 'result' | 'error' | 'ai' | 'reasoning'
+    type: 'log' | 'result' | 'error' | 'ai' | 'reasoning' | 'prompt'
     level?: 'info' | 'success' | 'error' | 'debug'
     text?: string
     data?: unknown
@@ -30,6 +30,7 @@ interface StreamEvent {
     debug?: string
     rawContent?: string
     parseError?: string | null
+    kind?: 'system' | 'user' | 'history'
 }
 
 async function readNdjsonStream(
@@ -151,6 +152,8 @@ export default function BuffEntityEditor({
     const [showReasoning, setShowReasoning] = useState(false)
     const [aiHistory, setAiHistory] = useState<{ role: 'user' | 'assistant'; content: string }[]>([])
     const [followUp, setFollowUp] = useState('')
+    const [prompts, setPrompts] = useState<{ kind: 'system' | 'user' | 'history'; text: string }[]>([])
+    const [showPrompts, setShowPrompts] = useState(false)
     const [logs, setLogs] = useState<LogEntry[]>([])
     const [showLogs, setShowLogs] = useState(false)
     const logBoxRef = useRef<HTMLDivElement>(null)
@@ -174,6 +177,8 @@ export default function BuffEntityEditor({
         setAiParseError(null)
         setAiOutput('')
         setAiReasoning('')
+        setPrompts([])
+        setShowPrompts(true)
         setLogs([])
         setShowLogs(true)
         try {
@@ -195,6 +200,8 @@ export default function BuffEntityEditor({
             await readNdjsonStream(res, (evt) => {
                 if (evt.type === 'log') {
                     setLogs((prev) => [...prev, { level: evt.level ?? 'info', text: evt.text ?? '' }])
+                } else if (evt.type === 'prompt') {
+                    setPrompts((prev) => [...prev, { kind: evt.kind ?? 'user', text: evt.text ?? '' }])
                 } else if (evt.type === 'ai') {
                     setAiOutput((prev) => prev + (evt.text ?? ''))
                 } else if (evt.type === 'reasoning') {
@@ -246,6 +253,8 @@ export default function BuffEntityEditor({
         setAiParseError(null)
         setAiOutput('')
         setAiReasoning('')
+        setPrompts([])
+        setShowPrompts(false)
         setAiError(null)
         setLogs([])
         setShowLogs(false)
@@ -325,7 +334,7 @@ export default function BuffEntityEditor({
     }
 
     function setBuffScope(idx: number, scope: BuffScope) {
-        setBuffs((prev) => prev.map((b, i) => (i === idx ? { ...b, scope } : b)))
+        setBuffs((prev) => prev.map((b, i) => (i === idx ? { ...b, scope, exclusive: scope === 'effect_only' ? true : b.exclusive } : b)))
     }
 
     function setBuffExclusive(idx: number, exclusive: boolean) {
@@ -540,7 +549,7 @@ export default function BuffEntityEditor({
                 </button>
             </div>
 
-            <div className="space-y-3">
+            <div className="grid grid-cols-1 gap-3 xl:grid-cols-2">
                 {buffs.length === 0 ? (
                     <div className="rounded-lg border border-(--card-border) bg-(--card-hover) px-3 py-6 text-center text-xs text-(--muted)">
                         暂无 Buff，点击右上角「新增 Buff」或使用下方 AI 生成
@@ -556,30 +565,25 @@ export default function BuffEntityEditor({
                                     maxLength={80}
                                     className="min-w-0 flex-1 rounded border border-(--card-border) bg-(--input-bg) px-2 py-1.5 text-sm outline-none focus:border-(--accent)/60"
                                 />
-                                <button
-                                    onClick={() => removeBuff(idx)}
-                                    className="shrink-0 rounded p-1 text-(--muted) transition-colors hover:text-red-400"
-                                    title="移除该 Buff"
-                                >
-                                    <Icon icon="mdi:close" className="size-4" />
-                                </button>
-                            </div>
-                            <div className="mb-2 flex flex-wrap items-center gap-2">
-                                <select
-                                    value={buff.scope}
-                                    onChange={(e) => setBuffScope(idx, e.target.value as BuffScope)}
-                                    className="rounded-lg border border-(--card-border) bg-(--input-bg) px-2 py-1 text-xs outline-none focus:border-(--accent)/60"
-                                    title="受影响者"
-                                >
+                                <div className="flex shrink-0 overflow-hidden rounded-lg border border-(--card-border)">
                                     {BUFF_SCOPES.map((s) => (
-                                        <option key={s} value={s}>
+                                        <button
+                                            key={s}
+                                            onClick={() => setBuffScope(idx, s)}
+                                            className={`px-2 py-1 text-[10px] transition-colors ${
+                                                buff.scope === s
+                                                    ? 'bg-(--accent)/15 text-(--accent-text)'
+                                                    : 'bg-(--input-bg) text-(--muted) hover:text-(--fg)'
+                                            }`}
+                                            title={BUFF_SCOPE_LABELS[s]}
+                                        >
                                             {BUFF_SCOPE_LABELS[s]}
-                                        </option>
+                                        </button>
                                     ))}
-                                </select>
+                                </div>
                                 <button
                                     onClick={() => setBuffExclusive(idx, !buff.exclusive)}
-                                    className={`inline-flex items-center gap-1 rounded-lg border px-2 py-1 text-[10px] transition-colors ${
+                                    className={`shrink-0 inline-flex items-center gap-1 rounded-lg border px-2 py-1 text-[10px] transition-colors ${
                                         buff.exclusive
                                             ? 'border-(--accent) text-(--accent-text)'
                                             : 'border-transparent text-(--muted) hover:text-(--fg)'
@@ -587,7 +591,14 @@ export default function BuffEntityEditor({
                                     title="是否专属于某效应"
                                 >
                                     <Icon icon={buff.exclusive ? 'mdi:check' : 'mdi:circle-outline'} className="size-3" />
-                                    {buff.exclusive ? '效应专属' : '非专属'}
+                                    {buff.exclusive ? '专属' : '普通'}
+                                </button>
+                                <button
+                                    onClick={() => removeBuff(idx)}
+                                    className="shrink-0 rounded p-1 text-(--muted) transition-colors hover:text-red-400"
+                                    title="移除该 Buff"
+                                >
+                                    <Icon icon="mdi:close" className="size-4" />
                                 </button>
                             </div>
 
@@ -790,6 +801,55 @@ export default function BuffEntityEditor({
                                         {aiDebug}
                                     </pre>
                                 )}
+                            </div>
+                        )}
+                    </div>
+                )}
+
+                {/* 本次提示词（处理后发送给 AI 的内容） */}
+                {showPrompts && prompts.length > 0 && (
+                    <div className="mt-2 rounded-lg border border-(--card-border) bg-black/10 p-2">
+                        <div className="mb-1 flex items-center justify-between">
+                            <span className="text-[10px] text-(--muted)">
+                                发送给 AI 的提示词（{prompts.length} 段）
+                            </span>
+                            <div className="flex items-center gap-1.5">
+                                <button
+                                    onClick={() => setShowPrompts((v) => !v)}
+                                    className="inline-flex items-center gap-1 rounded border border-(--card-border) px-1.5 py-0.5 text-[10px] text-(--muted) hover:text-(--fg)"
+                                >
+                                    <Icon icon={showPrompts ? 'mdi:chevron-up' : 'mdi:chevron-down'} className="size-3" />
+                                    {showPrompts ? '收起' : '展开'}
+                                </button>
+                                <button
+                                    onClick={() => {
+                                        navigator.clipboard.writeText(
+                                            prompts.map((p) => `===== ${p.kind} =====\n${p.text}`).join('\n\n')
+                                        )
+                                    }}
+                                    className="inline-flex items-center gap-1 rounded border border-(--card-border) px-1.5 py-0.5 text-[10px] text-(--muted) hover:text-(--fg)"
+                                >
+                                    <Icon icon="mdi:content-copy" className="size-3" />
+                                    复制全部
+                                </button>
+                            </div>
+                        </div>
+                        {showPrompts && (
+                            <div className="space-y-1.5">
+                                {prompts.map((p, i) => (
+                                    <pre
+                                        key={i}
+                                        className={`max-h-48 overflow-auto whitespace-pre-wrap rounded bg-black/20 p-2 font-mono text-[10px] leading-relaxed ${
+                                            p.kind === 'system'
+                                                ? 'text-violet-300'
+                                                : p.kind === 'history'
+                                                  ? 'text-amber-300'
+                                                  : 'text-emerald-300'
+                                        }`}
+                                    >
+                                        {p.text}
+                                    </pre>
+                                ))}
                             </div>
                         )}
                     </div>

@@ -15,10 +15,6 @@ interface Props {
 
 interface ToolEntry {
     name: string
-    star?: number
-    element?: string
-    weaponType?: string
-    cost?: number
 }
 
 interface StreamEvent {
@@ -66,7 +62,7 @@ export default function BuffEntitySidebar({
     const [loading, setLoading] = useState(false)
     const [tab, setTab] = useState<BuffEntityType>('character')
     const [search, setSearch] = useState('')
-    const [catalog, setCatalog] = useState<{ name: string; extra?: string }[] | null>(null)
+    const [catalog, setCatalog] = useState<string[] | null>(null)
     const [error, setError] = useState<string | null>(null)
     const [loadedFor, setLoadedFor] = useState<BuffEntityType | null>(null)
 
@@ -94,14 +90,7 @@ export default function BuffEntitySidebar({
             } else {
                 const seen = new Set<string>()
                 setCatalog(
-                    list
-                        .filter((e) => (seen.has(e.name) ? false : (seen.add(e.name), true)))
-                        .map((e) => ({
-                            name: e.name,
-                            extra: [e.star ? `★${e.star}` : '', e.element, e.weaponType, e.cost ? `${e.cost}费` : '']
-                                .filter(Boolean)
-                                .join(' · ') || undefined
-                        }))
+                    list.filter((e) => (seen.has(e.name) ? false : (seen.add(e.name), true))).map((e) => e.name)
                 )
             }
         } catch {
@@ -118,24 +107,19 @@ export default function BuffEntitySidebar({
         if (loadedFor !== type) load(type)
     }
 
-    const filtered = (catalog ?? []).filter((e) => e.name.includes(search.trim()))
+    const filtered = (catalog ?? []).filter((name) => name.includes(search.trim()))
 
     return (
-        <aside className="flex h-full flex-col rounded-xl border border-(--card-border) bg-(--card) p-3">
-            {/* 配置 */}
-            <div className="mb-2 space-y-1.5 border-b border-(--card-border) pb-2">
-                <div className="text-[10px] text-(--muted)">
-                    工具箱地址：{toolBase || '未配置'}
-                </div>
-                <button
-                    onClick={onNew}
-                    className="flex w-full items-center justify-center gap-1 rounded-lg px-3 py-1.5 text-xs font-medium text-(--btn-text) transition-all hover:brightness-110"
-                    style={{ background: 'var(--btn-bg)' }}
-                >
-                    <Icon icon="mdi:plus" className="size-3.5" />
-                    新增实体
-                </button>
-            </div>
+        <aside className="flex h-full max-h-[60vh] flex-col rounded-xl border border-(--card-border) bg-(--card) p-3 lg:max-h-none">
+            {/* 新增按钮 */}
+            <button
+                onClick={onNew}
+                className="mb-2 flex w-full items-center justify-center gap-1 rounded-lg px-3 py-1.5 text-xs font-medium text-(--btn-text) transition-all hover:brightness-110"
+                style={{ background: 'var(--btn-bg)' }}
+            >
+                <Icon icon="mdi:plus" className="size-3.5" />
+                新增实体
+            </button>
 
             {/* 搜索 */}
             <input
@@ -162,31 +146,28 @@ export default function BuffEntitySidebar({
 
             {/* 列表 */}
             <div className="min-h-0 flex-1 space-y-0.5 overflow-y-auto pr-0.5">
-                {error && (
-                    <div className="rounded-lg bg-red-500/10 px-2 py-2 text-xs text-red-400">{error}</div>
-                )}
+                {error && <div className="rounded-lg bg-red-500/10 px-2 py-2 text-xs text-red-400">{error}</div>}
                 {!error && catalog === null && loading && (
                     <div className="px-2 py-3 text-center text-xs text-(--muted)">加载中…</div>
                 )}
                 {!error && catalog !== null && filtered.length === 0 && (
                     <div className="px-2 py-3 text-center text-xs text-(--muted)">无匹配实体</div>
                 )}
-                {filtered.map((e) => {
-                    const key = entityKey(tab, e.name)
+                {filtered.map((name) => {
+                    const key = entityKey(tab, name)
                     const count = existingCountMap[key] ?? 0
-                    const active = selected?.entityType === tab && selected.entityName === e.name
+                    const active = selected?.entityType === tab && selected.entityName === name
                     return (
                         <button
-                            key={e.name}
-                            onClick={() => onSelect({ entityType: tab, entityName: e.name })}
+                            key={name}
+                            onClick={() => onSelect({ entityType: tab, entityName: name })}
                             className={`flex w-full items-center gap-2 rounded-lg px-2 py-1.5 text-left text-sm transition-colors ${
                                 active ? 'bg-(--accent)/15 text-(--accent-text)' : 'text-(--fg) hover:bg-(--card-hover)'
                             }`}
                         >
-                            <span className="min-w-0 flex-1 truncate">{e.name}</span>
-                            {e.extra && <span className="shrink-0 text-[10px] text-(--muted)">{e.extra}</span>}
+                            <span className="min-w-0 flex-1 truncate">{name}</span>
                             {count > 0 ? (
-                                <span className="shrink-0 rounded bg-(--accent)/15 px-1.5 py-0.5 text-[10px] text-(--accent-text)">
+                                <span className="shrink-0 rounded-full bg-(--accent)/15 px-2 py-0.5 text-[10px] text-(--accent-text)">
                                     {count}
                                 </span>
                             ) : (
