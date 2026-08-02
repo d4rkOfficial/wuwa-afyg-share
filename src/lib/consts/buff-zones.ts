@@ -1,0 +1,50 @@
+import type { BuffEntityType } from '@/lib/types/db'
+
+export interface BuffZoneDef {
+    id: string
+    label: string
+    unit: '%' | 'flat'
+}
+
+// 与 wuwa-afyg-tool 的 ZONE_DEFS 保持一致，作为 Buff 集 zoneId 白名单。
+// 编辑器下拉、展示均以此为准，避免脏数据写入。
+export const BUFF_ZONES: BuffZoneDef[] = [
+    { id: 'atkFlat', label: '攻击固定值', unit: 'flat' },
+    { id: 'atkPct', label: '攻击百分比', unit: '%' },
+    { id: 'hpFlat', label: '生命固定值', unit: 'flat' },
+    { id: 'hpPct', label: '生命百分比', unit: '%' },
+    { id: 'defFlat', label: '防御固定值', unit: 'flat' },
+    { id: 'defPct', label: '防御百分比', unit: '%' },
+    { id: 'critRate', label: '暴击率', unit: '%' },
+    { id: 'critDmg', label: '暴击伤害', unit: '%' },
+    { id: 'recharge', label: '共鸣效率', unit: '%' },
+    { id: 'tuneBreakBoost', label: '谐度破坏增幅', unit: 'flat' },
+    { id: 'offTuneBuildupRate', label: '偏谐值累积效率', unit: '%' },
+    { id: 'bonusDmg', label: '加成(增伤区)', unit: '%' },
+    { id: 'deepenDmg', label: '加深(加深区)', unit: '%' },
+    { id: 'resPen', label: '对目标属性抗性无视(穿抗)', unit: '%' },
+    { id: 'defPen', label: '对目标防御无视(穿防)', unit: '%' },
+    { id: 'defDown', label: '目标防御降低(减防)', unit: '%' },
+    { id: 'dmgRedPen', label: '对目标免伤无视(穿免)', unit: '%' },
+    { id: 'resDown', label: '目标抗性降低(减抗)', unit: '%' },
+    { id: 'tuneStrainLayer', label: '集谐干涉层数', unit: 'flat' },
+    { id: 'finalDmg', label: '最终伤害(终伤区)', unit: '%' },
+    { id: 'dmgTakenInc', label: '伤害提升(易伤区)', unit: '%' },
+    { id: 'customFinalDmg', label: '倍率/其它(特殊终伤)', unit: '%' },
+    { id: 'extraRatio', label: '额外倍率', unit: '%' }
+]
+
+export const BUFF_ZONE_MAP = new Map(BUFF_ZONES.map((z) => [z.id, z]))
+
+export const BUFF_ENTITY_TYPES = ['character', 'weapon', 'echo', '1set', '2set', '3set', '4set', '5set'] as const
+
+export const BUFF_ENTITY_LABELS: Record<BuffEntityType, string> = {
+    character: '角色',
+    weapon: '武器',
+    echo: '首位声骸',
+    '1set': '套装 1件',
+    '2set': '套装 2件',
+    '3set': '套装 3件',
+    '4set': '套装 4件',
+    '5set': '套装 5件'
+}

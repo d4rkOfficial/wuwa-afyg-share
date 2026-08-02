@@ -23,3 +23,26 @@ export interface ProjectRow {
 
 // 列表页用投影（不含大字段 project_blob）
 export type ProjectListItem = Omit<ProjectRow, 'file_size'>
+
+export interface ProfileRow {
+    id: string
+    username: string
+    is_admin: boolean
+    created_at: string
+}
+
+// Buff 集数据行类型（0009_buff_sets.sql）
+export type BuffEntityType = 'character' | 'weapon' | 'echo' | '1set' | '2set' | '3set' | '4set' | '5set'
+
+export interface BuffZoneValue {
+    zoneId: string
+    value: number
+    override?: boolean
+}
+
+export interface BuffSetRow {
+    entity_type: BuffEntityType
+    entity_name: string
+    buff_name: string
+    buff_set: BuffZoneValue[]
+}

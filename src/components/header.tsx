@@ -6,6 +6,7 @@ import { createClient, hasEnv } from '@/lib/supabase/server'
 export default async function Header() {
     let user: { id?: string; email?: string | null; user_metadata?: Record<string, unknown> } | null = null
     let profileName: string | null = null
+    let isAdmin = false
     if (hasEnv()) {
         const supabase = await createClient()
         const {
@@ -15,10 +16,11 @@ export default async function Header() {
         if (user) {
             const { data: profile } = await supabase
                 .from('profiles')
-                .select('username')
+                .select('username, is_admin')
                 .eq('id', user.id)
                 .maybeSingle()
             profileName = profile?.username ?? null
+            isAdmin = !!profile?.is_admin
         }
     }
 
@@ -38,6 +40,24 @@ export default async function Header() {
                 </Link>
 
                 <div className="flex-1" />
+
+                <Link
+                    href="/buff-sets"
+                    className="inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-sm text-(--muted) transition-colors hover:text-(--fg)"
+                >
+                    <Icon icon="mdi:view-dashboard-outline" className="size-4" />
+                    Buff 集
+                </Link>
+
+                {isAdmin && (
+                    <Link
+                        href="/admin/buff-sets"
+                        className="inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-sm text-(--muted) transition-colors hover:text-(--fg)"
+                    >
+                        <Icon icon="mdi:shield-edit-outline" className="size-4" />
+                        Buff 集管理
+                    </Link>
+                )}
 
                 {user ? (
                     <>
