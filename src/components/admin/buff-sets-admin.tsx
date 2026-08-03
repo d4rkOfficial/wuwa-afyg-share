@@ -25,6 +25,7 @@ const CONFIGURABLE_TOOLS = [
     'list_entities',
     'search_entities',
     'get_entity_info',
+    'get_character_terms',
     'get_buff_sets',
     'get_editing_context',
     'diff_buffs',

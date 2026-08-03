@@ -8,6 +8,7 @@ import {
     NAMING_RULES_TEXT,
     EXAMPLES_TEXT
 } from '@/lib/ai/prompts.config'
+import { analyzeCharacterTerms } from '@/lib/ai/terms'
 import type { BuffEntityType, BuffSetRow } from '@/lib/types/db'
 
 export interface ToolDefinition {
@@ -82,6 +83,21 @@ const BASE_TOOLS: ToolDefinition[] = [
                     entityName: { type: 'string', description: '实体名称（中文）' }
                 },
                 required: ['entityType', 'entityName']
+            }
+        }
+    },
+    {
+        type: 'function',
+        function: {
+            name: 'get_character_terms',
+            description:
+                '按需获取某角色的结构化术语速查：效果名【】、触发关键词（Highlight）、术语链接，以及每条技能/命座/固有去标签后的纯文本摘要。用于识别 buff 名称的触发来源与归属、以及判定元素/效果。',
+            parameters: {
+                type: 'object',
+                properties: {
+                    entityName: { type: 'string', description: '角色名称（中文）' }
+                },
+                required: ['entityName']
             }
         }
     },
@@ -277,6 +293,24 @@ export async function executeTool(ctx: ToolContext, name: string, args: Record<s
             const info = await fetchToolInfo(toolBase, entityType, entityName)
             if (info === null) return JSON.stringify({ error: `工具箱未找到「${entityName}」的信息` })
             return JSON.stringify(summarizeAiInfo(entityType, info))
+        }
+        case 'get_character_terms': {
+            const entityName = typeof args.entityName === 'string' ? args.entityName.trim() : ''
+            if (!entityName) return JSON.stringify({ error: '缺少实体名' })
+            const base = toolBase.replace(/\/+$/, '')
+            const res = await fetch(`${base}/api/v2/info/character/${encodeURIComponent(entityName)}`, {
+                headers: { Accept: 'application/json' },
+                cache: 'no-store'
+            })
+            if (!res.ok) {
+                if (res.status === 404) return JSON.stringify({ error: `工具箱未找到角色「${entityName}」` })
+                return JSON.stringify({ error: `工具箱 v2 接口失败（HTTP ${res.status}）` })
+            }
+            const info = await res.json()
+            if ((info as { error?: string }).error) {
+                return JSON.stringify({ error: (info as { error: string }).error })
+            }
+            return JSON.stringify(analyzeCharacterTerms(entityName, info))
         }
         case 'get_buff_sets': {
             if (!getBuffSets) return JSON.stringify({ error: '无法查询数据库' })
