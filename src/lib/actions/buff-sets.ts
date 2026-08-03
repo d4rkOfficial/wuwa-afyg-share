@@ -1,7 +1,7 @@
 'use server'
 
 import { revalidatePath } from 'next/cache'
-import { requireUser } from '@/lib/supabase/admin'
+import { requireAdmin } from '@/lib/supabase/admin'
 import { BUFF_ENTITY_TYPES, BUFF_ZONE_MAP, BUFF_REF_ZONE_MAP, BUFF_SCOPES } from '@/lib/consts/buff-zones'
 import type { BuffEntityType, BuffScope } from '@/lib/types/db'
 
@@ -11,9 +11,9 @@ export interface ActionResult<T = undefined> {
     debug?: string
 }
 
-// 登录用户即可编辑 buff 集
-async function withUser() {
-    const r = await requireUser()
+// 仅管理员（保存 / 删除等写操作）
+async function withAdmin() {
+    const r = await requireAdmin()
     if (!r.ok || !r.supabase) return { supabase: null as never, error: r.error ?? '无权限' }
     return { supabase: r.supabase, error: null as string | null }
 }
@@ -87,7 +87,7 @@ function normalizeScope(scope: unknown): BuffScope {
 }
 
 export async function upsertBuffSet(input: InputBuff): Promise<ActionResult> {
-    const auth = await withUser()
+    const auth = await withAdmin()
     if (auth.error || !auth.supabase) return { error: auth.error ?? '无权限' }
     const supabase = auth.supabase
 
@@ -121,7 +121,7 @@ export async function deleteBuffPreset(
     entityName: string,
     buffName: string
 ): Promise<ActionResult> {
-    const auth = await withUser()
+    const auth = await withAdmin()
     if (auth.error || !auth.supabase) return { error: auth.error ?? '无权限' }
     const supabase = auth.supabase
 
@@ -151,7 +151,7 @@ export interface UpsertEntityInput {
 }
 
 export async function upsertBuffEntity(input: UpsertEntityInput): Promise<ActionResult<{ saved: number }>> {
-    const auth = await withUser()
+    const auth = await withAdmin()
     if (auth.error || !auth.supabase) return { error: auth.error ?? '无权限' }
     const supabase = auth.supabase
 
@@ -201,7 +201,7 @@ export async function deleteBuffEntity(
     entityType: BuffEntityType,
     entityName: string
 ): Promise<ActionResult> {
-    const auth = await withUser()
+    const auth = await withAdmin()
     if (auth.error || !auth.supabase) return { error: auth.error ?? '无权限' }
     const supabase = auth.supabase
 

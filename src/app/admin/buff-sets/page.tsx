@@ -19,6 +19,13 @@ export default async function AdminBuffSetsPage() {
     } = await supabase.auth.getUser()
     if (!user) redirect('/login?redirect=/admin/buff-sets')
 
+    const { data: profile } = await supabase
+        .from('profiles')
+        .select('is_admin')
+        .eq('id', user.id)
+        .maybeSingle()
+    const isAdmin = !!profile?.is_admin
+
     const { data } = await supabase
         .from('buff_sets')
         .select('entity_type, entity_name, buff_name, scope, exclusive, buff_set')
@@ -31,11 +38,11 @@ export default async function AdminBuffSetsPage() {
             <div>
                 <h1 className="text-2xl font-bold">Buff 集管理</h1>
                 <p className="mt-1 text-sm text-(--muted)">
-                    左侧按整实体编辑，右侧从工具箱目录选择实体。保存即时发布。
+                    左侧按整实体编辑，右侧从工具箱目录选择实体。仅管理员可保存，非管理员可测试生成。
                 </p>
             </div>
 
-            <BuffSetsAdmin rows={rows} />
+            <BuffSetsAdmin rows={rows} isAdmin={isAdmin} />
         </div>
     )
 }

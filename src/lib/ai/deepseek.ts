@@ -9,13 +9,26 @@ const TIMEOUT_MS = 240000
 const MAX_TOKENS = 65536
 
 export interface ChatMessage {
-    role: 'system' | 'user' | 'assistant'
+    role: 'system' | 'user' | 'assistant' | 'tool'
     content: string
+    name?: string
+    tool_call_id?: string
+    tool_calls?: Array<{
+        id: string
+        type: 'function'
+        function: { name: string; arguments: string }
+    }>
 }
 
 export interface ChatDelta {
     content?: string
     reasoning?: string
+}
+
+export interface ChatToolCall {
+    id: string
+    name: string
+    arguments: string
 }
 
 export interface ChatResult {
@@ -28,11 +41,21 @@ export interface ChatResult {
         [k: string]: unknown
     }
     finishReason?: string
+    toolCalls?: ChatToolCall[]
 }
 
 interface StreamChunk {
     choices?: Array<{
-        delta?: { content?: string | null; reasoning_content?: string | null }
+        delta?: {
+            content?: string | null
+            reasoning_content?: string | null
+            tool_calls?: Array<{
+                index?: number
+                id?: string
+                type?: string
+                function?: { name?: string | null; arguments?: string | null }
+            }>
+        }
         finish_reason?: string | null
     }>
     usage?: ChatResult['usage']
@@ -52,6 +75,7 @@ export class DeepSeekError extends Error {
 export interface StreamOptions {
     onDelta?: (delta: ChatDelta) => void
     maxTokens?: number
+    tools?: unknown[]
 }
 
 export async function chatCompletionStream(
@@ -62,6 +86,19 @@ export async function chatCompletionStream(
     if (!apiKey.trim()) throw new Error('未提供 DeepSeek API Key')
 
     const maxTokens = options.maxTokens ?? MAX_TOKENS
+    const body: Record<string, unknown> = {
+        model: MODEL,
+        messages,
+        stream: true,
+        stream_options: { include_usage: true },
+        temperature: 0.3,
+        max_tokens: maxTokens
+    }
+    if (options.tools && options.tools.length > 0) {
+        body.tools = options.tools
+        body.tool_choice = 'auto'
+    }
+
     let res: Response
     try {
         res = await fetch(`${DEEPSEEK_BASE}/chat/completions`, {
@@ -70,15 +107,7 @@ export async function chatCompletionStream(
                 'Content-Type': 'application/json',
                 Authorization: `Bearer ${apiKey}`
             },
-            body: JSON.stringify({
-                model: MODEL,
-                messages,
-                response_format: { type: 'json_object' },
-                stream: true,
-                stream_options: { include_usage: true },
-                temperature: 0.3,
-                max_tokens: maxTokens
-            }),
+            body: JSON.stringify(body),
             signal: AbortSignal.timeout(TIMEOUT_MS)
         })
     } catch (e) {
@@ -109,6 +138,8 @@ export async function chatCompletionStream(
     let reasoning = ''
     let finishReason = ''
     let usage: ChatResult['usage'] | undefined
+    // tool_calls：index → 累积片段
+    const toolCalls = new Map<number, { id: string; name: string; args: string }>()
 
     try {
         for (;;) {
@@ -138,6 +169,16 @@ export async function chatCompletionStream(
                     reasoning += delta.reasoning_content
                     options.onDelta?.({ reasoning: delta.reasoning_content })
                 }
+                if (delta?.tool_calls) {
+                    for (const tc of delta.tool_calls) {
+                        const idx = tc.index ?? 0
+                        const cur = toolCalls.get(idx) ?? { id: '', name: '', args: '' }
+                        if (tc.id) cur.id += tc.id
+                        if (tc.function?.name) cur.name += tc.function.name
+                        if (tc.function?.arguments) cur.args += tc.function.arguments
+                        toolCalls.set(idx, cur)
+                    }
+                }
                 if (chunk.choices?.[0]?.finish_reason) finishReason = chunk.choices[0].finish_reason
                 if (chunk.usage) usage = chunk.usage
             }
@@ -148,7 +189,11 @@ export async function chatCompletionStream(
         throw new DeepSeekError(`读取流失败：${err}`, err)
     }
 
-    return { content, reasoning, usage, finishReason: finishReason || undefined }
+    const calls: ChatToolCall[] = [...toolCalls.entries()]
+        .sort((a, b) => a[0] - b[0])
+        .map(([, v]) => ({ id: v.id, name: v.name, arguments: v.args }))
+
+    return { content, reasoning, usage, finishReason: finishReason || undefined, toolCalls: calls.length ? calls : undefined }
 }
 
 // 只保留白名单乘区、合法数值，避免脏数据

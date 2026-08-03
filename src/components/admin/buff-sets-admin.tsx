@@ -4,19 +4,37 @@ import { useState } from 'react'
 import { Icon } from '@iconify/react'
 import BuffEntitySidebar from '@/components/admin/buff-entity-sidebar'
 import BuffEntityEditor from '@/components/admin/buff-entity-editor'
-import { DEFAULT_SYSTEM_PROMPT, DEFAULT_USER_PROMPT_TEMPLATE, DEFAULT_SLANG_DICT } from '@/lib/ai/prompts'
+import { DEFAULT_SYSTEM_PROMPT, DEFAULT_INITIAL_TASK_PROMPT, DEFAULT_SLANG_DICT } from '@/lib/ai/prompts'
 import type { BuffEntityType, BuffSetRow } from '@/lib/types/db'
 
 interface Props {
     rows: BuffSetRow[]
+    isAdmin: boolean
 }
 
 const AI_KEY_STORAGE = 'wuwa-afyg:deepseek-api-key'
 const TOOL_BASE_STORAGE = 'wuwa-afyg:tool-base'
 const SYSTEM_PROMPT_STORAGE = 'wuwa-afyg:deepseek-system-prompt'
-const USER_PROMPT_STORAGE = 'wuwa-afyg:deepseek-user-prompt'
+const INITIAL_TASK_STORAGE = 'wuwa-afyg:deepseek-initial-task'
 const SLANG_DICT_STORAGE = 'wuwa-afyg:deepseek-slang-dict'
+const TOOL_PROMPTS_STORAGE = 'wuwa-afyg:deepseek-tool-prompts'
 const TOOL_BASE_DEFAULT = 'http://localhost:5173'
+
+// 可配置 description 的工具清单（名称 → 默认描述占位）
+const CONFIGURABLE_TOOLS = [
+    'list_entities',
+    'search_entities',
+    'get_entity_info',
+    'get_buff_sets',
+    'get_editing_context',
+    'diff_buffs',
+    'get_zone',
+    'get_effects',
+    'get_scope_rules',
+    'get_slang_dict',
+    'get_naming_rules',
+    'get_examples'
+] as const
 
 function readStorage(key: string, fallback = ''): string {
     if (typeof window === 'undefined') return fallback
@@ -31,16 +49,23 @@ function entityKey(entityType: string, entityName: string) {
     return `${entityType}/${entityName}`
 }
 
-export default function BuffSetsAdmin({ rows }: Props) {
+export default function BuffSetsAdmin({ rows, isAdmin }: Props) {
     const [toolBase, setToolBase] = useState(() => readStorage(TOOL_BASE_STORAGE, TOOL_BASE_DEFAULT))
     const [apiKey, setApiKey] = useState(() => readStorage(AI_KEY_STORAGE))
     const [systemPrompt, setSystemPrompt] = useState(() =>
         readStorage(SYSTEM_PROMPT_STORAGE, DEFAULT_SYSTEM_PROMPT)
     )
-    const [userPromptTemplate, setUserPromptTemplate] = useState(() =>
-        readStorage(USER_PROMPT_STORAGE, DEFAULT_USER_PROMPT_TEMPLATE)
+    const [initialTaskPrompt, setInitialTaskPrompt] = useState(() =>
+        readStorage(INITIAL_TASK_STORAGE, DEFAULT_INITIAL_TASK_PROMPT)
     )
     const [slangDict, setSlangDict] = useState(() => readStorage(SLANG_DICT_STORAGE, DEFAULT_SLANG_DICT))
+    const [toolPrompts, setToolPrompts] = useState<Record<string, string>>(() => {
+        try {
+            return JSON.parse(localStorage.getItem(TOOL_PROMPTS_STORAGE) ?? '{}') as Record<string, string>
+        } catch {
+            return {}
+        }
+    })
     const [showConfig, setShowConfig] = useState(false)
     const [selected, setSelected] = useState<{ entityType: BuffEntityType; entityName: string } | null>(null)
     const [editingKey, setEditingKey] = useState<string | null>(null)
@@ -66,9 +91,9 @@ export default function BuffSetsAdmin({ rows }: Props) {
         localStorage.setItem(SYSTEM_PROMPT_STORAGE, value)
     }
 
-    function persistUserPromptTemplate(value: string) {
-        setUserPromptTemplate(value)
-        localStorage.setItem(USER_PROMPT_STORAGE, value)
+    function persistInitialTaskPrompt(value: string) {
+        setInitialTaskPrompt(value)
+        localStorage.setItem(INITIAL_TASK_STORAGE, value)
     }
 
     function persistSlangDict(value: string) {
@@ -76,14 +101,19 @@ export default function BuffSetsAdmin({ rows }: Props) {
         localStorage.setItem(SLANG_DICT_STORAGE, value)
     }
 
+    function persistToolPrompt(name: string, value: string) {
+        setToolPrompts((prev) => {
+            const next = { ...prev }
+            if (value.trim()) next[name] = value
+            else delete next[name]
+            localStorage.setItem(TOOL_PROMPTS_STORAGE, JSON.stringify(next))
+            return next
+        })
+    }
+
     function handleSelect(entity: { entityType: BuffEntityType; entityName: string }) {
         setSelected(entity)
         setEditingKey(entityKey(entity.entityType, entity.entityName))
-    }
-
-    function handleNew() {
-        setSelected(null)
-        setEditingKey(null)
     }
 
     const initial = selected
@@ -100,26 +130,29 @@ export default function BuffSetsAdmin({ rows }: Props) {
     return (
         <div className="flex flex-col gap-4 lg:flex-row">
             {/* 主编辑区 */}
-            <div className="min-w-0 flex-1">
-                {!initial && (
-                    <div className="mb-3 rounded-xl border border-(--card-border) bg-(--card) p-4 text-center text-sm text-(--muted)">
-                        <Icon icon="mdi:arrow-left" className="mr-1 inline size-4" />
-                        从右侧选择实体开始编辑，或点击「新增实体」
+            <div className="min-w-0 flex-1 lg:h-[calc(100vh-8rem)]">
+                {!initial ? (
+                    <div className="flex h-full flex-col items-center justify-center gap-3 rounded-xl border border-(--card-border) bg-(--card) p-8 text-center text-sm text-(--muted)">
+                        <Icon icon="mdi:arrow-left" className="size-8" />
+                        <p>从右侧选择实体开始编辑</p>
                     </div>
+                ) : (
+                    <BuffEntityEditor
+                        key={editingKey ?? 'new'}
+                        initial={initial}
+                        toolBase={toolBase}
+                        apiKey={apiKey}
+                        systemPrompt={systemPrompt}
+                        initialTaskPrompt={initialTaskPrompt}
+                        toolPrompts={toolPrompts}
+                        slangDict={slangDict}
+                        isAdmin={isAdmin}
+                        onEntityDeleted={() => {
+                            setSelected(null)
+                            setEditingKey(null)
+                        }}
+                    />
                 )}
-                <BuffEntityEditor
-                    key={editingKey ?? 'new'}
-                    initial={initial}
-                    toolBase={toolBase}
-                    apiKey={apiKey}
-                    systemPrompt={systemPrompt}
-                    userPromptTemplate={userPromptTemplate}
-                    slangDict={slangDict}
-                    onEntityDeleted={() => {
-                        setSelected(null)
-                        setEditingKey(null)
-                    }}
-                />
             </div>
 
             {/* 右侧侧栏 */}
@@ -161,6 +194,25 @@ export default function BuffSetsAdmin({ rows }: Props) {
                                         placeholder="http://localhost:5173"
                                         className="w-full rounded-lg border border-(--card-border) bg-(--input-bg) px-2 py-1.5 text-sm outline-none focus:border-(--accent)/60"
                                     />
+                                    <div className="flex flex-wrap gap-1">
+                                        {[
+                                            { label: '本地部署', value: 'http://localhost:5173' },
+                                            { label: '官方主站', value: 'https://wuwa-afyg-tool.200503.xyz' },
+                                            { label: '官方副站', value: 'https://wuwa-hpyg-tool.200503.xyz' }
+                                        ].map((opt) => (
+                                            <button
+                                                key={opt.value}
+                                                onClick={() => persistToolBase(opt.value)}
+                                                className={`rounded-md px-2 py-1 text-[10px] transition-colors ${
+                                                    toolBase === opt.value
+                                                        ? 'bg-(--accent)/15 text-(--accent-text)'
+                                                        : 'text-(--muted) hover:bg-(--card-hover) hover:text-(--fg)'
+                                                }`}
+                                            >
+                                                {opt.label}
+                                            </button>
+                                        ))}
+                                    </div>
                                 </label>
                                 <label className="flex flex-col gap-1 text-xs text-(--muted)">
                                     DeepSeek API Key
@@ -171,6 +223,15 @@ export default function BuffSetsAdmin({ rows }: Props) {
                                         placeholder="sk-..."
                                         className="w-full rounded-lg border border-(--card-border) bg-(--input-bg) px-2 py-1.5 text-sm outline-none focus:border-(--accent)/60"
                                     />
+                                    <a
+                                        href="https://platform.deepseek.com/api_keys"
+                                        target="_blank"
+                                        rel="noopener noreferrer"
+                                        className="inline-flex items-center gap-1 text-[10px] text-(--accent-text) hover:underline"
+                                    >
+                                        <Icon icon="mdi:open-in-new" className="size-3" />
+                                        DeepSeek 开放平台（获取 API Key）
+                                    </a>
                                 </label>
                                 <div className="flex flex-col gap-1">
                                     <div className="flex items-center justify-between">
@@ -193,19 +254,18 @@ export default function BuffSetsAdmin({ rows }: Props) {
                                 </div>
                                 <div className="flex flex-col gap-1">
                                     <div className="flex items-center justify-between">
-                                        <span className="text-xs text-(--muted)">用户消息模板</span>
+                                        <span className="text-xs text-(--muted)">首轮任务指令</span>
                                         <button
-                                            onClick={() => persistUserPromptTemplate(DEFAULT_USER_PROMPT_TEMPLATE)}
+                                            onClick={() => persistInitialTaskPrompt(DEFAULT_INITIAL_TASK_PROMPT)}
                                             className="text-[10px] text-(--accent-text) hover:underline"
                                         >
                                             恢复默认
                                         </button>
                                     </div>
                                     <textarea
-                                        value={userPromptTemplate}
-                                        onChange={(e) => persistUserPromptTemplate(e.target.value)}
-                                        
-                                        placeholder="支持 {ENTITY_TYPE} {ENTITY_NAME} {INFO}"
+                                        value={initialTaskPrompt}
+                                        onChange={(e) => persistInitialTaskPrompt(e.target.value)}
+                                        placeholder="支持 {ENTITY_TYPE} {ENTITY_NAME}"
                                         className="w-full rounded-lg border border-(--card-border) bg-(--input-bg) px-2 py-1.5 font-mono text-[11px] leading-relaxed outline-none focus:border-(--accent)/60"
                                         style={{ minHeight: '100px' }}
                                     />
@@ -223,11 +283,35 @@ export default function BuffSetsAdmin({ rows }: Props) {
                                     <textarea
                                         value={slangDict}
                                         onChange={(e) => persistSlangDict(e.target.value)}
-                                        
                                         placeholder={'光合能量=回路能量 // 注释'}
                                         className="w-full rounded-lg border border-(--card-border) bg-(--input-bg) px-2 py-1.5 font-mono text-[11px] leading-relaxed outline-none focus:border-(--accent)/60"
                                         style={{ minHeight: '100px' }}
                                     />
+                                </div>
+                                <div className="flex flex-col gap-1.5">
+                                    <div className="flex items-center justify-between">
+                                        <span className="text-xs text-(--muted)">工具提示词（description，留空用默认）</span>
+                                        <button
+                                            onClick={() => {
+                                                setToolPrompts({})
+                                                localStorage.removeItem(TOOL_PROMPTS_STORAGE)
+                                            }}
+                                            className="text-[10px] text-(--accent-text) hover:underline"
+                                        >
+                                            全部恢复默认
+                                        </button>
+                                    </div>
+                                    {CONFIGURABLE_TOOLS.map((name) => (
+                                        <div key={name} className="flex flex-col gap-0.5">
+                                            <span className="font-mono text-[10px] text-(--muted)">{name}</span>
+                                            <input
+                                                value={toolPrompts[name] ?? ''}
+                                                onChange={(e) => persistToolPrompt(name, e.target.value)}
+                                                placeholder="给 AI 的该工具用途说明（空=默认）"
+                                                className="w-full rounded-lg border border-(--card-border) bg-(--input-bg) px-2 py-1 text-xs outline-none focus:border-(--accent)/60"
+                                            />
+                                        </div>
+                                    ))}
                                 </div>
                                 <p className="text-[10px] text-(--muted)">
                                     提示词与词典仅存本机浏览器。可在编辑时对生成结果追问。
@@ -247,13 +331,12 @@ export default function BuffSetsAdmin({ rows }: Props) {
                     </div>
                 )}
 
-                <div className="lg:h-[calc(100vh-16rem)]">
+                <div className="lg:sticky lg:top-16 lg:h-[calc(100vh-8rem)]">
                     <BuffEntitySidebar
                         toolBase={toolBase}
                         existingCountMap={existingCountMap}
                         selected={selected}
                         onSelect={handleSelect}
-                        onNew={handleNew}
                     />
                 </div>
             </div>

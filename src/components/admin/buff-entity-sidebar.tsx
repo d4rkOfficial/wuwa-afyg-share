@@ -1,7 +1,6 @@
 'use client'
 
 import { useState } from 'react'
-import { Icon } from '@iconify/react'
 import { BUFF_ENTITY_LABELS } from '@/lib/consts/buff-zones'
 import type { BuffEntityType } from '@/lib/types/db'
 
@@ -10,7 +9,6 @@ interface Props {
     existingCountMap: Record<string, number>
     selected: { entityType: BuffEntityType; entityName: string } | null
     onSelect: (entity: { entityType: BuffEntityType; entityName: string }) => void
-    onNew: () => void
 }
 
 interface ToolEntry {
@@ -66,8 +64,7 @@ export default function BuffEntitySidebar({
     toolBase,
     existingCountMap,
     selected,
-    onSelect,
-    onNew
+    onSelect
 }: Props) {
     const [loading, setLoading] = useState(false)
     const [mainTab, setMainTab] = useState<BuffEntityType>('character')
@@ -132,16 +129,6 @@ export default function BuffEntitySidebar({
 
     return (
         <aside className="flex h-full max-h-[60vh] flex-col rounded-xl border border-(--card-border) bg-(--card) p-3 lg:max-h-none">
-            {/* 新增按钮 */}
-            <button
-                onClick={onNew}
-                className="toolbar-btn toolbar-btn-primary mb-2 w-full justify-center"
-                style={{ background: 'var(--btn-bg)' }}
-            >
-                <Icon icon="mdi:plus" className="size-3.5" />
-                新增实体
-            </button>
-
             {/* 搜索 */}
             <input
                 value={search}
