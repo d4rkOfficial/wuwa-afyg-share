@@ -406,7 +406,8 @@ export default function BuffEntityEditor({
                         ? {
                               targetZoneId: z.ref.targetZoneId,
                               pct: String(z.ref.pct),
-                              ...(z.ref.threshold !== undefined ? { threshold: String(z.ref.threshold) } : {})
+                              ...(z.ref.threshold !== undefined ? { threshold: String(z.ref.threshold) } : {}),
+                              ...(z.ref.refOwner ? { refOwner: z.ref.refOwner } : {})
                           }
                         : null
                 }))

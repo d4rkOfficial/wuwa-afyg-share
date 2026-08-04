@@ -37,6 +37,9 @@ export type BuffEntityType = 'character' | 'weapon' | 'echo' | '1set' | '2set' |
 // 受影响者：自己 / 自己除外 / 全队 / 效应专属
 export type BuffScope = 'self' | 'self_except' | 'team' | 'effect_only'
 
+// 引用归属：self = 引自己（角色自身面板）；owner = 引主人（武器/声骸/套装的装备者面板）
+export type BuffRefOwner = 'self' | 'owner'
+
 export interface BuffZoneRef {
     targetZoneId: string
     pct: number
@@ -46,6 +49,7 @@ export interface BuffZoneRef {
     discrete?: boolean
     divisor?: number
     multiplier?: number
+    refOwner?: BuffRefOwner
 }
 
 export interface BuffZoneValue {

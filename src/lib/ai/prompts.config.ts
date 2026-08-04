@@ -26,6 +26,10 @@ export const DEFAULT_SYSTEM_PROMPT = `你是《鸣潮》拉表工具（椰果工
 1. zones 只能使用白名单内的 zoneId；无法归入任何白名单乘区的增益不要输出。
 2. value：% 乘区填百分数数值（12 表示 +12%），flat 乘区填固定值数值。
 3. 若增益数值是"按某属性百分比"（如攻击白值×50%），用 ref 表示：{"zoneId":"extraRatio","value":0,"ref":{"targetZoneId":"baseAtk","pct":50}}。
+   并在 ref 中标注 refOwner：
+   - refOwner="self"：引用对象自身面板（角色增益引用自己的属性，如"散华当前攻击的50%"）。
+   - refOwner="owner"：引用"主人"面板（武器/声骸/套装的增益引用装备它的角色的属性，如"根据装备者当前攻击的50%"）。
+   角色类 buff 默认 self；武器/声骸/套装类 buff 默认 owner。文案明确"按装备者/佩戴者/持有者"时用 owner。
 4. override：文案明确为"覆盖/替换/无视原值"时加 "override": true，否则不加。
 5. 只提取增益型效果。以下均不是 buff，不要输出：
    - 伤害类倍率（"共鸣解放伤害 809.48%"）、武器攻击白值/副词条、声骸主词条
@@ -130,17 +134,23 @@ export const EXAMPLES_TEXT = `—— 示例1（角色固有属性合并）——
 {"buffs":[{"buffName":"武器1层","scope":"self","exclusive":false,"zones":[{"zoneId":"atkPct","value":15,"ref":null,"override":false}]},{"buffName":"武器灼羽1层","scope":"self","exclusive":false,"zones":[{"zoneId":"bonusDmg","value":5,"ref":null,"override":false}]},{"buffName":"武器灼羽2层","scope":"self","exclusive":false,"zones":[{"zoneId":"bonusDmg","value":10,"ref":null,"override":false}]}]}
 说明：武器攻击白值/副词条不是 buff，只提取 effect 描述；"每层+X%可叠N层"拆 1层/2层；共鸣技能伤害加成归入 bonusDmg。
 
-—— 示例4（声骸套装，含 ref 引用）——
+—— 示例4（声骸套装，含 ref 引用主人）——
 输入：{"bonuses":{"2":"治疗效果提升10%","5":"自身为友方提供治疗时，全队共鸣者攻击提升15%，持续30秒"}}
 输出：
 {"buffs":[{"buffName":"隐世2件1层","scope":"team","exclusive":false,"zones":[{"zoneId":"bonusDmg","value":10,"ref":null,"override":false}]},{"buffName":"隐世5件1层","scope":"team","exclusive":false,"zones":[{"zoneId":"atkPct","value":15,"ref":null,"override":false}]}]}
 说明："全队"→scope=team；套装加成按件数命名（2件/5件）。
 
-—— 示例5（角色技能，含 ref 引用属性）——
+—— 示例5（角色技能，含 ref 引用自身）——
 输入：{"skills":[{"name":"共鸣技能","desc":"造成衍射伤害，并根据当前攻击的50%额外造成伤害"}]}
 输出：
-{"buffs":[{"buffName":"E1层","scope":"self","exclusive":false,"zones":[{"zoneId":"extraRatio","value":0,"ref":{"targetZoneId":"totalAtk","pct":50},"override":false}]}]}
-说明："根据当前攻击的50%"→ref 引用 totalAtk，pct=50，value 填 0。`
+{"buffs":[{"buffName":"E1层","scope":"self","exclusive":false,"zones":[{"zoneId":"extraRatio","value":0,"ref":{"targetZoneId":"totalAtk","pct":50,"refOwner":"self"},"override":false}]}]}
+说明："根据当前攻击的50%"→ref 引用 totalAtk，pct=50，value 填 0；角色自身 → refOwner="self"。
+
+—— 示例6（武器效果，含 ref 引用主人）——
+输入：{"effect":{"desc":"造成伤害，并根据装备者当前攻击的40%额外造成伤害"}}
+输出：
+{"buffs":[{"buffName":"武器1层","scope":"self","exclusive":false,"zones":[{"zoneId":"extraRatio","value":0,"ref":{"targetZoneId":"totalAtk","pct":40,"refOwner":"owner"},"override":false}]}]}
+说明：武器效果"装备者当前攻击"→ refOwner="owner"，表示导入拉表时引用装备该武器的角色面板。`
 
 // ── 默认黑话词典（get_slang_dict 工具返回；每行：原叫法=黑话；行尾可用 // 注释）──
 export const DEFAULT_SLANG_DICT = `普攻=A

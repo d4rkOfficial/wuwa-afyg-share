@@ -9,6 +9,7 @@ interface ZoneRefRow {
     targetZoneId: string
     pct: string
     threshold?: string
+    refOwner?: 'self' | 'owner'
 }
 
 interface ZoneRow {
@@ -76,7 +77,6 @@ export default function BuffEntryModal({ open, initial, onClose, onSave, onDelet
             )
         }))
     }
-
     return (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
             <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={onClose} />
@@ -202,6 +202,20 @@ export default function BuffEntryModal({ open, initial, onClose, onSave, onDelet
                                         </div>
                                         {z.ref && (
                                             <div className="mt-1.5 flex flex-wrap items-center gap-2 rounded-md bg-(--input-bg) px-2 py-1.5">
+                                                <span className="text-[10px] text-(--muted)">引用归属</span>
+                                                <select
+                                                    value={z.ref.refOwner ?? 'self'}
+                                                    onChange={(e) =>
+                                                        setZone(z.zoneId, {
+                                                            ref: { ...z.ref!, refOwner: e.target.value as 'self' | 'owner' }
+                                                        })
+                                                    }
+                                                    className="rounded border border-(--card-border) bg-(--input-bg) px-1.5 py-1 text-[11px] outline-none focus:border-(--accent)/60"
+                                                    title="self=引自己（角色自身）；owner=引主人（武器/声骸/套装装备者）"
+                                                >
+                                                    <option value="self">引自己</option>
+                                                    <option value="owner">引主人</option>
+                                                </select>
                                                 <span className="text-[10px] text-(--muted)">引用目标</span>
                                                 <select
                                                     value={z.ref.targetZoneId}
@@ -246,7 +260,11 @@ export default function BuffEntryModal({ open, initial, onClose, onSave, onDelet
                 </div>
 
                 {/* 底部操作 */}
-                <div className="mt-3 flex items-center justify-between border-t border-(--card-border) pt-3">
+                <div className="mt-3 flex flex-col gap-1.5 border-t border-(--card-border) pt-3">
+                    <p className="text-[10px] text-(--muted)">
+                        引用含义：引自己=引用该角色自身面板；引主人=引用装备该武器/声骸/套装的角色的面板。拉表导入时会按实体归属自动解析。
+                    </p>
+                    <div className="flex items-center justify-between">
                     {onDelete ? (
                         <button
                             onClick={onDelete}
@@ -273,6 +291,7 @@ export default function BuffEntryModal({ open, initial, onClose, onSave, onDelet
                             <Icon icon="mdi:check" className="mr-1 inline size-4" />
                             保存
                         </button>
+                    </div>
                     </div>
                 </div>
             </div>

@@ -3,7 +3,7 @@
 import { revalidatePath } from 'next/cache'
 import { requireAdmin } from '@/lib/supabase/admin'
 import { BUFF_ENTITY_TYPES, BUFF_ZONE_MAP, BUFF_REF_ZONE_MAP, BUFF_SCOPES } from '@/lib/consts/buff-zones'
-import type { BuffEntityType, BuffScope } from '@/lib/types/db'
+import type { BuffEntityType, BuffScope, BuffRefOwner } from '@/lib/types/db'
 
 export interface ActionResult<T = undefined> {
     data?: T
@@ -27,6 +27,7 @@ interface ZoneRefInput {
     discrete?: boolean
     divisor?: number
     multiplier?: number
+    refOwner?: BuffRefOwner
 }
 
 interface ZoneInput {
@@ -59,6 +60,7 @@ function sanitizeRef(ref: unknown): ZoneRefInput | undefined {
     if (r.discrete) out.discrete = true
     if (typeof r.divisor === 'number' && Number.isFinite(r.divisor)) out.divisor = r.divisor
     if (typeof r.multiplier === 'number' && Number.isFinite(r.multiplier)) out.multiplier = r.multiplier
+    if (r.refOwner === 'self' || r.refOwner === 'owner') out.refOwner = r.refOwner
     return out
 }
 

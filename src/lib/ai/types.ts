@@ -1,5 +1,5 @@
 // AI 辅助生成的类型（与 buff_sets 的 buff_set 结构一致）
-import type { BuffScope } from '@/lib/types/db'
+import type { BuffScope, BuffRefOwner } from '@/lib/types/db'
 
 export interface GeneratedZoneRef {
     targetZoneId: string
@@ -10,6 +10,7 @@ export interface GeneratedZoneRef {
     discrete?: boolean
     divisor?: number
     multiplier?: number
+    refOwner?: BuffRefOwner
 }
 
 export interface GeneratedZone {
