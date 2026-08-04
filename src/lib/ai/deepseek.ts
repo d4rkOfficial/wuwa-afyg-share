@@ -76,6 +76,7 @@ export interface StreamOptions {
     onDelta?: (delta: ChatDelta) => void
     maxTokens?: number
     tools?: unknown[]
+    reasoningEffort?: 'low' | 'medium' | 'high'
 }
 
 export async function chatCompletionStream(
@@ -93,6 +94,9 @@ export async function chatCompletionStream(
         stream_options: { include_usage: true },
         temperature: 0.3,
         max_tokens: maxTokens
+    }
+    if (options.reasoningEffort) {
+        body.reasoning_effort = options.reasoningEffort
     }
     if (options.tools && options.tools.length > 0) {
         body.tools = options.tools

@@ -9,6 +9,7 @@ export const dynamic = 'force-dynamic'
 export const maxDuration = 300
 
 const MAX_TOOL_ROUNDS = 8
+const MAX_FIX_RETRY = 2
 
 interface AiRequestBody {
     apiKey: string
@@ -21,6 +22,7 @@ interface AiRequestBody {
     slangDict?: string
     history?: ChatMessage[]
     newUserMessage?: string
+    reasoningEffort?: 'low' | 'medium' | 'high'
 }
 
 export async function POST(req: Request) {
@@ -52,6 +54,10 @@ export async function POST(req: Request) {
     const slangDict = body.slangDict?.trim() || ''
     const history = Array.isArray(body.history) ? body.history : []
     const newUserMessage = body.newUserMessage?.trim() || ''
+    const reasoningEffort: 'low' | 'medium' | 'high' | undefined =
+        body.reasoningEffort === 'low' || body.reasoningEffort === 'medium' || body.reasoningEffort === 'high'
+            ? body.reasoningEffort
+            : undefined
     const tools = buildTools(toolPrompts)
 
     const validation =
@@ -122,10 +128,12 @@ export async function POST(req: Request) {
 
                 let content = ''
                 let reasoning = ''
+                let fixCount = 0
 
                 for (let round = 0; round < MAX_TOOL_ROUNDS; round++) {
                     const result = await chatCompletionStream(apiKey, messages, {
                         tools,
+                        reasoningEffort,
                         onDelta: (delta) => {
                             if (delta.content) {
                                 content += delta.content
@@ -177,38 +185,53 @@ export async function POST(req: Request) {
                         continue
                     }
 
-                    // 无工具调用 → 最终内容
+                    // 无工具调用 → 尝试解析最终内容
                     if (result.content?.trim()) {
                         content = result.content
                     }
-                    break
-                }
 
-                pushLog(
-                    `流结束：content=${content.length} 字符, reasoning=${reasoning.length} 字符`,
-                    'debug'
-                )
+                    if (!content.trim()) {
+                        push({ type: 'error', message: 'DeepSeek 未返回内容' })
+                        return
+                    }
 
-                if (!content.trim()) {
-                    push({ type: 'error', message: 'DeepSeek 未返回内容' })
+                    let buffs: ReturnType<typeof sanitizeBuffs> | null = null
+                    let parseError: string | null = null
+                    try {
+                        const parsed = JSON.parse(content) as { buffs?: unknown[] }
+                        if (Array.isArray(parsed.buffs)) {
+                            buffs = sanitizeBuffs(parsed.buffs as never)
+                            if (buffs.length > 0) {
+                                pushLog(`解析成功，得到 ${buffs.length} 条可用 Buff`, 'success')
+                                push({ type: 'result', data: buffs, rawContent: content, parseError: null })
+                                return
+                            }
+                            parseError = 'buffs 数组为空'
+                        } else {
+                            parseError = '返回结构缺少 buffs 数组'
+                        }
+                    } catch {
+                        parseError = '返回的不是合法 JSON'
+                    }
+
+                    // 解析失败 → 自动修复（把错误喂回 AI 再生成一轮）
+                    if (fixCount < MAX_FIX_RETRY) {
+                        fixCount++
+                        messages.push({ role: 'assistant', content })
+                        messages.push({
+                            role: 'user',
+                            content: `你上一条回复不是可用的 Buff JSON（错误：${parseError}）。请重新只输出符合输出格式的完整 buffs JSON：{"buffs":[{...}]}，不要包含任何其它内容、解释或代码块标记。`
+                        })
+                        pushLog(`Buff JSON 解析失败（${parseError}），自动修复第 ${fixCount}/${MAX_FIX_RETRY} 次`, 'debug')
+                        content = ''
+                        reasoning = ''
+                        continue
+                    }
+
+                    pushLog(`流结束：content=${content.length} 字符, reasoning=${reasoning.length} 字符`, 'debug')
+                    push({ type: 'result', data: null, rawContent: content, parseError })
                     return
                 }
-
-                let buffs: ReturnType<typeof sanitizeBuffs> | null = null
-                let parseError: string | null = null
-                try {
-                    const parsed = JSON.parse(content) as { buffs?: unknown[] }
-                    if (Array.isArray(parsed.buffs)) {
-                        buffs = sanitizeBuffs(parsed.buffs as never)
-                        pushLog(`解析成功，得到 ${buffs.length} 条可用 Buff`, buffs.length > 0 ? 'success' : 'error')
-                    } else {
-                        parseError = '返回结构缺少 buffs 数组'
-                    }
-                } catch {
-                    parseError = '返回的不是合法 JSON'
-                }
-
-                push({ type: 'result', data: buffs, rawContent: content, parseError })
             } catch (e) {
                 if (e instanceof DeepSeekError) {
                     push({ type: 'error', message: e.message, debug: e.debug })
