@@ -20,7 +20,7 @@ export const DEFAULT_SYSTEM_PROMPT = `你是《鸣潮》拉表工具（椰果工
 {REF_ZONE_LIST}
 
 输出格式（只输出此 JSON，不要输出任何其它内容）：
-{"buffs":[{"buffName":"增益名","scope":"self","exclusive":false,"zones":[{"zoneId":"...","value":数值,"ref":null,"override":false}]}]}
+{"buffs":[{"buffName":"增益名","scope":"self","exclusive":false,"condition":null,"zones":[{"zoneId":"...","value":数值,"ref":null,"override":false}]}]}
 
 行为红线（必须遵守）：
 1. zones 只能使用白名单内的 zoneId；无法归入任何白名单乘区的增益不要输出。
@@ -40,8 +40,12 @@ export const DEFAULT_SYSTEM_PROMPT = `你是《鸣潮》拉表工具（椰果工
    示例：多个"攻击提升1.8%/1.8%/4.2%"合并为 atkPct=7.8。
 7. 文案未说明 scope 归属时，默认 team。
 8. 属性增伤（"热熔伤害加成""导电伤害加成""共鸣技能伤害加成"）一律归入 bonusDmg；只有明确指"某效应（聚爆/光噪等）造成的伤害"才用 deepenDmg/finalDmg 且 effect_only。
+9. 生效条件 condition（与 buffName/scope 平级，一个 buff 至多一个，无门槛不输出）：
+   - {"type":"chain","min":n}：仅角色实体的增益，需角色共鸣链 ≥ n（n 取 1-6）。
+   - {"type":"refinement","min":n}：仅武器实体的增益，需武器精炼 ≥ n（n 取 1-5）。
+   - 仅当文案明确"第 X 链/命座"或"精炼 X 阶/X 阶效果"且确有门槛时标注；取值/语义不确定时调用 get_condition_rules。
 
-需要黑话词典、命名规范、few-shot 示例、效应表或 scope 判定细则时，调用对应工具获取。`
+需要黑话词典、命名规范、few-shot 示例、效应表、scope 判定细则或生效条件规则时，调用对应工具获取。`
 
 // ── 首轮任务指令（模型拿到实体后，第一步给它的消息）──
 export const DEFAULT_INITIAL_TASK_PROMPT = `实体类型：{ENTITY_TYPE}（{ENTITY_TYPE_RAW}）
@@ -85,6 +89,21 @@ export const SCOPE_RULES_TEXT = `受影响者（scope）判定：
 - 长离命座"饰我所言：施放变奏技能后，队伍中的角色攻击提升20%"→ 全队 → team。
 - 维里奈"自然的献礼：施放重击…时，队伍中的角色攻击提升20%"→ team。
 - 卡卡罗命座"集群威胁：施放延奏技能时，队伍中的角色导电伤害加成提升20%"→ team。`
+
+// ── 生效条件判定细则（get_condition_rules 工具返回）──────────
+export const CONDITION_RULES_TEXT = `Buff 生效条件（condition）字段，与 buffName/scope 平级，一个 buff 至多一个；无门槛则不输出：
+- {"type":"chain","min":n}：仅角色实体的增益，表示该增益需角色共鸣链 ≥ n（鸣潮 0-6 链）才生效。
+  例：散华第 3 链命座效果 → "condition":{"type":"chain","min":3}。
+- {"type":"refinement","min":n}：仅武器实体的增益，表示该增益需武器精炼 ≥ n（1-5 阶）才生效。
+  例：武器精炼 5 阶特效 → "condition":{"type":"refinement","min":5}。
+
+判定要点：
+1. 只有文案明确写"第 X 链/命座 X/共鸣链 X"或"精炼 X 阶/X 阶效果"且确有门槛才加条件；
+   普通技能、固有属性、无门槛的武器基础效果一律不设 condition。
+2. 角色命座效果归入角色实体 buff 时用 type=chain；武器各精炼档位效果用 type=refinement。
+3. 第 1 链/第 1 阶通常是基础配置，无需标注；从 min=2 起才需要 condition（有明确门槛时例外）。
+4. "每层+X%、可叠 N 层"是叠层不是条件，用 buff 名分层拆条；不要误用 condition。
+5. 一个 buff 只有单一来源门槛时使用；不要为整个实体统一加条件。`
 
 // ── 命名规范（get_naming_rules 工具返回）────────────────────
 export const NAMING_RULES_TEXT = `buff 名要一眼看懂，结构 = 触发来源 + 触发手段 + 层数：
@@ -150,7 +169,20 @@ export const EXAMPLES_TEXT = `—— 示例1（角色固有属性合并）——
 输入：{"effect":{"desc":"造成伤害，并根据装备者当前攻击的40%额外造成伤害"}}
 输出：
 {"buffs":[{"buffName":"武器1层","scope":"self","exclusive":false,"zones":[{"zoneId":"extraRatio","value":0,"ref":{"targetZoneId":"totalAtk","pct":40,"refOwner":"owner"},"override":false}]}]}
-说明：武器效果"装备者当前攻击"→ refOwner="owner"，表示导入拉表时引用装备该武器的角色面板。`
+说明：武器效果"装备者当前攻击"→ refOwner="owner"，表示导入拉表时引用装备该武器的角色面板。
+
+—— 示例7（角色命座，含生效条件 chain）——
+输入（角色的 chains 节选，注意命座所属链数）：
+[{"name":"暖雾","desc":"第1链：散华攻击提升8%。"},{"name":"孤影","desc":"第3链：散华暴击伤害提升20%。"}]
+输出：
+{"buffs":[{"buffName":"散暖雾1层","scope":"self","exclusive":false,"zones":[{"zoneId":"atkPct","value":8,"ref":null,"override":false}]},{"buffName":"散孤影1层","scope":"self","exclusive":false,"condition":{"type":"chain","min":3},"zones":[{"zoneId":"critDmg","value":20,"ref":null,"override":false}]}]}
+说明：第1链视为基础配置不设 condition；"第3链"明确有门槛 → condition={"type":"chain","min":3}。
+
+—— 示例8（武器精炼，含生效条件 refinement）——
+输入：{"effect":{"desc":"攻击提升15%。精炼5阶时，共鸣技能伤害额外提升10%"}}
+输出：
+{"buffs":[{"buffName":"武器1层","scope":"self","exclusive":false,"zones":[{"zoneId":"atkPct","value":15,"ref":null,"override":false}]},{"buffName":"武器5阶1层","scope":"self","exclusive":false,"condition":{"type":"refinement","min":5},"zones":[{"zoneId":"bonusDmg","value":10,"ref":null,"override":false}]}]}
+说明：武器基础效果无门槛不设 condition；"精炼5阶时"的额外效果 → condition={"type":"refinement","min":5}。`
 
 // ── 默认黑话词典（get_slang_dict 工具返回；每行：原叫法=黑话；行尾可用 // 注释）──
 export const DEFAULT_SLANG_DICT = `普攻=A

@@ -3,7 +3,7 @@
 import { useState } from 'react'
 import { Icon } from '@iconify/react'
 import { BUFF_ZONES, BUFF_ZONE_MAP, BUFF_REF_ZONES, BUFF_SCOPES, BUFF_SCOPE_LABELS } from '@/lib/consts/buff-zones'
-import type { BuffScope } from '@/lib/types/db'
+import type { BuffScope, BuffEntityType, BuffCondition } from '@/lib/types/db'
 
 interface ZoneRefRow {
     targetZoneId: string
@@ -23,23 +23,25 @@ export interface BuffEditDraft {
     buffName: string
     scope: BuffScope
     exclusive: boolean
+    condition?: BuffCondition | null
     zones: ZoneRow[]
 }
 
 interface Props {
     open: boolean
+    entityType: BuffEntityType
     initial: BuffEditDraft | null
     onClose: () => void
     onSave: (draft: BuffEditDraft) => void
     onDelete?: () => void
 }
 
-export default function BuffEntryModal({ open, initial, onClose, onSave, onDelete }: Props) {
+export default function BuffEntryModal({ open, entityType, initial, onClose, onSave, onDelete }: Props) {
     // 父组件通过 key 重挂载本组件来重置草稿；挂载时用 initial 初始化
     const [draft, setDraft] = useState<BuffEditDraft>(() =>
         initial
             ? (JSON.parse(JSON.stringify(initial)) as BuffEditDraft)
-            : { buffName: '', scope: 'team', exclusive: false, zones: [] }
+            : { buffName: '', scope: 'team', exclusive: false, condition: null, zones: [] }
     )
 
     if (!open) return null
@@ -75,6 +77,23 @@ export default function BuffEntryModal({ open, initial, onClose, onSave, onDelet
                     ? { ...z, ref: z.ref ? null : { targetZoneId: 'baseAtk', pct: '', threshold: undefined } }
                     : z
             )
+        }))
+    }
+
+    const conditionType: 'chain' | 'refinement' | null =
+        entityType === 'character' ? 'chain' : entityType === 'weapon' ? 'refinement' : null
+
+    function setConditionEnabled(enabled: boolean) {
+        setDraft((d) => ({
+            ...d,
+            condition: enabled ? { type: conditionType!, min: 1 } : null
+        }))
+    }
+
+    function setConditionMin(min: string) {
+        setDraft((d) => ({
+            ...d,
+            condition: d.condition ? { ...d.condition, min: Number(min) || 0 } : d.condition
         }))
     }
     return (
@@ -116,6 +135,58 @@ export default function BuffEntryModal({ open, initial, onClose, onSave, onDelet
                         ))}
                     </div>
                 </div>
+
+                {/* 生效条件（仅角色/武器实体） */}
+                {conditionType && (
+                    <div className="mb-3 flex flex-wrap items-center gap-2">
+                        <button
+                            onClick={() => setConditionEnabled(!draft.condition)}
+                            className={`flex items-center gap-1 rounded-lg border px-2 text-[11px] transition-colors ${
+                                draft.condition ? 'self-stretch' : 'h-6'
+                            } ${
+                                draft.condition
+                                    ? 'border-(--accent) bg-(--accent)/10 text-(--accent-text)'
+                                    : 'border-(--card-border) bg-(--input-bg) text-(--muted) hover:text-(--fg)'
+                            }`}
+                            title="仅当该增益确有命座/精炼门槛时开启"
+                        >
+                            <Icon
+                                icon={draft.condition ? 'mdi:check-circle' : 'mdi:circle-outline'}
+                                className="size-3.5"
+                            />
+                            {!draft.condition && '共鸣链/精炼阶数条件'}
+                        </button>
+                        {draft.condition && (
+                            <div className="flex items-center gap-2 rounded-lg border border-(--card-border) bg-(--input-bg) px-2.5 py-1.5">
+                                <span className="flex h-6 items-center text-[11px] text-(--fg)">
+                                    {conditionType === 'chain' ? '角色共鸣链' : '武器精炼'}
+                                </span>
+                                <div className="flex overflow-hidden rounded border border-(--card-border)">
+                                    {Array.from(
+                                        { length: conditionType === 'chain' ? 6 : 5 },
+                                        (_, k) => k + 1
+                                    ).map((n) => (
+                                        <button
+                                            key={n}
+                                            onClick={() => setConditionMin(String(n))}
+                                            className={`flex h-6 min-w-6 items-center justify-center px-1 text-[11px] transition-colors ${
+                                                draft.condition?.min === n
+                                                    ? 'bg-(--accent)/15 text-(--accent-text)'
+                                                    : 'text-(--muted) hover:text-(--fg)'
+                                            }`}
+                                        >
+                                            {n}
+                                        </button>
+                                    ))}
+                                </div>
+                                <span className="flex h-6 w-11 items-center text-center text-xs font-medium text-(--fg) tabular-nums">
+                                    ≥ {draft.condition.min}
+                                    {conditionType === 'chain' ? ' 链' : ' 阶'}
+                                </span>
+                            </div>
+                        )}
+                    </div>
+                )}
 
                 {/* 乘区编辑主体 */}
                 <div className="flex min-h-0 flex-1 flex-col gap-3 overflow-y-auto md:flex-row">

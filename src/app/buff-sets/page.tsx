@@ -13,7 +13,7 @@ export default async function BuffSetsPage() {
     const supabase = await createClient()
     const { data, error } = await supabase
         .from('buff_sets')
-        .select('entity_type, entity_name, buff_name, scope, exclusive, buff_set')
+        .select('entity_type, entity_name, buff_name, scope, exclusive, condition, buff_set')
 
     const rows = (data ?? []) as BuffSetRow[]
 

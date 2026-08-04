@@ -1,6 +1,6 @@
 // DeepSeek 官方 API 流式客户端（server-only，key 由前端管理员输入后透传）
 import type { GeneratedBuff } from '@/lib/ai/types'
-import { BUFF_ZONE_MAP, BUFF_REF_ZONE_MAP, BUFF_SCOPES } from '@/lib/consts/buff-zones'
+import { BUFF_ZONE_MAP, BUFF_REF_ZONE_MAP, BUFF_SCOPES, sanitizeCondition } from '@/lib/consts/buff-zones'
 import type { BuffScope } from '@/lib/types/db'
 
 const DEEPSEEK_BASE = 'https://api.deepseek.com'
@@ -215,8 +215,9 @@ export function sanitizeBuffs(buffs: GeneratedBuff[]): GeneratedBuff[] {
         const scope: BuffScope =
             b.scope && BUFF_SCOPES.includes(b.scope as BuffScope) ? (b.scope as BuffScope) : 'team'
         const exclusive = scope === 'effect_only' || !!b.exclusive
+        const condition = sanitizeCondition(b.condition)
         seen.add(name)
-        out.push({ buffName: name, scope, exclusive, zones })
+        out.push({ buffName: name, scope, exclusive, ...(condition ? { condition } : {}), zones })
     }
     return out
 }

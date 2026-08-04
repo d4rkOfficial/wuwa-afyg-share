@@ -85,7 +85,7 @@ export async function POST(req: Request) {
                 if (!auth.supabase) return { error: '数据库不可用' }
                 let q = auth.supabase
                     .from('buff_sets')
-                    .select('entity_type, entity_name, buff_name, scope, exclusive, buff_set')
+                    .select('entity_type, entity_name, buff_name, scope, exclusive, condition, buff_set')
                     .order('entity_type', { ascending: true })
                     .order('entity_name', { ascending: true })
                 if (queryType) q = q.eq('entity_type', queryType)

@@ -1,5 +1,5 @@
 // AI 辅助生成的类型（与 buff_sets 的 buff_set 结构一致）
-import type { BuffScope, BuffRefOwner } from '@/lib/types/db'
+import type { BuffScope, BuffRefOwner, BuffCondition } from '@/lib/types/db'
 
 export interface GeneratedZoneRef {
     targetZoneId: string
@@ -24,5 +24,6 @@ export interface GeneratedBuff {
     buffName: string
     scope?: BuffScope
     exclusive?: boolean
+    condition?: BuffCondition | null
     zones: GeneratedZone[]
 }

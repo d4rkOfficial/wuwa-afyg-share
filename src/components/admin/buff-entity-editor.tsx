@@ -6,7 +6,7 @@ import { Icon } from '@iconify/react'
 import { upsertBuffEntity, deleteBuffEntity } from '@/lib/actions/buff-sets'
 import { toast } from '@/components/ui/toast'
 import { BUFF_ENTITY_LABELS, BUFF_ZONE_MAP, BUFF_REF_ZONES, BUFF_SCOPE_LABELS } from '@/lib/consts/buff-zones'
-import type { BuffEntityType, BuffScope, BuffSetRow } from '@/lib/types/db'
+import type { BuffEntityType, BuffScope, BuffSetRow, BuffCondition } from '@/lib/types/db'
 import type { GeneratedBuff } from '@/lib/ai/types'
 import BuffEntryModal, { type BuffEditDraft } from '@/components/admin/buff-entry-modal'
 
@@ -79,6 +79,7 @@ interface ZoneRefRow {
     targetZoneId: string
     pct: string
     threshold?: string
+    refOwner?: 'self' | 'owner'
 }
 
 interface ZoneRow {
@@ -92,6 +93,7 @@ interface BuffRow {
     buffName: string
     scope: BuffScope
     exclusive: boolean
+    condition?: BuffCondition | null
     zones: ZoneRow[]
 }
 
@@ -117,6 +119,9 @@ export default function BuffEntityEditor({
             buffName: r.buff_name,
             scope: r.scope ?? 'team',
             exclusive: !!r.exclusive,
+            condition: r.condition && (r.condition.type === 'chain' || r.condition.type === 'refinement')
+                ? { type: r.condition.type, min: r.condition.min }
+                : null,
             zones: (r.buff_set ?? []).map((z) => ({
                 zoneId: z.zoneId,
                 value: String(z.value),
@@ -125,7 +130,8 @@ export default function BuffEntityEditor({
                     ? {
                           targetZoneId: z.ref.targetZoneId,
                           pct: String(z.ref.pct),
-                          ...(z.ref.threshold !== undefined ? { threshold: String(z.ref.threshold) } : {})
+                          ...(z.ref.threshold !== undefined ? { threshold: String(z.ref.threshold) } : {}),
+                          ...(z.ref.refOwner ? { refOwner: z.ref.refOwner } : {})
                       }
                     : null
             }))
@@ -307,7 +313,10 @@ export default function BuffEntityEditor({
 
     // ── buff 列表操作 ──
     function addBuff() {
-        const next = [...buffs, { buffName: '', scope: 'team' as BuffScope, exclusive: false, zones: [] }]
+        const next = [
+            ...buffs,
+            { buffName: '', scope: 'team' as BuffScope, exclusive: false, condition: null, zones: [] }
+        ]
         setBuffs(next)
         setEditingIdx(next.length - 1)
     }
@@ -353,7 +362,8 @@ export default function BuffEntityEditor({
                                       pct: Number(z.ref.pct) || 0,
                                       ...(z.ref.threshold !== undefined && z.ref.threshold !== ''
                                           ? { threshold: Number(z.ref.threshold) || 0 }
-                                          : {})
+                                          : {}),
+                                      ...(z.ref.refOwner ? { refOwner: z.ref.refOwner } : {})
                                   }
                               }
                             : {}),
@@ -361,7 +371,13 @@ export default function BuffEntityEditor({
                     }
                 })
                 .filter((z): z is { zoneId: string; value: number; override?: boolean; ref?: unknown } => z !== null)
-            return { buffName: b.buffName, scope: b.scope, exclusive: b.exclusive, zones }
+            return {
+                buffName: b.buffName,
+                scope: b.scope,
+                exclusive: b.exclusive,
+                ...(b.condition ? { condition: b.condition } : {}),
+                zones
+            }
         })
         const savedCount = payload.filter((b) => b.zones.length > 0).length
         run(() =>
@@ -398,6 +414,10 @@ export default function BuffEntityEditor({
                 buffName: b.buffName,
                 scope: b.scope ?? 'team',
                 exclusive: !!b.exclusive,
+                condition:
+                    b.condition && (b.condition.type === 'chain' || b.condition.type === 'refinement')
+                        ? { type: b.condition.type, min: b.condition.min }
+                        : null,
                 zones: b.zones.map((z) => ({
                     zoneId: z.zoneId,
                     value: String(z.value),
@@ -471,6 +491,16 @@ export default function BuffEntityEditor({
                                         效应专属
                                     </span>
                                 )}
+                                {buff.condition && buff.condition.type === 'chain' && (
+                                    <span className="shrink-0 rounded bg-(--accent)/10 px-1.5 py-0.5 text-[9px] text-(--accent-text)">
+                                        {buff.condition.min}链
+                                    </span>
+                                )}
+                                {buff.condition && buff.condition.type === 'refinement' && (
+                                    <span className="shrink-0 rounded bg-(--accent)/10 px-1.5 py-0.5 text-[9px] text-(--accent-text)">
+                                        {buff.condition.min}阶
+                                    </span>
+                                )}
                             </button>
                             <span className="shrink-0 text-[10px] text-(--muted)">
                                 {buff.zones.length} 乘区
@@ -500,6 +530,7 @@ export default function BuffEntityEditor({
             <BuffEntryModal
                 key={editingIdx ?? 'closed'}
                 open={editingIdx !== null}
+                entityType={entityType}
                 initial={editingIdx !== null ? (buffs[editingIdx] as BuffEditDraft) : null}
                 onClose={closeBuffModal}
                 onSave={saveBuffDraft}

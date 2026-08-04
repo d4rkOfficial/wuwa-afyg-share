@@ -26,7 +26,7 @@ export async function GET(req: Request) {
 
     let query = supabase
         .from('buff_sets')
-        .select('entity_type, entity_name, buff_name, scope, exclusive, buff_set')
+        .select('entity_type, entity_name, buff_name, scope, exclusive, condition, buff_set')
 
     if (entityType && ENTITY_TYPES.has(entityType)) query = query.eq('entity_type', entityType)
     if (entityName) query = query.eq('entity_name', entityName)
@@ -38,8 +38,8 @@ export async function GET(req: Request) {
 
     if (error) return Response.json({ error: error.message }, { status: 500, headers: CORS_HEADERS })
 
-    const buffSets: BuffSetRow[] = (data ?? []).filter(
-        (row): row is BuffSetRow => ENTITY_TYPES.has(row.entity_type as BuffEntityType)
+    const buffSets: BuffSetRow[] = ((data ?? []) as BuffSetRow[]).filter((row) =>
+        ENTITY_TYPES.has(row.entity_type)
     )
     return Response.json({ buffSets, total: buffSets.length }, { headers: CORS_HEADERS })
 }

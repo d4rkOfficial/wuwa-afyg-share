@@ -6,7 +6,8 @@ import {
     EFFECTS_TEXT,
     SCOPE_RULES_TEXT,
     NAMING_RULES_TEXT,
-    EXAMPLES_TEXT
+    EXAMPLES_TEXT,
+    CONDITION_RULES_TEXT
 } from '@/lib/ai/prompts.config'
 import { analyzeCharacterTerms } from '@/lib/ai/terms'
 import type { BuffEntityType, BuffSetRow } from '@/lib/types/db'
@@ -154,6 +155,14 @@ const BASE_TOOLS: ToolDefinition[] = [
                                 buffName: { type: 'string' },
                                 scope: { type: 'string', enum: ['self', 'self_except', 'team', 'effect_only'] },
                                 exclusive: { type: 'boolean' },
+                                condition: {
+                                    type: 'object',
+                                    description: '生效条件（可选）：{"type":"chain"|"refinement","min":n}',
+                                    properties: {
+                                        type: { type: 'string', enum: ['chain', 'refinement'] },
+                                        min: { type: 'number' }
+                                    }
+                                },
                                 zones: {
                                     type: 'array',
                                     items: {
@@ -200,6 +209,15 @@ const BASE_TOOLS: ToolDefinition[] = [
         function: {
             name: 'get_scope_rules',
             description: '获取受影响者（scope）的取值与判定细则（self/self_except/team/effect_only）。',
+            parameters: { type: 'object', properties: {} }
+        }
+    },
+    {
+        type: 'function',
+        function: {
+            name: 'get_condition_rules',
+            description:
+                '获取 Buff 生效条件（condition）的取值与判定细则（角色共鸣链 chain / 武器精炼 refinement）。仅当实体为角色或武器、且某增益确实存在命座/精炼门槛时调用，确认字段结构后给 buff 加 condition。',
             parameters: { type: 'object', properties: {} }
         }
     },
@@ -358,6 +376,8 @@ export async function executeTool(ctx: ToolContext, name: string, args: Record<s
             return EFFECTS_TEXT
         case 'get_scope_rules':
             return SCOPE_RULES_TEXT
+        case 'get_condition_rules':
+            return CONDITION_RULES_TEXT
         case 'get_slang_dict':
             return slangDict?.trim() || DEFAULT_SLANG_DICT
         case 'get_naming_rules':
@@ -373,6 +393,7 @@ interface ProposedBuff {
     buffName?: string
     scope?: string
     exclusive?: boolean
+    condition?: { type?: string; min?: number }
     zones?: Array<{ zoneId?: string; value?: number; override?: boolean }>
 }
 
@@ -434,6 +455,14 @@ function buildDiff(
 function sameBuff(existing: BuffSetRow, p: ProposedBuff): boolean {
     if (existing.scope !== p.scope) return false
     if (!!existing.exclusive !== !!p.exclusive) return false
+    const cond = (c: BuffSetRow['condition']): string => {
+        if (!c || (c.type !== 'chain' && c.type !== 'refinement')) return ''
+        return `${c.type}:${c.min}`
+    }
+    const pCond = p.condition && (p.condition.type === 'chain' || p.condition.type === 'refinement')
+        ? `${p.condition.type}:${typeof p.condition.min === 'number' ? Math.floor(p.condition.min) : 0}`
+        : ''
+    if (cond(existing.condition) !== pCond) return false
     const eZones = existing.buff_set ?? []
     const pZones = p.zones ?? []
     if (eZones.length !== pZones.length) return false

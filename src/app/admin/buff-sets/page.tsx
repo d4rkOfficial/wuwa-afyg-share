@@ -28,7 +28,7 @@ export default async function AdminBuffSetsPage() {
 
     const { data } = await supabase
         .from('buff_sets')
-        .select('entity_type, entity_name, buff_name, scope, exclusive, buff_set')
+        .select('entity_type, entity_name, buff_name, scope, exclusive, condition, buff_set')
         .order('entity_type', { ascending: true })
         .order('entity_name', { ascending: true })
     const rows = (data ?? []) as BuffSetRow[]

@@ -216,10 +216,14 @@ create table if not exists public.buff_sets (
     buff_set    jsonb not null,
     scope       text not null default 'team',
     exclusive   boolean not null default false,
+    condition   jsonb,
     primary key (entity_type, entity_name, buff_name),
     check (entity_type in ('character', 'weapon', 'echo', '1set', '2set', '3set', '4set', '5set')),
     check (scope in ('self', 'self_except', 'team', 'effect_only'))
 );
+
+-- 生效条件列（jsonb：{"type":"chain"|"refinement","min":n}）；对已部署库幂等补充
+alter table public.buff_sets add column if not exists condition jsonb;
 
 alter table public.buff_sets enable row level security;
 

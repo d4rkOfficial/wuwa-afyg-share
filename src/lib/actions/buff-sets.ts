@@ -2,8 +2,14 @@
 
 import { revalidatePath } from 'next/cache'
 import { requireAdmin } from '@/lib/supabase/admin'
-import { BUFF_ENTITY_TYPES, BUFF_ZONE_MAP, BUFF_REF_ZONE_MAP, BUFF_SCOPES } from '@/lib/consts/buff-zones'
-import type { BuffEntityType, BuffScope, BuffRefOwner } from '@/lib/types/db'
+import {
+    BUFF_ENTITY_TYPES,
+    BUFF_ZONE_MAP,
+    BUFF_REF_ZONE_MAP,
+    BUFF_SCOPES,
+    sanitizeCondition
+} from '@/lib/consts/buff-zones'
+import type { BuffEntityType, BuffCondition, BuffScope, BuffRefOwner } from '@/lib/types/db'
 
 export interface ActionResult<T = undefined> {
     data?: T
@@ -43,6 +49,7 @@ export interface InputBuff {
     buffName: string
     scope?: BuffScope
     exclusive?: boolean
+    condition?: BuffCondition | null
     zones: ZoneInput[]
 }
 
@@ -88,6 +95,16 @@ function normalizeScope(scope: unknown): BuffScope {
     return scope && BUFF_SCOPES.includes(scope as BuffScope) ? (scope as BuffScope) : 'team'
 }
 
+// 按实体类型约束条件类型：角色仅 chain（共鸣链）、武器仅 refinement（精炼），其它实体不支持条件
+function sanitizeConditionForEntity(cond: unknown, entityType: BuffEntityType): BuffCondition | null {
+    const c = sanitizeCondition(cond)
+    if (!c) return null
+    if (entityType === 'character' && c.type !== 'chain') return null
+    if (entityType === 'weapon' && c.type !== 'refinement') return null
+    if (entityType !== 'character' && entityType !== 'weapon') return null
+    return c
+}
+
 export async function upsertBuffSet(input: InputBuff): Promise<ActionResult> {
     const auth = await withAdmin()
     if (auth.error || !auth.supabase) return { error: auth.error ?? '无权限' }
@@ -108,6 +125,7 @@ export async function upsertBuffSet(input: InputBuff): Promise<ActionResult> {
             buff_name: buffName,
             scope: normalizeScope(input.scope),
             exclusive: !!input.exclusive,
+            condition: sanitizeConditionForEntity(input.condition, entityType),
             buff_set: sanitizeZones(input.zones)
         },
         { onConflict: 'entity_type,entity_name,buff_name' }
@@ -143,6 +161,7 @@ export interface InputEntityBuff {
     buffName: string
     scope?: BuffScope
     exclusive?: boolean
+    condition?: BuffCondition | null
     zones: ZoneInput[]
 }
 
@@ -177,6 +196,7 @@ export async function upsertBuffEntity(input: UpsertEntityInput): Promise<Action
             buffName: b.buffName.trim().slice(0, 80),
             scope: normalizeScope(b.scope),
             exclusive: !!b.exclusive,
+            condition: sanitizeConditionForEntity(b.condition, entityType),
             zones: sanitizeZones(b.zones)
         }))
         .filter((b) => b.buffName && b.zones.length > 0)
@@ -188,6 +208,7 @@ export async function upsertBuffEntity(input: UpsertEntityInput): Promise<Action
             buff_name: b.buffName,
             scope: b.scope,
             exclusive: b.exclusive,
+            condition: b.condition,
             buff_set: b.zones
         }))
         const { error } = await supabase.from('buff_sets').insert(rows)

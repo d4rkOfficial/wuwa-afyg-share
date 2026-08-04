@@ -1,4 +1,4 @@
-import type { BuffEntityType, BuffScope } from '@/lib/types/db'
+import type { BuffEntityType, BuffCondition, BuffScope } from '@/lib/types/db'
 
 export interface BuffZoneDef {
     id: string
@@ -73,4 +73,29 @@ export const BUFF_SCOPE_LABELS: Record<BuffScope, string> = {
     self_except: '自己除外',
     team: '对全队',
     effect_only: '效应专属'
+}
+
+// ── 生效条件（condition）──
+// 仅角色 / 武器实体使用：chain = 角色共鸣链（鸣潮 0-6 链）；refinement = 武器精炼（1-5 阶）
+export const BUFF_CONDITION_TYPES = ['chain', 'refinement'] as const
+export type BuffConditionType = (typeof BUFF_CONDITION_TYPES)[number]
+
+export const CHAIN_MAX = 6
+export const REFINE_MAX = 5
+
+export const BUFF_CONDITION_LABELS: Record<BuffConditionType, string> = {
+    chain: '角色共鸣链',
+    refinement: '武器精炼'
+}
+
+// 清洗生效条件：类型白名单 + min 为正整数且在各自上限内；非法返回 undefined
+export function sanitizeCondition(cond: unknown): BuffCondition | undefined {
+    if (!cond || typeof cond !== 'object') return undefined
+    const c = cond as Record<string, unknown>
+    if (c.type !== 'chain' && c.type !== 'refinement') return undefined
+    const type = c.type as BuffConditionType
+    const min = typeof c.min === 'number' && Number.isFinite(c.min) ? Math.floor(c.min) : 0
+    const max = type === 'chain' ? CHAIN_MAX : REFINE_MAX
+    if (min <= 0 || min > max) return undefined
+    return { type, min }
 }

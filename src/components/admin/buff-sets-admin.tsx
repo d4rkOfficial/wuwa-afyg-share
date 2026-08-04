@@ -32,6 +32,7 @@ const CONFIGURABLE_TOOLS = [
     'get_zone',
     'get_effects',
     'get_scope_rules',
+    'get_condition_rules',
     'get_slang_dict',
     'get_naming_rules',
     'get_examples'

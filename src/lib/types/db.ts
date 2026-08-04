@@ -40,6 +40,12 @@ export type BuffScope = 'self' | 'self_except' | 'team' | 'effect_only'
 // 引用归属：self = 引自己（角色自身面板）；owner = 引主人（武器/声骸/套装的装备者面板）
 export type BuffRefOwner = 'self' | 'owner'
 
+// 生效条件：仅角色/武器实体使用。chain = 角色共鸣链 ≥ min（0-6）；refinement = 武器精炼 ≥ min（1-5）
+export interface BuffCondition {
+    type: 'chain' | 'refinement'
+    min: number
+}
+
 export interface BuffZoneRef {
     targetZoneId: string
     pct: number
@@ -65,5 +71,6 @@ export interface BuffSetRow {
     buff_name: string
     scope: BuffScope
     exclusive: boolean
+    condition?: BuffCondition | null
     buff_set: BuffZoneValue[]
 }
