@@ -38,7 +38,7 @@ export default async function AdminBuffSetsPage() {
             <div>
                 <h1 className="text-2xl font-bold">Buff 集管理</h1>
                 <p className="mt-1 text-sm text-(--muted)">
-                    左侧按整实体编辑，右侧从工具箱目录选择实体。仅管理员可保存，非管理员可测试生成。
+                    按角色/武器/声骸/套装浏览实体网格，点开某个实体弹窗编辑。仅管理员可保存，非管理员可测试生成。
                 </p>
             </div>
 

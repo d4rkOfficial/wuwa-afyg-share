@@ -2,7 +2,7 @@
 
 import { useState } from 'react'
 import { Icon } from '@iconify/react'
-import BuffEntitySidebar from '@/components/admin/buff-entity-sidebar'
+import BuffEntityGrid from '@/components/admin/buff-entity-grid'
 import BuffEntityEditor from '@/components/admin/buff-entity-editor'
 import { DEFAULT_SYSTEM_PROMPT, DEFAULT_INITIAL_TASK_PROMPT, DEFAULT_SLANG_DICT } from '@/lib/ai/prompts'
 import type { BuffEntityType, BuffSetRow } from '@/lib/types/db'
@@ -17,26 +17,8 @@ const TOOL_BASE_STORAGE = 'wuwa-afyg:tool-base'
 const SYSTEM_PROMPT_STORAGE = 'wuwa-afyg:deepseek-system-prompt'
 const INITIAL_TASK_STORAGE = 'wuwa-afyg:deepseek-initial-task'
 const SLANG_DICT_STORAGE = 'wuwa-afyg:deepseek-slang-dict'
-const TOOL_PROMPTS_STORAGE = 'wuwa-afyg:deepseek-tool-prompts'
+const REASONING_EFFORT_STORAGE = 'wuwa-afyg:deepseek-reasoning-effort'
 const TOOL_BASE_DEFAULT = 'http://localhost:5173'
-
-// 可配置 description 的工具清单（名称 → 默认描述占位）
-const CONFIGURABLE_TOOLS = [
-    'list_entities',
-    'search_entities',
-    'get_entity_info',
-    'get_character_terms',
-    'get_buff_sets',
-    'get_editing_context',
-    'diff_buffs',
-    'get_zone',
-    'get_effects',
-    'get_scope_rules',
-    'get_condition_rules',
-    'get_slang_dict',
-    'get_naming_rules',
-    'get_examples'
-] as const
 
 function readStorage(key: string, fallback = ''): string {
     if (typeof window === 'undefined') return fallback
@@ -61,12 +43,9 @@ export default function BuffSetsAdmin({ rows, isAdmin }: Props) {
         readStorage(INITIAL_TASK_STORAGE, DEFAULT_INITIAL_TASK_PROMPT)
     )
     const [slangDict, setSlangDict] = useState(() => readStorage(SLANG_DICT_STORAGE, DEFAULT_SLANG_DICT))
-    const [toolPrompts, setToolPrompts] = useState<Record<string, string>>(() => {
-        try {
-            return JSON.parse(localStorage.getItem(TOOL_PROMPTS_STORAGE) ?? '{}') as Record<string, string>
-        } catch {
-            return {}
-        }
+    const [reasoningEffort, setReasoningEffort] = useState<'low' | 'medium' | 'high'>(() => {
+        const v = readStorage(REASONING_EFFORT_STORAGE)
+        return v === 'low' || v === 'high' ? v : 'medium'
     })
     const [showConfig, setShowConfig] = useState(false)
     const [selected, setSelected] = useState<{ entityType: BuffEntityType; entityName: string } | null>(null)
@@ -103,14 +82,9 @@ export default function BuffSetsAdmin({ rows, isAdmin }: Props) {
         localStorage.setItem(SLANG_DICT_STORAGE, value)
     }
 
-    function persistToolPrompt(name: string, value: string) {
-        setToolPrompts((prev) => {
-            const next = { ...prev }
-            if (value.trim()) next[name] = value
-            else delete next[name]
-            localStorage.setItem(TOOL_PROMPTS_STORAGE, JSON.stringify(next))
-            return next
-        })
+    function persistReasoningEffort(value: 'low' | 'medium' | 'high') {
+        setReasoningEffort(value)
+        localStorage.setItem(REASONING_EFFORT_STORAGE, value)
     }
 
     function handleSelect(entity: { entityType: BuffEntityType; entityName: string }) {
@@ -130,40 +104,11 @@ export default function BuffSetsAdmin({ rows, isAdmin }: Props) {
         : null
 
     return (
-        <div className="flex flex-col gap-4 lg:flex-row">
-            {/* 主编辑区 */}
-            <div className="min-w-0 flex-1 lg:h-[calc(100vh-8rem)]">
-                {!initial ? (
-                    <div className="flex h-full flex-col items-center justify-center gap-3 rounded-xl border border-(--card-border) bg-(--card) p-8 text-center text-sm text-(--muted)">
-                        <Icon icon="mdi:arrow-left" className="size-8" />
-                        <p>从右侧选择实体开始编辑</p>
-                    </div>
-                ) : (
-                    <BuffEntityEditor
-                        key={editingKey ?? 'new'}
-                        initial={initial}
-                        toolBase={toolBase}
-                        apiKey={apiKey}
-                        systemPrompt={systemPrompt}
-                        initialTaskPrompt={initialTaskPrompt}
-                        toolPrompts={toolPrompts}
-                        slangDict={slangDict}
-                        isAdmin={isAdmin}
-                        onEntityDeleted={() => {
-                            setSelected(null)
-                            setEditingKey(null)
-                        }}
-                    />
-                )}
-            </div>
-
-            {/* 右侧侧栏 */}
-            <div className="shrink-0 lg:order-last lg:w-72">
-                {/* 连接配置按钮 */}
-                <button
-                    onClick={() => setShowConfig(true)}
-                    className="toolbar-btn toolbar-btn-ghost mb-3 w-full justify-between"
-                >
+        <div className="flex h-[calc(100vh-8rem)] flex-col gap-3">
+            {/* 顶部工具栏 */}
+            <div className="flex shrink-0 items-center justify-between rounded-xl border border-(--card-border) bg-(--card) px-4 py-2.5">
+                <span className="text-sm font-medium text-(--muted)">实体列表</span>
+                <button onClick={() => setShowConfig(true)} className="toolbar-btn toolbar-btn-ghost">
                     <span className="flex items-center gap-1.5">
                         <Icon icon="mdi:cog-outline" className="size-4" />
                         连接配置
@@ -173,11 +118,43 @@ export default function BuffSetsAdmin({ rows, isAdmin }: Props) {
                     </span>
                     <Icon icon="mdi:cog" className="size-4" />
                 </button>
+            </div>
 
-                {/* 连接配置弹窗（整个弹窗随内容滚动） */}
-                {showConfig && (
-                    <div className="fixed inset-0 z-50 overflow-y-auto">
-                        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm" onClick={() => setShowConfig(false)} />
+            {/* 实体网格 */}
+            <div className="min-h-0 flex-1">
+                <BuffEntityGrid toolBase={toolBase} existingCountMap={existingCountMap} onSelect={handleSelect} />
+            </div>
+
+            {/* 编辑弹窗 */}
+            {selected && initial && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+                    <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={() => setSelected(null)} />
+                    <div className="relative flex h-[92vh] w-[min(98vw,1500px)] flex-col overflow-hidden rounded-xl border border-(--card-border) bg-(--card) shadow-2xl">
+                        <BuffEntityEditor
+                            key={editingKey ?? 'new'}
+                            initial={initial}
+                            toolBase={toolBase}
+                            apiKey={apiKey}
+                            systemPrompt={systemPrompt}
+                            initialTaskPrompt={initialTaskPrompt}
+                            toolPrompts={{}}
+                            slangDict={slangDict}
+                            reasoningEffort={reasoningEffort}
+                            isAdmin={isAdmin}
+                            onEntityDeleted={() => {
+                                setSelected(null)
+                                setEditingKey(null)
+                            }}
+                            onclose={() => setSelected(null)}
+                        />
+                    </div>
+                </div>
+            )}
+
+            {/* 连接配置弹窗（整个弹窗随内容滚动） */}
+            {showConfig && (
+                <div className="fixed inset-0 z-50 overflow-y-auto">
+                    <div className="fixed inset-0 bg-black/60 backdrop-blur-sm" onClick={() => setShowConfig(false)} />
                         <div className="relative mx-auto my-8 w-[calc(100vw-2rem)] max-w-xl rounded-xl border border-(--card-border) bg-(--card) p-4 shadow-2xl">
                             <div className="mb-3 flex items-center justify-between">
                                 <span className="text-sm font-semibold text-(--fg)">连接配置</span>
@@ -290,30 +267,25 @@ export default function BuffSetsAdmin({ rows, isAdmin }: Props) {
                                         style={{ minHeight: '100px' }}
                                     />
                                 </div>
-                                <div className="flex flex-col gap-1.5">
+                                <div className="flex flex-col gap-1">
                                     <div className="flex items-center justify-between">
-                                        <span className="text-xs text-(--muted)">工具提示词（description，留空用默认）</span>
-                                        <button
-                                            onClick={() => {
-                                                setToolPrompts({})
-                                                localStorage.removeItem(TOOL_PROMPTS_STORAGE)
-                                            }}
-                                            className="text-[10px] text-(--accent-text) hover:underline"
-                                        >
-                                            全部恢复默认
-                                        </button>
-                                    </div>
-                                    {CONFIGURABLE_TOOLS.map((name) => (
-                                        <div key={name} className="flex flex-col gap-0.5">
-                                            <span className="font-mono text-[10px] text-(--muted)">{name}</span>
-                                            <input
-                                                value={toolPrompts[name] ?? ''}
-                                                onChange={(e) => persistToolPrompt(name, e.target.value)}
-                                                placeholder="给 AI 的该工具用途说明（空=默认）"
-                                                className="w-full rounded-lg border border-(--card-border) bg-(--input-bg) px-2 py-1 text-xs outline-none focus:border-(--accent)/60"
-                                            />
+                                        <span className="text-xs text-(--muted)">思考强度</span>
+                                        <div className="flex items-center gap-1">
+                                            {(['low', 'medium', 'high'] as const).map((level) => (
+                                                <button
+                                                    key={level}
+                                                    onClick={() => persistReasoningEffort(level)}
+                                                    className={`rounded-md px-2 py-1 text-[11px] transition-colors ${
+                                                        reasoningEffort === level
+                                                            ? 'bg-(--accent)/15 text-(--accent-text)'
+                                                            : 'text-(--muted) hover:text-(--fg)'
+                                                    }`}
+                                                >
+                                                    {level === 'low' ? '低' : level === 'medium' ? '中' : '高'}
+                                                </button>
+                                            ))}
                                         </div>
-                                    ))}
+                                    </div>
                                 </div>
                                 <p className="text-[10px] text-(--muted)">
                                     提示词与词典仅存本机浏览器。可在编辑时对生成结果追问。
@@ -332,16 +304,6 @@ export default function BuffSetsAdmin({ rows, isAdmin }: Props) {
                         </div>
                     </div>
                 )}
-
-                <div className="lg:sticky lg:top-16 lg:h-[calc(100vh-8rem)]">
-                    <BuffEntitySidebar
-                        toolBase={toolBase}
-                        existingCountMap={existingCountMap}
-                        selected={selected}
-                        onSelect={handleSelect}
-                    />
-                </div>
-            </div>
         </div>
     )
 }
