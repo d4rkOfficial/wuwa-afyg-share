@@ -1,11 +1,29 @@
 import type { Metadata } from 'next'
+import { redirect } from 'next/navigation'
 import UploadForm from '@/components/upload-form'
+import { createClient, hasEnv } from '@/lib/supabase/server'
 
 export const metadata: Metadata = {
     title: '上传工程'
 }
 
-export default function UploadPage() {
+export const dynamic = 'force-dynamic'
+
+export default async function UploadPage() {
+    if (hasEnv()) {
+        const supabase = await createClient()
+        const {
+            data: { user }
+        } = await supabase.auth.getUser()
+        if (!user) redirect('/login?redirect=/upload')
+        const { data: profile } = await supabase
+            .from('profiles')
+            .select('id')
+            .eq('id', user.id)
+            .maybeSingle()
+        if (!profile) redirect('/setup-username?redirect=/upload')
+    }
+
     return (
         <div className="mx-auto max-w-2xl space-y-6">
             <div>

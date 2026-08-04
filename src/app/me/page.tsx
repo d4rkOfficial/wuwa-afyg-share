@@ -44,6 +44,9 @@ export default async function MePage() {
         .eq('id', user.id)
         .maybeSingle()
 
+    // 首次登录需先设置用户名（原由 middleware 强制）
+    if (!profile?.username) redirect('/setup-username?redirect=/me')
+
     return (
         <div className="mx-auto max-w-3xl space-y-6">
             {profile?.username && <UsernameEditor initial={profile.username} />}
