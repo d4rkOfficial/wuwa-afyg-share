@@ -3,13 +3,45 @@
 import { useState } from 'react'
 import { Icon } from '@iconify/react'
 import { BUFF_ENTITY_LABELS } from '@/lib/consts/buff-zones'
-import { fetchToolList, type ToolListEntry } from '@/lib/ai/info'
+import type { ToolListEntry } from '@/lib/ai/info'
 import type { BuffEntityType } from '@/lib/types/db'
 
 interface Props {
     toolBase: string
     existingCountMap: Record<string, number>
     onSelect: (entity: { entityType: BuffEntityType; entityName: string }) => void
+}
+
+interface StreamEvent {
+    type: 'log' | 'result' | 'error'
+    data?: unknown
+    message?: string
+}
+
+// 服务端代理（/api/admin/buff-sets/list）返回 NDJSON 流：{type:'result',data:ToolListEntry[]}
+async function readNdjsonStream(res: Response, onEvent: (evt: StreamEvent) => void): Promise<void> {
+    if (!res.body) {
+        onEvent({ type: 'error', message: '响应无 body' })
+        return
+    }
+    const reader = res.body.getReader()
+    const decoder = new TextDecoder()
+    let buffer = ''
+    for (;;) {
+        const { done, value } = await reader.read()
+        if (done) break
+        buffer += decoder.decode(value, { stream: true })
+        const lines = buffer.split('\n')
+        buffer = lines.pop() ?? ''
+        for (const line of lines) {
+            if (!line.trim()) continue
+            try {
+                onEvent(JSON.parse(line) as StreamEvent)
+            } catch {
+                /* 忽略坏行 */
+            }
+        }
+    }
 }
 
 function entityKey(entityType: BuffEntityType, entityName: string) {
@@ -50,11 +82,29 @@ export default function BuffEntityGrid({ toolBase, existingCountMap, onSelect }:
     async function load(type: BuffEntityType) {
         setError(null)
         try {
-            const list = await fetchToolList(toolBase, type)
-            const seen = new Set<string>()
-            setCatalog(list.filter((e) => (seen.has(e.name) ? false : (seen.add(e.name), true))))
-        } catch (e) {
-            setError(e instanceof Error ? e.message : '拉取实体目录失败')
+            const res = await fetch('/api/admin/buff-sets/list', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ toolBase, entityType: type })
+            })
+            let list: ToolListEntry[] = []
+            let failMsg: string | null = null
+            await readNdjsonStream(res, (evt) => {
+                if (evt.type === 'result' && Array.isArray(evt.data)) {
+                    list = evt.data as ToolListEntry[]
+                } else if (evt.type === 'error') {
+                    failMsg = evt.message ?? '拉取实体目录失败'
+                }
+            })
+            if (failMsg) {
+                setError(failMsg)
+                setCatalog(null)
+            } else {
+                const seen = new Set<string>()
+                setCatalog(list.filter((e) => (seen.has(e.name) ? false : (seen.add(e.name), true))))
+            }
+        } catch {
+            setError('拉取实体目录失败')
             setCatalog(null)
         } finally {
             setLoadedFor(type)
