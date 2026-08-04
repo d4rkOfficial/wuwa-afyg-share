@@ -6,23 +6,48 @@
 
 ## 功能
 
-- **工程广场** — 浏览社区分享的工程，按最新/最热排序、按名称搜索
-- **分享码** — 每个工程一个短链接，可设置有效期（7/30/90 天或永久），过期自动下架
+- **工程广场** — 浏览社区分享的工程，按最新/最热排序、按名称搜索；已失效（含宽限）工程自动隐藏
+- **分享码** — 每个工程一个短链接，可设置**过期日期**（按天选择或永久），到期自动失效；非匿名作者过期后额外宽限一周
+- **分享链接** — 复制时可选**工具箱实例**（主站/副站/本地或自定义），生成「工具箱地址#import_project=下载直链」一键打开
 - **详情预览** — 展示配队、武器、套装、声骸等元数据，无需登录即可下载原始 JSON
 - **登录上传** — GitHub / 邮箱魔法链接登录后即可上传（浏览与克隆无需登录）
-- **我的工程** — 编辑简介标签、延长/撤销分享码、换码、下架、删除、查看浏览量
+- **我的工程** — 编辑简介标签、按日期设置/改期过期、换源（替换工程文件）、换码、删除（仅宽限中工程）；所有操作有 toast 反馈
 - **Buff 集** — 角色/武器/声骸/套装的固定增益库，供椰果工具箱一键导入；公开浏览页按类型→实体分级展示
-- **Buff 集管理** — 右侧实体列表选择 → 左侧 IDE 式编辑区（整实体多 Buff、scope/效应专属/引用/覆盖/层数）；AI 协作按需调用工具生成/追问
-- **工程管理（管理员）** — 管理员可改名、调过期时间、删除任意用户的分享工程
+- **Buff 集管理** — 实体网格（分类/搜索/星级与 Cost 筛选/有条目无条目过滤）点开弹窗 IDE 编辑；AI 协作按需调用工具生成/润色/追问
+- **工程管理（管理员）** — 管理员可改名、调整过期时间、删除任意用户的分享工程
 
 ## 技术栈
 
 | 层   | 技术                                   |
 | ---- | -------------------------------------- |
-| 框架 | [Next.js](https://nextjs.org) (App Router, React 19) |
+| 框架 | [Next.js](https://nextjs.org) 16 (App Router, React 19) |
 | 样式 | [TailwindCSS](https://tailwindcss.com) v4 |
 | 后端 | [Supabase](https://supabase.com)（Postgres + Auth + RLS） |
-| 部署 | Vercel |
+| 部署 | [Cloudflare Workers](https://workers.cloudflare.com)（[OpenNext](https://opennext.js.org/cloudflare)） |
+
+## 部署到 Cloudflare Workers
+
+基于 `@opennextjs/cloudflare`（支持 Next.js 16，Node runtime）。提交 `main` 后由 Cloudflare **Workers Builds**（连接 GitHub）自动构建部署。
+
+```bash
+pnpm install
+pnpm preview      # 本地 wrangler 预览（workerd 运行时）
+pnpm deploy       # 构建并直接部署
+pnpm upload       # 构建并上传新版本
+```
+
+关键配置：
+- `wrangler.jsonc` — Worker 名 `wuwa-afyg-share`，`nodejs_compat` + `global_fetch_strictly_public`，静态资源 assets 绑定
+- `open-next.config.ts` — OpenNext 默认配置
+- `NEXT_PRIVATE_MINIMAL_MODE=1`（`wrangler.jsonc` vars）— 规避 Next `getMiddlewareManifest()` 在 workerd 的动态 `require` 报错（OpenNext 已知问题 #1232）
+- **不使用 Node proxy/middleware**：OpenNext 暂不支持 Node middleware（Next 16 `proxy.ts` / `middleware.ts` 均强制 Node runtime）。登录保护与首次设用户名校验已下沉到 `/me`、`/upload` 页面 server 组件；Supabase session 过期后需重新登录
+- `public/_headers` — `/_next/static` 静态资源长缓存
+
+环境变量（Cloudflare Dashboard → Worker → Settings → Variables）：
+- **Build 变量**：`NEXT_PUBLIC_SUPABASE_URL`、`NEXT_PUBLIC_SUPABASE_ANON_KEY`、`NEXT_PUBLIC_SITE_URL=https://wuwa-afyg-share.200503.xyz`
+- **Runtime 变量**：同上 + `SUPABASE_SERVICE_ROLE_KEY`
+
+自定义域名：`wuwa-afyg-share.200503.xyz`（Worker → Domains & Routes；DNS 在阿里云，CNAME 指向 Worker 端点）。
 
 ## 本地开发
 
@@ -86,3 +111,4 @@ pnpm dev
 ## 免费档注意事项
 
 - Supabase 免费项目闲置 **1 周** 会自动暂停，建议配置定时任务（如 GitHub Actions）定期发起一次请求保活。
+- Cloudflare Workers **免费档 Worker 体积上限 3 MiB（gzip）**，付费档 10 MiB；构建后 `wrangler deploy` 会显示 gzip 体积，超限需升级付费档或精简依赖。
