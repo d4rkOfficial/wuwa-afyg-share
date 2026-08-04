@@ -6,7 +6,7 @@ import { parseProjectFile, safeJsonParse } from '@/lib/project/parse'
 import { extractTeamPreview } from '@/lib/project/extract'
 import { compressProjectText, assertRawSize } from '@/lib/project/compress'
 import { generateCode } from '@/lib/utils/slug'
-import { EXPORT_VERSION, type ProjectData } from '@/lib/types/project'
+import { EXPORT_VERSION } from '@/lib/types/project'
 
 export interface ActionResult<T = undefined> {
     data?: T
@@ -18,6 +18,7 @@ export interface PublishInput {
     description: string
     tags: string[]
     expiresDays: number | null
+    expiresAt?: string | null
 }
 
 async function requireUser() {
@@ -50,30 +51,36 @@ function fallbackAuthorName(user: { user_metadata?: Record<string, unknown>; ema
     return raw?.trim().slice(0, 20) || '匿名'
 }
 
+// 解析 + 提取预览 + 压缩工程文件（发布与换源共用）
+function prepareProjectFile(fileText: string) {
+    const project = parseProjectFile(safeJsonParse(fileText))
+    const preview = extractTeamPreview(project)
+    const file = { version: EXPORT_VERSION, exportedAt: Date.now(), project }
+    const text = JSON.stringify(file)
+    const fileSize = new TextEncoder().encode(text).length
+    assertRawSize(text)
+    const { blobHex } = compressProjectText(text)
+    return { project, preview, blobHex, fileSize }
+}
+
 export async function publishProject(input: PublishInput): Promise<ActionResult<{ code: string }>> {
     const auth = await requireUser()
     if (!auth.user) return { error: auth.error ?? '请先登录' }
     const { supabase, user } = auth
 
-    let project: ProjectData
+    let prep: ReturnType<typeof prepareProjectFile>
     try {
-        project = parseProjectFile(safeJsonParse(input.fileText))
+        prep = prepareProjectFile(input.fileText)
     } catch (e) {
         return { error: e instanceof Error ? e.message : '解析失败' }
     }
+    const { project, preview, blobHex, fileSize } = prep
 
-    const preview = extractTeamPreview(project)
     const description = input.description.trim().slice(0, 500)
     const tags = sanitizeTags(input.tags)
-    const expiresAt = input.expiresDays
-        ? new Date(Date.now() + input.expiresDays * 86400000).toISOString()
-        : null
-
-    const file = { version: EXPORT_VERSION, exportedAt: Date.now(), project }
-    const fileText = JSON.stringify(file)
-    const fileSize = new TextEncoder().encode(fileText).length
-    assertRawSize(fileText)
-    const { blobHex } = compressProjectText(fileText)
+    const expiresAt =
+        input.expiresAt ??
+        (input.expiresDays ? new Date(Date.now() + input.expiresDays * 86400000).toISOString() : null)
 
     const name = project.name.trim()
     const { data: profile } = await supabase
@@ -145,6 +152,35 @@ export async function setExpiry(id: string, expiresAt: string | null): Promise<A
 
     const { error } = await supabase.from('projects').update({ expires_at: expiresAt }).eq('id', id)
     if (error) return { error: error.message }
+    revalidatePath('/me')
+    return {}
+}
+
+// 工程换源：以新工程文件覆盖内容（保留分享码、简介、标签、有效期），更新标题
+export async function replaceProjectFile(id: string, fileText: string): Promise<ActionResult> {
+    const auth = await requireUser()
+    if (!auth.user) return { error: auth.error ?? '请先登录' }
+    const { supabase } = auth
+
+    let prep: ReturnType<typeof prepareProjectFile>
+    try {
+        prep = prepareProjectFile(fileText)
+    } catch (e) {
+        return { error: e instanceof Error ? e.message : '解析失败' }
+    }
+    const { project, preview, blobHex, fileSize } = prep
+
+    const { error } = await supabase
+        .from('projects')
+        .update({
+            title: project.name.trim().slice(0, 60),
+            team_preview: preview,
+            project_blob: blobHex,
+            file_size: fileSize
+        })
+        .eq('id', id)
+    if (error) return { error: error.message }
+    revalidatePath('/')
     revalidatePath('/me')
     return {}
 }

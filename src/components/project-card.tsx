@@ -30,22 +30,25 @@ export default function ProjectCard({ project }: { project: ProjectListItem }) {
             {project.tags.length > 0 && (
                 <div className="flex flex-wrap gap-1.5">
                     {project.tags.map((tag) => (
-                        <span
+                        <Link
                             key={tag}
-                            className="rounded-md bg-(--card-hover) px-2 py-0.5 text-xs text-(--muted)"
+                            href={`/?q=${encodeURIComponent(tag)}`}
+                            className="rounded-md bg-(--card-hover) px-2 py-0.5 text-xs text-(--muted) transition-colors hover:bg-(--accent)/10 hover:text-(--accent-text)"
                         >
                             #{tag}
-                        </span>
+                        </Link>
                     ))}
                 </div>
             )}
 
             <div className="mt-auto flex items-center gap-3 text-xs text-(--muted)">
-                <span className="flex items-center gap-1">
-                    <Icon icon="mdi:account-outline" className="size-3.5" />
-                    {project.author_name}
+                <span className="flex min-w-0 items-center gap-1.5">
+                    <span className="flex size-5 shrink-0 items-center justify-center rounded-full bg-(--card-hover) text-[9px] font-semibold text-(--muted)">
+                        {project.author_name?.charAt(0) || '?'}
+                    </span>
+                    <span className="truncate">{project.author_name}</span>
                 </span>
-                <span>{timeAgo(project.created_at)}</span>
+                <span className="shrink-0">{timeAgo(project.created_at)}</span>
                 <div className="flex-1" />
                 <span className="flex items-center gap-0.5">
                     <Icon icon="mdi:eye-outline" className="size-3.5" />

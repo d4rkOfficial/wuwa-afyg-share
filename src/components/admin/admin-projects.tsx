@@ -9,6 +9,7 @@ import {
     adminDeleteProject
 } from '@/lib/actions/admin-projects'
 import { toast } from '@/components/ui/toast'
+import { isExpiredProject, isGracePeriod } from '@/lib/utils/expiry'
 import type { ProjectListItem } from '@/lib/types/db'
 
 export default function AdminProjects() {
@@ -107,7 +108,6 @@ export default function AdminProjects() {
                             <th className="px-3 py-2 font-semibold">标题</th>
                             <th className="px-3 py-2 font-semibold">分享码</th>
                             <th className="px-3 py-2 font-semibold">作者</th>
-                            <th className="px-3 py-2 font-semibold">发布</th>
                             <th className="px-3 py-2 font-semibold">过期</th>
                             <th className="px-3 py-2 font-semibold">查看/克隆</th>
                             <th className="px-3 py-2 font-semibold">操作</th>
@@ -142,18 +142,27 @@ export default function AdminProjects() {
                                     )}
                                 </td>
                                 <td className="px-3 py-2">
-                                    <span
-                                        className={`rounded px-1.5 py-0.5 text-[10px] ${
-                                            row.published
-                                                ? 'bg-(--success)/15 text-(--success)'
-                                                : 'bg-(--danger)/15 text-(--danger)'
-                                        }`}
-                                    >
-                                        {row.published ? '已发布' : '未发布'}
-                                    </span>
-                                </td>
-                                <td className="px-3 py-2 text-xs text-(--muted)">
-                                    {row.expires_at ? new Date(row.expires_at).toLocaleDateString('zh-CN') : '永久'}
+                                    {(() => {
+                                        const expired = isExpiredProject(row.expires_at, row.author_name)
+                                        const grace = isGracePeriod(row.expires_at, row.author_name)
+                                        if (expired)
+                                            return (
+                                                <span className="rounded bg-(--danger)/15 px-1.5 py-0.5 text-[10px] text-(--danger)">
+                                                    已过期
+                                                </span>
+                                            )
+                                        if (grace)
+                                            return (
+                                                <span className="rounded bg-(--warning)/15 px-1.5 py-0.5 text-[10px] text-(--warning)">
+                                                    宽限中
+                                                </span>
+                                            )
+                                        return (
+                                            <span className="text-xs text-(--muted)">
+                                                {row.expires_at ? new Date(row.expires_at).toLocaleDateString('zh-CN') : '永久'}
+                                            </span>
+                                        )
+                                    })()}
                                 </td>
                                 <td className="px-3 py-2 text-xs text-(--muted)">
                                     {row.view_count} / {row.clone_count}
@@ -238,7 +247,7 @@ export default function AdminProjects() {
                         ))}
                         {!loading && items.length === 0 && (
                             <tr>
-                                <td colSpan={7} className="px-3 py-10 text-center text-sm text-(--muted)">
+                                <td colSpan={6} className="px-3 py-10 text-center text-sm text-(--muted)">
                                     暂无工程
                                 </td>
                             </tr>

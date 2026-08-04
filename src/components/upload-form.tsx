@@ -10,11 +10,17 @@ import { teamDisplayNames } from '@/lib/project/extract'
 import type { ProjectData } from '@/lib/types/project'
 
 const EXPIRY_OPTIONS = [
-    { value: null as number | null, label: '永久' },
-    { value: 7, label: '7 天' },
-    { value: 30, label: '30 天' },
-    { value: 90, label: '90 天' }
+    { days: 7, label: '+7 天' },
+    { days: 30, label: '+30 天' },
+    { days: 90, label: '+90 天' }
 ]
+
+function toDateInput(d: Date): string {
+    const y = d.getFullYear()
+    const m = String(d.getMonth() + 1).padStart(2, '0')
+    const day = String(d.getDate()).padStart(2, '0')
+    return `${y}-${m}-${day}`
+}
 
 export default function UploadForm() {
     const router = useRouter()
@@ -26,7 +32,8 @@ export default function UploadForm() {
 
     const [description, setDescription] = useState('')
     const [tagsText, setTagsText] = useState('')
-    const [expiresDays, setExpiresDays] = useState<number | null>(30)
+    // 过期日期（YYYY-MM-DD），空串 = 永久
+    const [expireDate, setExpireDate] = useState(() => toDateInput(new Date(Date.now() + 30 * 86400000)))
 
     const [submitError, setSubmitError] = useState<string | null>(null)
     const [pending, startTransition] = useTransition()
@@ -61,7 +68,8 @@ export default function UploadForm() {
                 .split(/[,，\s]+/)
                 .map((t) => t.trim())
                 .filter(Boolean)
-            const res = await publishProject({ fileText, description, tags, expiresDays })
+            const expiresAt = expireDate ? `${expireDate}T23:59:59.999+08:00` : null
+            const res = await publishProject({ fileText, description, tags, expiresDays: null, expiresAt })
             if (res.error) {
                 setSubmitError(res.error)
                 return
@@ -154,23 +162,35 @@ export default function UploadForm() {
                     </div>
 
                     <div>
-                        <label className="mb-1.5 block text-sm text-(--muted)">分享码有效期</label>
-                        <div className="flex flex-wrap gap-2">
+                        <label className="mb-1.5 block text-sm text-(--muted)">过期日期</label>
+                        <div className="flex flex-wrap items-center gap-2">
                             {EXPIRY_OPTIONS.map((opt) => (
                                 <button
                                     key={opt.label}
-                                    onClick={() => setExpiresDays(opt.value)}
-                                    className={`rounded-lg px-3 py-1.5 text-sm transition-colors ${
-                                        expiresDays === opt.value
-                                            ? 'bg-(--accent) text-(--accent-fg)'
-                                            : 'border border-(--card-border) bg-(--card) text-(--muted) hover:text-(--fg)'
-                                    }`}
+                                    onClick={() => setExpireDate(toDateInput(new Date(Date.now() + opt.days * 86400000)))}
+                                    className="rounded-lg border border-(--card-border) bg-(--card) px-3 py-1.5 text-sm text-(--muted) transition-colors hover:text-(--fg)"
                                 >
                                     {opt.label}
                                 </button>
                             ))}
+                            <input
+                                type="date"
+                                value={expireDate}
+                                onChange={(e) => setExpireDate(e.target.value)}
+                                className="rounded-lg border border-(--card-border) bg-(--input-bg) px-3 py-1.5 text-sm outline-none transition-colors focus:border-(--accent)/60"
+                            />
+                            <button
+                                onClick={() => setExpireDate('')}
+                                className={`rounded-lg px-3 py-1.5 text-sm transition-colors ${
+                                    !expireDate
+                                        ? 'bg-(--accent) text-(--accent-fg)'
+                                        : 'border border-(--card-border) bg-(--card) text-(--muted) hover:text-(--fg)'
+                                }`}
+                            >
+                                永久
+                            </button>
                         </div>
-                        <p className="mt-1.5 text-xs text-(--muted)">过期后分享链接将自动下架，可在「我的工程」中随时延长。</p>
+                        <p className="mt-1.5 text-xs text-(--muted)">到期后分享链接将自动失效，可在「我的工程」中随时改期。</p>
                     </div>
                 </div>
             </div>

@@ -4,6 +4,7 @@ import { useState, useTransition } from 'react'
 import { useRouter } from 'next/navigation'
 import { Icon } from '@iconify/react'
 import { updateUsername } from '@/lib/actions/profile'
+import { toast } from '@/components/ui/toast'
 
 interface Props {
     initial: string
@@ -17,14 +18,17 @@ export default function UsernameEditor({ initial }: Props) {
     const [pending, startTransition] = useTransition()
 
     function onSave() {
+        toast('正在保存用户名…', 'info')
         startTransition(async () => {
             const res = await updateUsername(username)
             if (res.error) {
                 setErr(res.error)
+                toast(res.error, 'error')
                 return
             }
             setErr(null)
             setEditing(false)
+            toast('已保存用户名', 'success')
             router.refresh()
         })
     }

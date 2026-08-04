@@ -7,6 +7,7 @@ import UsernameEditor from '@/components/username-editor'
 import { createClient, hasEnv } from '@/lib/supabase/server'
 import { signOut } from '@/lib/actions/auth'
 import { LIST_COLUMNS } from '@/lib/project/query'
+import { isExpiredProject, isGracePeriod } from '@/lib/utils/expiry'
 import type { ProjectListItem } from '@/lib/types/db'
 
 export const metadata: Metadata = {
@@ -30,6 +31,12 @@ export default async function MePage() {
         .eq('author_id', user.id)
         .order('created_at', { ascending: false })
     const projects = (data ?? []) as ProjectListItem[]
+    // 到期即算过期（含非匿名宽限期）
+    const expiredCount = projects.filter(
+        (p) => isExpiredProject(p.expires_at, p.author_name) || isGracePeriod(p.expires_at, p.author_name)
+    ).length
+    const totalViews = projects.reduce((s, p) => s + (p.view_count ?? 0), 0)
+    const totalClones = projects.reduce((s, p) => s + (p.clone_count ?? 0), 0)
 
     const { data: profile } = await supabase
         .from('profiles')
@@ -66,6 +73,27 @@ export default async function MePage() {
                     </Link>
                 </div>
             </div>
+
+            {projects.length > 0 && (
+                <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+                    <div className="rounded-xl border border-(--card-border) bg-(--card) p-3 text-center">
+                        <div className="text-lg font-bold tabular-nums">{projects.length}</div>
+                        <div className="text-xs text-(--muted)">工程</div>
+                    </div>
+                    <div className="rounded-xl border border-(--card-border) bg-(--card) p-3 text-center">
+                        <div className="text-lg font-bold tabular-nums text-red-400">{expiredCount}</div>
+                        <div className="text-xs text-(--muted)">已过期</div>
+                    </div>
+                    <div className="rounded-xl border border-(--card-border) bg-(--card) p-3 text-center">
+                        <div className="text-lg font-bold tabular-nums">{totalViews.toLocaleString()}</div>
+                        <div className="text-xs text-(--muted)">总浏览</div>
+                    </div>
+                    <div className="rounded-xl border border-(--card-border) bg-(--card) p-3 text-center">
+                        <div className="text-lg font-bold tabular-nums">{totalClones.toLocaleString()}</div>
+                        <div className="text-xs text-(--muted)">总克隆</div>
+                    </div>
+                </div>
+            )}
 
             {projects.length === 0 ? (
                 <div className="rounded-xl border border-(--card-border) bg-(--card) p-12 text-center text-(--muted)">

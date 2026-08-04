@@ -5,6 +5,7 @@ import Pagination from '@/components/pagination'
 import SetupNotice from '@/components/setup-notice'
 import { createClient, hasEnv } from '@/lib/supabase/server'
 import { LIST_COLUMNS } from '@/lib/project/query'
+import { isExpiredProject } from '@/lib/utils/expiry'
 import type { ProjectListItem } from '@/lib/types/db'
 
 export const dynamic = 'force-dynamic'
@@ -35,7 +36,10 @@ export default async function HomePage({
 
     const from = (page - 1) * PER_PAGE
     const { data, count, error } = await query.range(from, from + PER_PAGE - 1)
-    const items = (data ?? []) as ProjectListItem[]
+    // 应用层按有效期限（含非匿名宽限一周）过滤，已失效工程不展示
+    const items = ((data ?? []) as ProjectListItem[]).filter(
+        (p) => !isExpiredProject(p.expires_at, p.author_name)
+    )
     const totalPages = Math.max(1, Math.ceil((count ?? 0) / PER_PAGE))
 
     return (
@@ -67,22 +71,23 @@ export default async function HomePage({
             <div className="flex items-center gap-2">
                 {(
                     [
-                        { key: 'latest', label: '最新' },
-                        { key: 'hot', label: '最热' }
+                        { key: 'latest', label: '最新', icon: 'mdi:clock-outline' },
+                        { key: 'hot', label: '最热', icon: 'mdi:fire' }
                     ] as const
-                ).map(({ key, label }) => {
+                ).map(({ key, label, icon }) => {
                     const active = sort === key
                     const href = `/?sort=${key}&page=1${q ? `&q=${encodeURIComponent(q)}` : ''}`
                     return (
                         <Link
                             key={key}
                             href={href}
-                            className={`rounded-lg px-3 py-1.5 text-sm transition-colors ${
+                            className={`inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-sm transition-colors ${
                                 active
-                                    ? 'bg-(--accent) text-(--accent-fg)'
+                                    ? 'bg-(--accent) font-medium text-(--accent-fg)'
                                     : 'border border-(--card-border) bg-(--card) text-(--muted) hover:text-(--fg)'
                             }`}
                         >
+                            <Icon icon={icon} className="size-4" />
                             {label}
                         </Link>
                     )
@@ -95,15 +100,18 @@ export default async function HomePage({
                 </div>
             ) : items.length === 0 ? (
                 <div className="rounded-xl border border-(--card-border) bg-(--card) p-12 text-center">
-                    <Icon icon="mdi:package-variant-closed" className="mx-auto mb-3 size-10 text-(--muted)" />
-                    <p className="text-(--muted)">{q ? `没有找到「${q}」相关工程` : '还没有人分享工程'}</p>
+                    <Icon icon={q ? 'mdi:magnify-close' : 'mdi:package-variant-closed'} className="mx-auto mb-3 size-10 text-(--muted)" />
+                    <p className="font-medium">{q ? `没有找到「${q}」相关工程` : '这里还没有人分享工程'}</p>
+                    <p className="mt-1 text-sm text-(--muted)">
+                        {q ? '换个关键词试试，或发布你自己的工程' : '去工具箱导出你的拉表排轴工程，做第一个分享者'}
+                    </p>
                     <Link
                         href="/upload"
                         className="mt-4 inline-flex items-center gap-1.5 rounded-lg px-4 py-2 text-sm font-medium text-(--btn-text)"
                         style={{ background: 'var(--btn-bg)' }}
                     >
                         <Icon icon="mdi:plus" className="size-4" />
-                        上传第一个工程
+                        上传工程
                     </Link>
                 </div>
             ) : (

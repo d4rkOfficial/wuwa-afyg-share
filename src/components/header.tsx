@@ -43,29 +43,29 @@ export default async function Header() {
 
                 <AppLink
                     href="/buff-sets"
-                    className="inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-sm text-(--muted) transition-colors hover:text-(--fg)"
+                    className="inline-flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-sm text-(--muted) transition-colors hover:text-(--fg)"
                 >
                     <Icon icon="mdi:view-dashboard-outline" className="size-4" />
-                    Buff 集
+                    <span className="hidden sm:inline">Buff 集</span>
                 </AppLink>
 
-                {user && (
+                {isAdmin && (
                     <AppLink
                         href="/admin/buff-sets"
-                        className="inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-sm text-(--muted) transition-colors hover:text-(--fg)"
+                        className="inline-flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-sm text-(--muted) transition-colors hover:text-(--fg)"
                     >
                         <Icon icon="mdi:shield-edit-outline" className="size-4" />
-                        Buff 集管理
+                        <span className="hidden sm:inline">Buff 集管理</span>
                     </AppLink>
                 )}
 
                 {isAdmin && (
                     <AppLink
                         href="/admin/projects"
-                        className="inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-sm text-(--muted) transition-colors hover:text-(--fg)"
+                        className="inline-flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-sm text-(--muted) transition-colors hover:text-(--fg)"
                     >
                         <Icon icon="mdi:clipboard-account-outline" className="size-4" />
-                        工程管理
+                        <span className="hidden sm:inline">工程管理</span>
                     </AppLink>
                 )}
 

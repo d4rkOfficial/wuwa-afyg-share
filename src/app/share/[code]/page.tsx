@@ -4,14 +4,14 @@ import type { Metadata } from 'next'
 import { Icon } from '@iconify/react'
 import TeamBanner from '@/components/team-banner'
 import TeamPreview from '@/components/team-preview'
-import CopyButton from '@/components/copy-button'
+import ShareLinkPicker from '@/components/share-link-picker'
 import ExpiryCountdown from '@/components/expiry-countdown'
 import SetupNotice from '@/components/setup-notice'
 import { createClient, hasEnv } from '@/lib/supabase/server'
 import { DETAIL_COLUMNS } from '@/lib/project/query'
 import { teamDisplayNames } from '@/lib/project/extract'
 import { formatDate, formatCount } from '@/lib/utils/format'
-import { siteUrl } from '@/lib/utils/site'
+import { isExpiredProject, isGracePeriod } from '@/lib/utils/expiry'
 import type { ProjectRow } from '@/lib/types/db'
 
 export const dynamic = 'force-dynamic'
@@ -56,10 +56,28 @@ export default async function SharePage({ params }: { params: Promise<{ code: st
     await supabase.rpc('bump_counter', { p_id: project.id, p_col: 'views' })
 
     const names = teamDisplayNames(project.team_preview)
-    // eslint-disable-next-line react-hooks/purity -- 动态服务端组件按请求时间判断过期
-    const isExpired = project.expires_at !== null && new Date(project.expires_at).getTime() <= Date.now()
-    const shareUrl = `${siteUrl()}/share/${project.code}`
+    const expired = isExpiredProject(project.expires_at, project.author_name)
+    const grace = isGracePeriod(project.expires_at, project.author_name)
     const isOwner = user && user.id === project.author_id
+
+    if (expired) {
+        return (
+            <div className="mx-auto max-w-4xl space-y-6">
+                <Link
+                    href="/"
+                    className="inline-flex items-center gap-1 text-sm text-(--muted) transition-colors hover:text-(--fg)"
+                >
+                    <Icon icon="mdi:arrow-left" className="size-4" />
+                    返回广场
+                </Link>
+                <div className="rounded-2xl border border-(--card-border) bg-(--card) p-12 text-center">
+                    <Icon icon="mdi:clock-alert-outline" className="mx-auto mb-3 size-10 text-(--muted)" />
+                    <p className="font-medium">该工程分享已过期</p>
+                    <p className="mt-1 text-sm text-(--muted)">链接已失效，可联系作者重新分享。</p>
+                </div>
+            </div>
+        )
+    }
 
     return (
         <div className="mx-auto max-w-4xl space-y-6">
@@ -82,7 +100,14 @@ export default async function SharePage({ params }: { params: Promise<{ code: st
                             </span>
                             <span>{formatDate(project.created_at)}</span>
                             {project.game_version && <span>v{project.game_version}</span>}
-                            {project.expires_at && !isExpired && <ExpiryCountdown expiresAt={project.expires_at} />}
+                            {grace ? (
+                                <span className="inline-flex items-center gap-1 rounded-md bg-orange-500/15 px-2 py-0.5 text-xs text-orange-400">
+                                    <Icon icon="mdi:clock-alert-outline" className="size-3.5" />
+                                    宽限期中
+                                </span>
+                            ) : (
+                                project.expires_at && !expired && <ExpiryCountdown expiresAt={project.expires_at} />
+                            )}
                         </div>
                     </div>
                 </div>
@@ -115,7 +140,7 @@ export default async function SharePage({ params }: { params: Promise<{ code: st
                         <Icon icon="mdi:download" className="size-4" />
                         下载工程 JSON
                     </a>
-                    <CopyButton text={shareUrl} />
+                    <ShareLinkPicker code={project.code} />
                     {isOwner && (
                         <Link
                             href="/me"
