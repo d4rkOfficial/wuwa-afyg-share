@@ -62,6 +62,9 @@ export default function BuffSetsAdmin({ rows, isAdmin }: Props) {
     // 跨实体共享会话：按实体类型分组（system 前缀一致才能命中缓存），默认开启
     const [sessionShare, setSessionShare] = useState(() => readStorage(SESSION_SHARE_STORAGE, '1') === '1')
     const [shareSessions, setShareSessions] = useState<Record<string, ChatMessage[]>>({})
+    // 二级弹窗编辑：system / initial / slang
+    const [editingPrompt, setEditingPrompt] = useState<'system' | 'initial' | 'slang' | null>(null)
+    const [draftText, setDraftText] = useState('')
     const [showConfig, setShowConfig] = useState(false)
     const [selected, setSelected] = useState<{ entityType: BuffEntityType; entityName: string } | null>(null)
     const [editingKey, setEditingKey] = useState<string | null>(null)
@@ -128,6 +131,49 @@ export default function BuffSetsAdmin({ rows, isAdmin }: Props) {
 
     function handleSessionUpdate(entityType: BuffEntityType, messages: ChatMessage[]) {
         setShareSessions((prev) => ({ ...prev, [entityType]: trimSession(messages) }))
+    }
+
+    const PROMPT_EDITORS = [
+        {
+            key: 'system' as const,
+            label: '系统提示词模板',
+            hint: '支持 {ZONE_LIST} {REF_ZONE_LIST} {CONDITION_RULES} 占位符',
+            value: systemPrompt,
+            minHeight: 320,
+            persist: persistSystemPrompt,
+            reset: DEFAULT_SYSTEM_PROMPT
+        },
+        {
+            key: 'initial' as const,
+            label: '首轮任务指令',
+            hint: '支持 {ENTITY_TYPE} {ENTITY_NAME} 占位符',
+            value: initialTaskPrompt,
+            minHeight: 200,
+            persist: persistInitialTaskPrompt,
+            reset: DEFAULT_INITIAL_TASK_PROMPT
+        },
+        {
+            key: 'slang' as const,
+            label: '黑话词典',
+            hint: '每行：原叫法=黑话；行尾可用 // 注释',
+            value: slangDict,
+            minHeight: 200,
+            persist: persistSlangDict,
+            reset: DEFAULT_SLANG_DICT
+        }
+    ]
+
+    const activePromptEditor = PROMPT_EDITORS.find((e) => e.key === editingPrompt) ?? null
+
+    function openPromptEditor(key: 'system' | 'initial' | 'slang') {
+        setDraftText(PROMPT_EDITORS.find((e) => e.key === key)?.value ?? '')
+        setEditingPrompt(key)
+    }
+
+    function savePromptEditor() {
+        if (!activePromptEditor) return
+        activePromptEditor.persist(draftText)
+        setEditingPrompt(null)
     }
 
     function handleSelect(entity: { entityType: BuffEntityType; entityName: string }) {
@@ -311,61 +357,38 @@ export default function BuffSetsAdmin({ rows, isAdmin }: Props) {
                                         opencode-go 填 OPENCODE_API_KEY（opencode 登录后 auth.json 里的 key）；DeepSeek 填官方 API Key
                                     </p>
                                 </label>
-                                <div className="flex flex-col gap-1">
-                                    <div className="flex items-center justify-between">
-                                        <span className="text-xs text-(--muted)">系统提示词模板</span>
-                                        <button
-                                            onClick={() => persistSystemPrompt(DEFAULT_SYSTEM_PROMPT)}
-                                            className="text-[10px] text-(--accent-text) hover:underline"
+                                {PROMPT_EDITORS.map((editor) => {
+                                    const summary = editor.value.trim().replace(/\s+/g, ' ').slice(0, 60)
+                                    return (
+                                        <div
+                                            key={editor.key}
+                                            className="flex items-center gap-2 rounded-lg border border-(--card-border) bg-(--input-bg) px-2.5 py-2"
                                         >
-                                            恢复默认
-                                        </button>
-                                    </div>
-                                    <textarea
-                                        value={systemPrompt}
-                                        onChange={(e) => persistSystemPrompt(e.target.value)}
-                                        
-                                        placeholder="支持 {ZONE_LIST} 占位符"
-                                        className="w-full rounded-lg border border-(--card-border) bg-(--input-bg) px-2 py-1.5 font-mono text-[11px] leading-relaxed outline-none focus:border-(--accent)/60"
-                                        style={{ minHeight: '200px' }}
-                                    />
-                                </div>
-                                <div className="flex flex-col gap-1">
-                                    <div className="flex items-center justify-between">
-                                        <span className="text-xs text-(--muted)">首轮任务指令</span>
-                                        <button
-                                            onClick={() => persistInitialTaskPrompt(DEFAULT_INITIAL_TASK_PROMPT)}
-                                            className="text-[10px] text-(--accent-text) hover:underline"
-                                        >
-                                            恢复默认
-                                        </button>
-                                    </div>
-                                    <textarea
-                                        value={initialTaskPrompt}
-                                        onChange={(e) => persistInitialTaskPrompt(e.target.value)}
-                                        placeholder="支持 {ENTITY_TYPE} {ENTITY_NAME}"
-                                        className="w-full rounded-lg border border-(--card-border) bg-(--input-bg) px-2 py-1.5 font-mono text-[11px] leading-relaxed outline-none focus:border-(--accent)/60"
-                                        style={{ minHeight: '100px' }}
-                                    />
-                                </div>
-                                <div className="flex flex-col gap-1">
-                                    <div className="flex items-center justify-between">
-                                        <span className="text-xs text-(--muted)">黑话词典（每行：原叫法=黑话；行尾可用 // 注释）</span>
-                                        <button
-                                            onClick={() => persistSlangDict(DEFAULT_SLANG_DICT)}
-                                            className="text-[10px] text-(--accent-text) hover:underline"
-                                        >
-                                            恢复默认
-                                        </button>
-                                    </div>
-                                    <textarea
-                                        value={slangDict}
-                                        onChange={(e) => persistSlangDict(e.target.value)}
-                                        placeholder={'光合能量=回路能量 // 注释'}
-                                        className="w-full rounded-lg border border-(--card-border) bg-(--input-bg) px-2 py-1.5 font-mono text-[11px] leading-relaxed outline-none focus:border-(--accent)/60"
-                                        style={{ minHeight: '100px' }}
-                                    />
-                                </div>
+                                            <div className="min-w-0 flex-1">
+                                                <div className="flex items-center justify-between gap-2">
+                                                    <span className="text-xs text-(--muted)">{editor.label}</span>
+                                                    <button
+                                                        onClick={() => editor.persist(editor.reset)}
+                                                        className="shrink-0 text-[10px] text-(--accent-text) hover:underline"
+                                                    >
+                                                        恢复默认
+                                                    </button>
+                                                </div>
+                                                <p className="truncate text-[10px] text-(--muted)/60" title={editor.value}>
+                                                    {summary || `（未填写） ${editor.hint}`}
+                                                </p>
+                                            </div>
+                                            <button
+                                                onClick={() => openPromptEditor(editor.key)}
+                                                className="inline-flex shrink-0 items-center gap-1 rounded-lg px-2.5 py-1 text-xs font-medium text-(--btn-text) transition-all hover:brightness-110"
+                                                style={{ background: 'var(--btn-bg)' }}
+                                            >
+                                                <Icon icon="mdi:pencil-outline" className="size-3.5" />
+                                                编辑
+                                            </button>
+                                        </div>
+                                    )
+                                })}
                                 <div className="flex flex-col gap-1">
                                     <div className="flex items-center justify-between">
                                         <span className="text-xs text-(--muted)">思考强度</span>
@@ -413,7 +436,7 @@ export default function BuffSetsAdmin({ rows, isAdmin }: Props) {
                                 </p>
                             </div>
 
-                            <div className="mt-3 flex justify-end border-t border-(--card-border) pt-3">
+                             <div className="mt-3 flex justify-end border-t border-(--card-border) pt-3">
                                 <button
                                     onClick={() => setShowConfig(false)}
                                     className="rounded-lg px-4 py-1.5 text-sm font-medium text-(--btn-text) transition-all hover:brightness-110"
@@ -421,6 +444,64 @@ export default function BuffSetsAdmin({ rows, isAdmin }: Props) {
                                 >
                                     完成
                                 </button>
+                            </div>
+                        </div>
+                    </div>
+                )}
+
+                {/* 二级弹窗：提示词/任务指令/黑话词典编辑 */}
+                {activePromptEditor && (
+                    <div className="fixed inset-0 z-[60] flex items-center justify-center p-4">
+                        <div
+                            className="absolute inset-0 bg-black/60 backdrop-blur-sm"
+                            onClick={() => setEditingPrompt(null)}
+                        />
+                        <div className="relative flex max-h-[85vh] w-[min(96vw,720px)] flex-col overflow-hidden rounded-xl border border-(--card-border) bg-(--card) shadow-2xl">
+                            <div className="flex items-center justify-between border-b border-(--card-border) px-4 py-3">
+                                <span className="text-sm font-semibold text-(--fg)">{activePromptEditor.label}</span>
+                                <button
+                                    onClick={() => setEditingPrompt(null)}
+                                    className="rounded p-1 text-(--muted) transition-colors hover:text-(--fg)"
+                                >
+                                    <Icon icon="mdi:close" className="size-5" />
+                                </button>
+                            </div>
+                            <div className="min-h-0 flex-1 overflow-y-auto p-4">
+                                <p className="mb-2 text-[10px] text-(--muted)">{activePromptEditor.hint}</p>
+                                <textarea
+                                    value={draftText}
+                                    onChange={(e) => setDraftText(e.target.value)}
+                                    autoFocus
+                                    placeholder={activePromptEditor.hint}
+                                    className="w-full rounded-lg border border-(--card-border) bg-(--input-bg) px-2.5 py-2 font-mono text-[11px] leading-relaxed outline-none focus:border-(--accent)/60"
+                                    style={{ minHeight: `${activePromptEditor.minHeight}px` }}
+                                />
+                            </div>
+                            <div className="flex items-center justify-between border-t border-(--card-border) px-4 py-3">
+                                <button
+                                    onClick={() => {
+                                        setDraftText(activePromptEditor.reset)
+                                        activePromptEditor.persist(activePromptEditor.reset)
+                                    }}
+                                    className="text-[10px] text-(--accent-text) hover:underline"
+                                >
+                                    恢复默认
+                                </button>
+                                <div className="flex items-center gap-2">
+                                    <button
+                                        onClick={() => setEditingPrompt(null)}
+                                        className="rounded-lg px-3 py-1.5 text-xs text-(--muted) transition-colors hover:text-(--fg)"
+                                    >
+                                        取消
+                                    </button>
+                                    <button
+                                        onClick={savePromptEditor}
+                                        className="rounded-lg px-4 py-1.5 text-sm font-medium text-(--btn-text) transition-all hover:brightness-110"
+                                        style={{ background: 'var(--btn-bg)' }}
+                                    >
+                                        保存
+                                    </button>
+                                </div>
                             </div>
                         </div>
                     </div>

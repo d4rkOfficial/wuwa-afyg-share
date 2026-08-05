@@ -1,6 +1,7 @@
 'use client'
 
 import { useState } from 'react'
+import { createPortal } from 'react-dom'
 import { useRouter } from 'next/navigation'
 import { Icon } from '@iconify/react'
 import { createAnnouncement, updateAnnouncement, deleteAnnouncement } from '@/lib/actions/announcements'
@@ -91,11 +92,13 @@ export default function AnnouncementBar({ announcements, isAdmin }: Props) {
                 <Icon icon="mdi:chevron-right" className="size-4 shrink-0 text-(--muted)" />
             </button>
 
-            {/* 公告弹窗 */}
-            {open && (
-                <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-                    <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={() => setOpen(false)} />
-                    <div className="relative flex max-h-[80vh] w-[min(96vw,560px)] flex-col overflow-hidden rounded-xl border border-(--card-border) bg-(--card) shadow-2xl">
+            {/* 公告弹窗（Portal 到 body，避免祖先容器/包含块影响遮罩全屏） */}
+            {open &&
+                createPortal(
+                    <div className="fixed inset-0 z-[70]">
+                        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm" onClick={() => setOpen(false)} />
+                        <div className="fixed inset-0 flex items-center justify-center p-4">
+                            <div className="relative flex max-h-[80vh] w-[min(96vw,560px)] flex-col overflow-hidden rounded-xl border border-(--card-border) bg-(--card) shadow-2xl">
                         <div className="flex items-center justify-between border-b border-(--card-border) px-4 py-3">
                             <span className="flex items-center gap-2 text-sm font-semibold text-(--fg)">
                                 <Icon icon="mdi:bullhorn-outline" className="size-4 text-(--accent-text)" />
@@ -284,10 +287,12 @@ export default function AnnouncementBar({ announcements, isAdmin }: Props) {
                                     </div>
                                 )
                             })}
+                                </div>
+                            </div>
                         </div>
-                    </div>
-                </div>
-            )}
+                    </div>,
+                    document.body
+                )}
         </>
     )
 }

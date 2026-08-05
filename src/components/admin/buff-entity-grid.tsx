@@ -1,9 +1,11 @@
 'use client'
 
 import { useState } from 'react'
+import { useRouter } from 'next/navigation'
 import { Icon } from '@iconify/react'
 import { BUFF_ENTITY_LABELS } from '@/lib/consts/buff-zones'
 import { fetchToolList } from '@/lib/ai/info'
+import { toast } from '@/components/ui/toast'
 import type { ToolListEntry } from '@/lib/ai/info'
 import type { BuffEntityType } from '@/lib/types/db'
 
@@ -35,6 +37,7 @@ const FILTERS: Array<{ key: 'with' | 'without'; label: string }> = [
 const SKELETON_COUNT = 12
 
 export default function BuffEntityGrid({ toolBase, existingCountMap, onSelect }: Props) {
+    const router = useRouter()
     const [mainTab, setMainTab] = useState<BuffEntityType>('character')
     const [setPiece, setSetPiece] = useState<BuffEntityType>('1set')
     const [search, setSearch] = useState('')
@@ -44,6 +47,19 @@ export default function BuffEntityGrid({ toolBase, existingCountMap, onSelect }:
     const [loadedFor, setLoadedFor] = useState<BuffEntityType | null>(null)
     const [starFilter, setStarFilter] = useState<number | null>(null)
     const [costFilter, setCostFilter] = useState<number | null>(null)
+    const [refreshing, setRefreshing] = useState(false)
+
+    // 刷新：重拉工具箱目录 + 重新获取已收录条目数（服务端）
+    async function handleRefresh() {
+        setRefreshing(true)
+        try {
+            await load(activeType)
+        } finally {
+            setRefreshing(false)
+        }
+        router.refresh()
+        toast('已刷新', 'success')
+    }
 
     // 当前实际生效的实体类型
     const activeType: BuffEntityType = mainTab === '1set' ? setPiece : mainTab
@@ -129,18 +145,29 @@ export default function BuffEntityGrid({ toolBase, existingCountMap, onSelect }:
                         </button>
                     ))}
                 </div>
-                <div className="flex items-center gap-1 rounded-lg border border-(--card-border) bg-(--card-hover) p-0.5">
-                    {FILTERS.map((f) => (
-                        <button
-                            key={f.key}
-                            onClick={() => setFilter(f.key)}
-                            className={`rounded px-2.5 py-1 text-[11px] font-medium transition-colors ${
-                                filter === f.key ? 'bg-(--accent)/15 text-(--accent-text)' : 'text-(--muted) hover:text-(--fg)'
-                            }`}
-                        >
-                            {f.label}
-                        </button>
-                    ))}
+                <div className="flex items-center gap-2">
+                    <button
+                        onClick={handleRefresh}
+                        disabled={refreshing}
+                        className="inline-flex items-center gap-1 rounded-lg border border-(--card-border) bg-(--card-hover) px-2.5 py-1.5 text-[11px] text-(--muted) transition-colors hover:text-(--fg) disabled:opacity-50"
+                        title="刷新目录与条目数"
+                    >
+                        <Icon icon={refreshing ? 'mdi:loading' : 'mdi:refresh'} className="size-3.5" />
+                        刷新
+                    </button>
+                    <div className="flex items-center gap-1 rounded-lg border border-(--card-border) bg-(--card-hover) p-0.5">
+                        {FILTERS.map((f) => (
+                            <button
+                                key={f.key}
+                                onClick={() => setFilter(f.key)}
+                                className={`rounded px-2.5 py-1 text-[11px] font-medium transition-colors ${
+                                    filter === f.key ? 'bg-(--accent)/15 text-(--accent-text)' : 'text-(--muted) hover:text-(--fg)'
+                                }`}
+                            >
+                                {f.label}
+                            </button>
+                        ))}
+                    </div>
                 </div>
             </div>
 

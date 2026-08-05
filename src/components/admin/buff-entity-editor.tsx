@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation'
 import { Icon } from '@iconify/react'
 import { upsertBuffEntity, deleteBuffEntity } from '@/lib/actions/buff-sets'
 import { toast } from '@/components/ui/toast'
-import { BUFF_ENTITY_LABELS, BUFF_ZONES, BUFF_ZONE_MAP, BUFF_REF_ZONES, BUFF_SCOPE_LABELS, BUFF_ELEMENTS, BUFF_DAMAGE_TYPES, BUFF_DAMAGE_TYPE_SHORT, CHAIN_MAX, REFINE_MAX, sanitizeCondition } from '@/lib/consts/buff-zones'
+import { BUFF_ENTITY_LABELS, BUFF_ZONES, BUFF_ZONE_MAP, BUFF_REF_ZONES, BUFF_REF_ZONE_MAP, BUFF_SCOPE_LABELS, BUFF_ELEMENTS, BUFF_DAMAGE_TYPES, BUFF_DAMAGE_TYPE_SHORT, CHAIN_MAX, REFINE_MAX, sanitizeCondition } from '@/lib/consts/buff-zones'
 import type { BuffEntityType, BuffScope, BuffSetRow, BuffCondition } from '@/lib/types/db'
 import type { GeneratedBuff } from '@/lib/ai/types'
 import { generateBuffSet, type GenerateEvent } from '@/lib/ai/generate'
@@ -16,6 +16,25 @@ import BuffRefModal from '@/components/admin/buff-ref-modal'
 interface LogEntry {
     level: 'info' | 'success' | 'error' | 'debug'
     text: string
+}
+
+function gcd(a: number, b: number): number {
+    a = Math.abs(a)
+    b = Math.abs(b)
+    while (b) {
+        const t = b
+        b = a % b
+        a = t
+    }
+    return a
+}
+
+// pct → 最简分数（divisor/multiplier），用于引用摘要展示（对齐工具箱）
+function simplifyPct(pct: number): { divisor: number; multiplier: number } {
+    if (pct === 0) return { divisor: 1, multiplier: 0 }
+    const num = Math.round(pct)
+    const g = gcd(num, 100)
+    return { divisor: 100 / g, multiplier: num / g }
 }
 
 interface Props {
@@ -913,15 +932,45 @@ export default function BuffEntityEditor({
                                                 <span className="min-w-0 flex-1 truncate text-[11px]">
                                                     {def?.label ?? z.zoneId}
                                                 </span>
-                                                <input
-                                                    type="number"
-                                                    value={z.value}
-                                                    onChange={(e) => setZoneValue(z.zoneId, e.target.value)}
-                                                    className="w-16 rounded border border-(--card-border) bg-(--input-bg) px-1.5 py-1 text-xs text-right outline-none focus:border-(--accent)/60 tabular-nums"
-                                                />
-                                                <span className="w-3 text-[10px] text-(--muted)">
-                                                    {def?.unit === '%' ? '%' : ''}
-                                                </span>
+                                                {z.ref ? (
+                                                    (() => {
+                                                        const refDef = BUFF_REF_ZONE_MAP.get(z.ref!.targetZoneId)
+                                                        const th = Number(z.ref!.threshold ?? 0)
+                                                        const refOp = th < 0 ? '+' : '-'
+                                                        const refTh = Math.abs(th)
+                                                        const refS = simplifyPct(Number(z.ref!.pct))
+                                                        const hasThreshold = th !== 0
+                                                        const hasLower = z.ref!.lower !== undefined
+                                                        const hasUpper = z.ref!.upper !== undefined
+                                                        return (
+                                                            <span
+                                                                className="min-w-0 flex-1 truncate text-right text-[10px] text-(--muted)"
+                                                                title={`引用: (${refDef?.label ?? '?'}${hasThreshold ? ` ${refOp} ${refTh}${refDef?.unit === '%' ? '%' : ''}` : ''}) ÷${refS.divisor}×${refS.multiplier}${hasLower || hasUpper ? ` clamp(${hasLower ? z.ref!.lower : ''} ~ ${hasUpper ? z.ref!.upper : ''})` : ''}`}
+                                                            >
+                                                                引用: ({refDef?.label ?? '?'}
+                                                                {hasThreshold ? refOp + refTh + (refDef?.unit === '%' ? '%' : '') : ''}
+                                                                ) ÷{refS.divisor}×{refS.multiplier}
+                                                                {hasLower || hasUpper ? (
+                                                                    <span className="text-(--muted)/60">
+                                                                        ({hasLower ? z.ref!.lower : ''}~{hasUpper ? z.ref!.upper : ''})
+                                                                    </span>
+                                                                ) : null}
+                                                            </span>
+                                                        )
+                                                    })()
+                                                ) : (
+                                                    <>
+                                                        <input
+                                                            type="number"
+                                                            value={z.value}
+                                                            onChange={(e) => setZoneValue(z.zoneId, e.target.value)}
+                                                            className="w-16 rounded border border-(--card-border) bg-(--input-bg) px-1.5 py-1 text-xs text-right outline-none focus:border-(--accent)/60 tabular-nums"
+                                                        />
+                                                        <span className="w-3 text-[10px] text-(--muted)">
+                                                            {def?.unit === '%' ? '%' : ''}
+                                                        </span>
+                                                    </>
+                                                )}
                                                 {z.zoneId !== 'extraRatio' && (
                                                     <button
                                                         onClick={() => setZoneOverride(z.zoneId, !z.override)}
@@ -942,8 +991,15 @@ export default function BuffEntityEditor({
                                                             ? 'border-(--accent) text-(--accent-text)'
                                                             : 'border-transparent text-(--muted) hover:text-(--fg)'
                                                     }`}
-                                                    title="引用某属性（如 攻击白值×N%）"
+                                                    title={
+                                                        z.ref
+                                                            ? `引${entityType === 'character' ? '自己' : '主人'} ${
+                                                                  BUFF_REF_ZONE_MAP.get(z.ref.targetZoneId)?.label ?? z.ref.targetZoneId
+                                                              } × ${z.ref.pct}%`
+                                                            : '引用某属性（如 当前攻击×N%）'
+                                                    }
                                                 >
+                                                    <Icon icon="mdi:link-variant" className="mr-0.5 size-3" />
                                                     {z.ref ? '已引用' : '引用'}
                                                 </button>
                                                 <button
@@ -1038,7 +1094,7 @@ export default function BuffEntityEditor({
                         {aiHistory.map((m, i) =>
                             m.role === 'user' ? (
                                 <div key={i} className="flex justify-end">
-                                    <div className="max-w-[85%] whitespace-pre-wrap break-words rounded-2xl rounded-br-sm bg-(--accent) px-3 py-2 text-xs leading-relaxed text-(--accent-text-on-bg)">
+                                    <div className="max-w-[85%] whitespace-pre-wrap break-words rounded-2xl rounded-br-sm bg-(--accent) px-3 py-2 text-xs leading-relaxed text-(--accent-fg)">
                                         {m.content}
                                     </div>
                                 </div>
