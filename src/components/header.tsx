@@ -85,6 +85,11 @@ export default async function Header() {
                         >
                             <Icon icon="mdi:account-circle-outline" className="size-4 text-(--muted)" />
                             {displayName || '我的工程'}
+                            {isAdmin && (
+                                <span className="rounded bg-(--accent)/15 px-1.5 py-0.5 text-[10px] font-medium leading-none text-(--accent-text)">
+                                    管理员
+                                </span>
+                            )}
                         </AppLink>
                     </>
                 ) : (

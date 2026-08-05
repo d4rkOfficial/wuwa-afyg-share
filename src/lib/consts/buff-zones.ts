@@ -76,26 +76,69 @@ export const BUFF_SCOPE_LABELS: Record<BuffScope, string> = {
 }
 
 // ── 生效条件（condition）──
-// 仅角色 / 武器实体使用：chain = 角色共鸣链（鸣潮 0-6 链）；refinement = 武器精炼（1-5 阶）
-export const BUFF_CONDITION_TYPES = ['chain', 'refinement'] as const
-export type BuffConditionType = (typeof BUFF_CONDITION_TYPES)[number]
-
+// 多字段可并存（全部满足才生效）：chain = 角色共鸣链（0-6 链，0 表示无门槛）；refinement = 武器精炼（1-5 阶）；
+// elements = 伤害属性多选；damageTypes = 伤害类型多选
 export const CHAIN_MAX = 6
 export const REFINE_MAX = 5
 
-export const BUFF_CONDITION_LABELS: Record<BuffConditionType, string> = {
-    chain: '角色共鸣链',
-    refinement: '武器精炼'
+// 伤害属性 / 伤害类型白名单（与工具箱 game-terms 一致）
+export const BUFF_ELEMENTS = ['物理', '冷凝', '热熔', '导电', '气动', '衍射', '湮灭'] as const
+export const BUFF_DAMAGE_TYPES = [
+    '普攻伤害',
+    '重击伤害',
+    '共鸣技能伤害',
+    '共鸣解放伤害',
+    '声骸技能伤害',
+    '变奏技能伤害',
+    '延奏技能伤害',
+    '协同攻击伤害',
+    '其它类型伤害'
+] as const
+
+// 伤害类型短名（与工具箱 DAMAGE_TYPE_SHORT 一致，用于摘要/按钮展示）
+export const BUFF_DAMAGE_TYPE_SHORT: Record<string, string> = {
+    普攻伤害: '普攻',
+    重击伤害: '重击',
+    共鸣技能伤害: '共技',
+    共鸣解放伤害: '共解',
+    声骸技能伤害: '声骸',
+    变奏技能伤害: '变奏',
+    延奏技能伤害: '延奏',
+    协同攻击伤害: '协同',
+    其它类型伤害: '其它'
 }
 
-// 清洗生效条件：类型白名单 + min 为正整数且在各自上限内；非法返回 undefined
+// 清洗生效条件：白名单校验 + 数值/数组归一化；兼容旧格式 {type:"chain"|"refinement",min}；全空返回 undefined
 export function sanitizeCondition(cond: unknown): BuffCondition | undefined {
     if (!cond || typeof cond !== 'object') return undefined
     const c = cond as Record<string, unknown>
-    if (c.type !== 'chain' && c.type !== 'refinement') return undefined
-    const type = c.type as BuffConditionType
-    const min = typeof c.min === 'number' && Number.isFinite(c.min) ? Math.floor(c.min) : 0
-    const max = type === 'chain' ? CHAIN_MAX : REFINE_MAX
-    if (min <= 0 || min > max) return undefined
-    return { type, min }
+    // 旧格式兼容：{ type: 'chain'|'refinement', min } → 多字段
+    if (c.type === 'chain' || c.type === 'refinement') {
+        const min = typeof c.min === 'number' && Number.isFinite(c.min) ? Math.floor(c.min) : 0
+        const max = c.type === 'chain' ? CHAIN_MAX : REFINE_MAX
+        const minOk = c.type === 'chain' ? min >= 0 : min >= 1
+        return minOk && min <= max ? { [c.type]: min } : undefined
+    }
+    const out: BuffCondition = {}
+    if (typeof c.chain === 'number' && Number.isFinite(c.chain)) {
+        const min = Math.floor(c.chain)
+        if (min >= 0 && min <= CHAIN_MAX) out.chain = min
+    }
+    if (typeof c.refinement === 'number' && Number.isFinite(c.refinement)) {
+        const min = Math.floor(c.refinement)
+        if (min >= 1 && min <= REFINE_MAX) out.refinement = min
+    }
+    if (Array.isArray(c.elements)) {
+        const elements = c.elements.filter(
+            (e): e is string => typeof e === 'string' && (BUFF_ELEMENTS as readonly string[]).includes(e)
+        )
+        if (elements.length > 0) out.elements = [...new Set(elements)]
+    }
+    if (Array.isArray(c.damageTypes)) {
+        const damageTypes = c.damageTypes.filter(
+            (d): d is string => typeof d === 'string' && (BUFF_DAMAGE_TYPES as readonly string[]).includes(d)
+        )
+        if (damageTypes.length > 0) out.damageTypes = [...new Set(damageTypes)]
+    }
+    return Object.keys(out).length > 0 ? out : undefined
 }

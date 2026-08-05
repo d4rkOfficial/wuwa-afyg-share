@@ -96,13 +96,9 @@ function normalizeScope(scope: unknown): BuffScope {
 }
 
 // 按实体类型约束条件类型：角色仅 chain（共鸣链）、武器仅 refinement（精炼），其它实体不支持条件
-function sanitizeConditionForEntity(cond: unknown, entityType: BuffEntityType): BuffCondition | null {
-    const c = sanitizeCondition(cond)
-    if (!c) return null
-    if (entityType === 'character' && c.type !== 'chain') return null
-    if (entityType === 'weapon' && c.type !== 'refinement') return null
-    if (entityType !== 'character' && entityType !== 'weapon') return null
-    return c
+// 多字段条件模型：不再按实体类型限制（角色/武器/声骸/套装均可设链/精炼/属性/类型条件）
+function sanitizeConditionForEntity(cond: unknown): BuffCondition | null {
+    return sanitizeCondition(cond) ?? null
 }
 
 export async function upsertBuffSet(input: InputBuff): Promise<ActionResult> {
@@ -125,7 +121,7 @@ export async function upsertBuffSet(input: InputBuff): Promise<ActionResult> {
             buff_name: buffName,
             scope: normalizeScope(input.scope),
             exclusive: !!input.exclusive,
-            condition: sanitizeConditionForEntity(input.condition, entityType),
+            condition: sanitizeConditionForEntity(input.condition),
             buff_set: sanitizeZones(input.zones)
         },
         { onConflict: 'entity_type,entity_name,buff_name' }
@@ -196,7 +192,7 @@ export async function upsertBuffEntity(input: UpsertEntityInput): Promise<Action
             buffName: b.buffName.trim().slice(0, 80),
             scope: normalizeScope(b.scope),
             exclusive: !!b.exclusive,
-            condition: sanitizeConditionForEntity(b.condition, entityType),
+            condition: sanitizeConditionForEntity(b.condition),
             zones: sanitizeZones(b.zones)
         }))
         .filter((b) => b.buffName && b.zones.length > 0)

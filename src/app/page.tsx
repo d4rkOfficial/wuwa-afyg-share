@@ -3,10 +3,11 @@ import { Icon } from '@iconify/react'
 import ProjectCard from '@/components/project-card'
 import Pagination from '@/components/pagination'
 import SetupNotice from '@/components/setup-notice'
+import AnnouncementBar from '@/components/announcement-bar'
 import { createClient, hasEnv } from '@/lib/supabase/server'
 import { LIST_COLUMNS } from '@/lib/project/query'
 import { isExpiredProject } from '@/lib/utils/expiry'
-import type { ProjectListItem } from '@/lib/types/db'
+import type { ProjectListItem, AnnouncementRow } from '@/lib/types/db'
 
 export const dynamic = 'force-dynamic'
 
@@ -42,13 +43,32 @@ export default async function HomePage({
     )
     const totalPages = Math.max(1, Math.ceil((count ?? 0) / PER_PAGE))
 
+    // 公告（公开读，表未建时兜底为空）
+    const { data: announcementRows } = await supabase
+        .from('announcements')
+        .select('id, title, content, created_at')
+        .order('created_at', { ascending: false })
+    const announcements = (announcementRows ?? []) as AnnouncementRow[]
+
+    // 当前用户是否管理员（决定公告栏是否显示编辑入口）
+    const {
+        data: { user }
+    } = await supabase.auth.getUser()
+    let isAdmin = false
+    if (user) {
+        const { data: profile } = await supabase
+            .from('profiles')
+            .select('is_admin')
+            .eq('id', user.id)
+            .maybeSingle()
+        isAdmin = !!profile?.is_admin
+    }
+
     return (
         <div className="space-y-6">
-            <div className="flex flex-col gap-4 sm:flex-row sm:items-center">
-                <div className="flex-1">
-                    <h1 className="text-xl font-bold">工程广场</h1>
-                    <p className="text-sm text-(--muted)">浏览社区分享的拉表排轴工程，一键克隆回你的工具箱</p>
-                </div>
+            <AnnouncementBar announcements={announcements} isAdmin={isAdmin} />
+
+            <div className="flex flex-wrap items-center gap-2">
                 <form action="/" method="get" className="flex gap-2">
                     <input
                         type="search"
@@ -66,32 +86,32 @@ export default async function HomePage({
                         搜索
                     </button>
                 </form>
-            </div>
 
-            <div className="flex items-center gap-2">
-                {(
-                    [
-                        { key: 'latest', label: '最新', icon: 'mdi:clock-outline' },
-                        { key: 'hot', label: '最热', icon: 'mdi:fire' }
-                    ] as const
-                ).map(({ key, label, icon }) => {
-                    const active = sort === key
-                    const href = `/?sort=${key}&page=1${q ? `&q=${encodeURIComponent(q)}` : ''}`
-                    return (
-                        <Link
-                            key={key}
-                            href={href}
-                            className={`inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-sm transition-colors ${
-                                active
-                                    ? 'bg-(--accent) font-medium text-(--accent-fg)'
-                                    : 'border border-(--card-border) bg-(--card) text-(--muted) hover:text-(--fg)'
-                            }`}
-                        >
-                            <Icon icon={icon} className="size-4" />
-                            {label}
-                        </Link>
-                    )
-                })}
+                <div className="flex items-center gap-2">
+                    {(
+                        [
+                            { key: 'latest', label: '最新', icon: 'mdi:clock-outline' },
+                            { key: 'hot', label: '最热', icon: 'mdi:fire' }
+                        ] as const
+                    ).map(({ key, label, icon }) => {
+                        const active = sort === key
+                        const href = `/?sort=${key}&page=1${q ? `&q=${encodeURIComponent(q)}` : ''}`
+                        return (
+                            <Link
+                                key={key}
+                                href={href}
+                                className={`inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-sm transition-colors ${
+                                    active
+                                        ? 'bg-(--accent) font-medium text-(--accent-fg)'
+                                        : 'border border-(--card-border) bg-(--card) text-(--muted) hover:text-(--fg)'
+                                }`}
+                            >
+                                <Icon icon={icon} className="size-4" />
+                                {label}
+                            </Link>
+                        )
+                    })}
+                </div>
             </div>
 
             {error ? (

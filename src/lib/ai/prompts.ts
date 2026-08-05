@@ -2,7 +2,10 @@ import { BUFF_ZONES, BUFF_ENTITY_LABELS, BUFF_SCOPE_LABELS, BUFF_REF_ZONES } fro
 import {
     DEFAULT_SYSTEM_PROMPT,
     DEFAULT_INITIAL_TASK_PROMPT,
-    DEFAULT_SLANG_DICT
+    DEFAULT_SLANG_DICT,
+    CONDITION_CHAIN_RULES_TEXT,
+    CONDITION_REFINE_RULES_TEXT,
+    CONDITION_COMMON_RULES_TEXT
 } from '@/lib/ai/prompts.config'
 
 // 乘区白名单表（保留在 system，作为 zoneId 校验边界）
@@ -15,8 +18,24 @@ export const REF_ZONE_LIST_TEXT = BUFF_REF_ZONES.map(
     (z) => `- ${z.id}（${z.label}，单位：${z.unit === '%' ? '百分数' : '固定值'}）`
 ).join('\n')
 
-export function renderSystemPrompt(template: string): string {
-    return template.replaceAll('{ZONE_LIST}', ZONE_LIST_TEXT).replaceAll('{REF_ZONE_LIST}', REF_ZONE_LIST_TEXT)
+// 生效条件规则按实体类型裁剪：角色才讲 chain，武器才讲 refinement，其他只讲属性/类型
+export function renderConditionRules(entityType?: string): string {
+    const parts: string[] = []
+    if (entityType === 'character') parts.push(CONDITION_CHAIN_RULES_TEXT)
+    if (entityType === 'weapon') parts.push(CONDITION_REFINE_RULES_TEXT)
+    parts.push(CONDITION_COMMON_RULES_TEXT)
+    return parts.join('\n')
+}
+
+export interface RenderSystemContext {
+    entityType?: string
+}
+
+export function renderSystemPrompt(template: string, ctx: RenderSystemContext = {}): string {
+    return template
+        .replaceAll('{ZONE_LIST}', ZONE_LIST_TEXT)
+        .replaceAll('{REF_ZONE_LIST}', REF_ZONE_LIST_TEXT)
+        .replaceAll('{CONDITION_RULES}', renderConditionRules(ctx.entityType))
 }
 
 export interface RenderUserContext {

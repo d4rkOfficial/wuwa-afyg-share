@@ -1,4 +1,4 @@
-// DeepSeek 工具调用：定义工具 schema + 执行器（server-only）
+// DeepSeek 工具调用：定义工具 schema + 执行器（纯前端可执行）
 import { fetchToolList, fetchToolInfo } from '@/lib/ai/info'
 import { BUFF_ENTITY_TYPES, BUFF_ZONES, BUFF_ZONE_MAP, BUFF_REF_ZONES, BUFF_REF_ZONE_MAP } from '@/lib/consts/buff-zones'
 import {
@@ -7,8 +7,9 @@ import {
     SCOPE_RULES_TEXT,
     NAMING_RULES_TEXT,
     EXAMPLES_TEXT,
-    CONDITION_RULES_TEXT
+    REF_RULES_TEXT
 } from '@/lib/ai/prompts.config'
+import { renderConditionRules } from '@/lib/ai/prompts'
 import { analyzeCharacterTerms } from '@/lib/ai/terms'
 import type { BuffEntityType, BuffSetRow } from '@/lib/types/db'
 
@@ -157,10 +158,13 @@ const BASE_TOOLS: ToolDefinition[] = [
                                 exclusive: { type: 'boolean' },
                                 condition: {
                                     type: 'object',
-                                    description: '生效条件（可选）：{"type":"chain"|"refinement","min":n}',
+                                    description:
+                                        '生效条件（可选，多字段可并存、全部满足才生效）：{"chain":n} 需角色共鸣链 ≥ n（1-6）；{"refinement":n} 需武器精炼 ≥ n（1-5）；{"elements":["物理",...]} 伤害属性多选；{"damageTypes":["普攻伤害",...]} 伤害类型多选',
                                     properties: {
-                                        type: { type: 'string', enum: ['chain', 'refinement'] },
-                                        min: { type: 'number' }
+                                        chain: { type: 'number', minimum: 1, maximum: 6 },
+                                        refinement: { type: 'number', minimum: 1, maximum: 5 },
+                                        elements: { type: 'array', items: { type: 'string' } },
+                                        damageTypes: { type: 'array', items: { type: 'string' } }
                                     }
                                 },
                                 zones: {
@@ -217,7 +221,16 @@ const BASE_TOOLS: ToolDefinition[] = [
         function: {
             name: 'get_condition_rules',
             description:
-                '获取 Buff 生效条件（condition）的取值与判定细则（角色共鸣链 chain / 武器精炼 refinement）。仅当实体为角色或武器、且某增益确实存在命座/精炼门槛时调用，确认字段结构后给 buff 加 condition。',
+                '获取 Buff 生效条件（condition）的取值与判定细则（角色共鸣链 chain / 武器精炼 refinement / 伤害属性 elements / 伤害类型 damageTypes，多字段可并存）。当某增益确实存在命座/精炼门槛或属性/类型限定时调用，确认字段结构后给 buff 加 condition。',
+            parameters: { type: 'object', properties: {} }
+        }
+    },
+    {
+        type: 'function',
+        function: {
+            name: 'get_ref_rules',
+            description:
+                '获取引用乘区（ref）的转模字段规则（threshold 阈值 / 线性 pct / 离散 discrete+divisor+multiplier / lower、upper 上下限 / refOwner）。当增益数值按"某属性百分比"、"每 X 转 Y"、"超过 X 的部分"、"最高/至少"等规则换算时调用，确认 ref 结构后输出。',
             parameters: { type: 'object', properties: {} }
         }
     },
@@ -377,23 +390,43 @@ export async function executeTool(ctx: ToolContext, name: string, args: Record<s
         case 'get_scope_rules':
             return SCOPE_RULES_TEXT
         case 'get_condition_rules':
-            return CONDITION_RULES_TEXT
+            // 按实体类型裁剪：角色才讲 chain，武器才讲 refinement
+            return renderConditionRules(curType)
+        case 'get_ref_rules':
+            return REF_RULES_TEXT
         case 'get_slang_dict':
             return slangDict?.trim() || DEFAULT_SLANG_DICT
         case 'get_naming_rules':
             return NAMING_RULES_TEXT
         case 'get_examples':
-            return EXAMPLES_TEXT
+            // 示例按实体类型过滤：示例7（chain）仅角色、示例8（refinement）仅武器
+            return filterExamples(curType)
         default:
             return JSON.stringify({ error: `未知工具：${name}` })
     }
+}
+
+// 从 EXAMPLES_TEXT 中按实体类型过滤条件相关示例（示例7=chain 仅角色；示例8=refinement 仅武器）
+function filterExamples(entityType: BuffEntityType): string {
+    const parts = EXAMPLES_TEXT.split('\n—— ')
+    const keep: string[] = []
+    parts.forEach((sec, i) => {
+        if (i === 0) {
+            keep.push(sec)
+            return
+        }
+        if (sec.startsWith('示例7') && entityType !== 'character') return
+        if (sec.startsWith('示例8') && entityType !== 'weapon') return
+        keep.push(`—— ${sec}`)
+    })
+    return keep.join('\n')
 }
 
 interface ProposedBuff {
     buffName?: string
     scope?: string
     exclusive?: boolean
-    condition?: { type?: string; min?: number }
+    condition?: Record<string, unknown>
     zones?: Array<{ zoneId?: string; value?: number; override?: boolean }>
 }
 
@@ -455,14 +488,22 @@ function buildDiff(
 function sameBuff(existing: BuffSetRow, p: ProposedBuff): boolean {
     if (existing.scope !== p.scope) return false
     if (!!existing.exclusive !== !!p.exclusive) return false
-    const cond = (c: BuffSetRow['condition']): string => {
-        if (!c || (c.type !== 'chain' && c.type !== 'refinement')) return ''
-        return `${c.type}:${c.min}`
+    // 条件归一化比较（兼容旧格式 {type,min} 与新多字段模型）
+    const normCond = (c: unknown): string => {
+        if (!c || typeof c !== 'object') return ''
+        const o = c as Record<string, unknown>
+        if (o.type === 'chain' || o.type === 'refinement') {
+            const min = typeof o.min === 'number' ? Math.floor(o.min) : 0
+            return `${o.type}:${min}`
+        }
+        const parts: string[] = []
+        if (typeof o.chain === 'number') parts.push(`chain:${Math.floor(o.chain)}`)
+        if (typeof o.refinement === 'number') parts.push(`refinement:${Math.floor(o.refinement)}`)
+        if (Array.isArray(o.elements)) parts.push(`elements:${[...(o.elements as string[])].sort().join(',')}`)
+        if (Array.isArray(o.damageTypes)) parts.push(`damageTypes:${[...(o.damageTypes as string[])].sort().join(',')}`)
+        return parts.join('|')
     }
-    const pCond = p.condition && (p.condition.type === 'chain' || p.condition.type === 'refinement')
-        ? `${p.condition.type}:${typeof p.condition.min === 'number' ? Math.floor(p.condition.min) : 0}`
-        : ''
-    if (cond(existing.condition) !== pCond) return false
+    if (normCond(existing.condition) !== normCond(p.condition)) return false
     const eZones = existing.buff_set ?? []
     const pZones = p.zones ?? []
     if (eZones.length !== pZones.length) return false

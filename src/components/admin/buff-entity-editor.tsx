@@ -5,58 +5,17 @@ import { useRouter } from 'next/navigation'
 import { Icon } from '@iconify/react'
 import { upsertBuffEntity, deleteBuffEntity } from '@/lib/actions/buff-sets'
 import { toast } from '@/components/ui/toast'
-import { BUFF_ENTITY_LABELS, BUFF_ZONES, BUFF_ZONE_MAP, BUFF_REF_ZONES, BUFF_SCOPE_LABELS } from '@/lib/consts/buff-zones'
+import { BUFF_ENTITY_LABELS, BUFF_ZONES, BUFF_ZONE_MAP, BUFF_REF_ZONES, BUFF_SCOPE_LABELS, BUFF_ELEMENTS, BUFF_DAMAGE_TYPES, BUFF_DAMAGE_TYPE_SHORT, CHAIN_MAX, REFINE_MAX, sanitizeCondition } from '@/lib/consts/buff-zones'
 import type { BuffEntityType, BuffScope, BuffSetRow, BuffCondition } from '@/lib/types/db'
 import type { GeneratedBuff } from '@/lib/ai/types'
+import { generateBuffSet, type GenerateEvent } from '@/lib/ai/generate'
+import { DeepSeekError, type ChatMessage } from '@/lib/ai/deepseek'
+import { createClient } from '@/lib/supabase/client'
 import BuffRefModal from '@/components/admin/buff-ref-modal'
 
 interface LogEntry {
     level: 'info' | 'success' | 'error' | 'debug'
     text: string
-}
-
-interface StreamEvent {
-    type: 'log' | 'result' | 'error' | 'ai' | 'reasoning' | 'prompt' | 'tool'
-    level?: 'info' | 'success' | 'error' | 'debug'
-    text?: string
-    data?: unknown
-    message?: string
-    debug?: string
-    rawContent?: string
-    parseError?: string | null
-    kind?: 'system' | 'user' | 'history'
-    name?: string
-    args?: Record<string, unknown>
-    resultLen?: number
-    running?: boolean
-}
-
-async function readNdjsonStream(
-    res: Response,
-    onEvent: (evt: StreamEvent) => void
-): Promise<void> {
-    if (!res.body) {
-        onEvent({ type: 'error', message: '响应无 body' })
-        return
-    }
-    const reader = res.body.getReader()
-    const decoder = new TextDecoder()
-    let buffer = ''
-    for (;;) {
-        const { done, value } = await reader.read()
-        if (done) break
-        buffer += decoder.decode(value, { stream: true })
-        const lines = buffer.split('\n')
-        buffer = lines.pop() ?? ''
-        for (const line of lines) {
-            if (!line.trim()) continue
-            try {
-                onEvent(JSON.parse(line) as StreamEvent)
-            } catch {
-                /* 忽略坏行 */
-            }
-        }
-    }
 }
 
 interface Props {
@@ -67,12 +26,18 @@ interface Props {
     }
     toolBase: string
     apiKey: string
+    aiBaseUrl: string
+    aiModel: string
     systemPrompt: string
     initialTaskPrompt: string
     toolPrompts: Record<string, string>
     slangDict: string
     reasoningEffort?: 'low' | 'medium' | 'high'
     isAdmin: boolean
+    // 跨实体共享会话（省 token / 缓存命中）
+    sessionSeed?: ChatMessage[]
+    onSessionUpdate?: (messages: ChatMessage[]) => void
+    sessionShareEnabled?: boolean
     onEntityDeleted?: () => void
     onclose?: () => void
 }
@@ -108,12 +73,17 @@ export default function BuffEntityEditor({
     initial,
     toolBase,
     apiKey,
+    aiBaseUrl,
+    aiModel,
     systemPrompt,
     initialTaskPrompt,
     toolPrompts,
     slangDict,
     reasoningEffort,
     isAdmin,
+    sessionSeed,
+    onSessionUpdate,
+    sessionShareEnabled,
     onEntityDeleted,
     onclose
 }: Props) {
@@ -128,9 +98,7 @@ export default function BuffEntityEditor({
             buffName: r.buff_name,
             scope: r.scope ?? 'team',
             exclusive: !!r.exclusive,
-            condition: r.condition && (r.condition.type === 'chain' || r.condition.type === 'refinement')
-                ? { type: r.condition.type, min: r.condition.min }
-                : null,
+            condition: sanitizeCondition(r.condition) ?? null,
             zones: (r.buff_set ?? []).map((z) => ({
                 zoneId: z.zoneId,
                 value: String(z.value),
@@ -203,7 +171,23 @@ export default function BuffEntityEditor({
 
     const canSave = entityName.trim().length > 0
 
-    // 统一 AI 请求（首轮或追问）
+    // 前端直连 DeepSeek 查询已收录 buff 集（供 get_buff_sets 等工具）
+    async function getBuffSets(queryType?: string, queryName?: string, query?: string) {
+        const supabase = createClient()
+        let q = supabase
+            .from('buff_sets')
+            .select('entity_type, entity_name, buff_name, scope, exclusive, condition, buff_set')
+            .order('entity_type', { ascending: true })
+            .order('entity_name', { ascending: true })
+        if (queryType) q = q.eq('entity_type', queryType)
+        if (queryName) q = q.eq('entity_name', queryName)
+        if (query) q = q.or(`entity_name.ilike.%${query.replace(/[%_\\]/g, '\\$&')}%,buff_name.ilike.%${query.replace(/[%_\\]/g, '\\$&')}%`)
+        const { data, error } = await q.limit(200)
+        if (error) return { error: error.message }
+        return { total: (data ?? []).length, buffSets: data ?? [] }
+    }
+
+    // 统一 AI 请求（首轮或追问），浏览器直连 DeepSeek
     async function runAiRequest(newUserMessage: string, history: { role: 'user' | 'assistant'; content: string }[]) {
         // 新一轮强制滚到底部（即使之前在看历史）
         autoScrollPaused.current = false
@@ -226,62 +210,68 @@ export default function BuffEntityEditor({
         setLogs([])
         setShowLogs(false)
         try {
-            const res = await fetch('/api/admin/buff-sets/ai', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    apiKey: apiKey.trim(),
-                    toolBase,
-                    entityType,
-                    entityName: entityName.trim(),
-                    systemPrompt,
-                    initialTaskPrompt,
-                    toolPrompts,
-                    slangDict,
-                    reasoningEffort,
-                    history,
-                    newUserMessage
-                })
-            })
-            await readNdjsonStream(res, (evt) => {
-                if (evt.type === 'log') {
-                    setLogs((prev) => [...prev, { level: evt.level ?? 'info', text: evt.text ?? '' }])
-                } else if (evt.type === 'prompt') {
-                    setPrompts((prev) => [...prev, { kind: evt.kind ?? 'user', text: evt.text ?? '' }])
-                } else if (evt.type === 'ai') {
-                    setAiOutput((prev) => prev + (evt.text ?? ''))
-                } else if (evt.type === 'reasoning') {
-                    setAiReasoning((prev) => prev + (evt.text ?? ''))
-                    setShowReasoning(true)
-                } else if (evt.type === 'tool') {
-                    setAiTools((prev) => [
-                        ...prev,
-                        { name: evt.name ?? 'unknown', args: evt.args ?? {}, resultLen: evt.resultLen, running: evt.running }
-                    ])
-                } else if (evt.type === 'result') {
-                    if (Array.isArray(evt.data)) {
-                        if (polishActive.current) {
-                            // 一键润色：自动应用到列表，记录一次 assistant 轮
-                            const list = evt.data as GeneratedBuff[]
-                            setAiHistory((prev) => [
-                                ...prev,
-                                { role: 'assistant', content: evt.rawContent ?? JSON.stringify(list) }
-                            ])
-                            applyBuffList(list)
-                            setAiResult(null)
-                        } else {
-                            setAiResult(evt.data as GeneratedBuff[])
+            await generateBuffSet({
+                apiKey: apiKey.trim(),
+                toolBase,
+                entityType,
+                entityName: entityName.trim(),
+                baseUrl: aiBaseUrl.trim() || undefined,
+                model: aiModel.trim() || undefined,
+                systemPrompt,
+                initialTaskPrompt,
+                toolPrompts,
+                slangDict,
+                reasoningEffort,
+                history: history as ChatMessage[],
+                newUserMessage,
+                getBuffSets,
+                seedMessages: sessionShareEnabled ? sessionSeed : undefined,
+                onMessages: sessionShareEnabled ? onSessionUpdate : undefined,
+                onEvent: (evt: GenerateEvent) => {
+                    if (evt.type === 'log') {
+                        setLogs((prev) => [...prev, { level: evt.level ?? 'info', text: evt.text ?? '' }])
+                    } else if (evt.type === 'prompt') {
+                        setPrompts((prev) => [...prev, { kind: evt.kind ?? 'user', text: evt.text ?? '' }])
+                    } else if (evt.type === 'ai') {
+                        setAiOutput((prev) => prev + (evt.text ?? ''))
+                    } else if (evt.type === 'reasoning') {
+                        setAiReasoning((prev) => prev + (evt.text ?? ''))
+                        setShowReasoning(true)
+                    } else if (evt.type === 'tool') {
+                        setAiTools((prev) => [
+                            ...prev,
+                            { name: evt.name ?? 'unknown', args: evt.args ?? {}, resultLen: evt.resultLen, running: evt.running }
+                        ])
+                    } else if (evt.type === 'result') {
+                        if (Array.isArray(evt.data)) {
+                            if (polishActive.current) {
+                                // 一键润色：自动应用到列表，记录一次 assistant 轮
+                                const list = evt.data as GeneratedBuff[]
+                                setAiHistory((prev) => [
+                                    ...prev,
+                                    { role: 'assistant', content: evt.rawContent ?? JSON.stringify(list) }
+                                ])
+                                applyBuffList(list)
+                                setAiResult(null)
+                            } else {
+                                setAiResult(evt.data as GeneratedBuff[])
+                            }
                         }
+                        setAiRawContent(evt.rawContent ?? '')
+                        setAiParseError(evt.parseError ?? null)
+                    } else if (evt.type === 'error') {
+                        setAiError(evt.message ?? 'AI 生成请求失败')
+                        if (evt.debug) setAiDebug(evt.debug)
                     }
-                    setAiRawContent(evt.rawContent ?? '')
-                    setAiParseError(evt.parseError ?? null)
-                } else if (evt.type === 'error') {
-                    setAiError(evt.message ?? 'AI 生成请求失败')
-                    if (evt.debug) setAiDebug(evt.debug)
                 }
             })
-        } catch {
-            setAiError('AI 生成请求失败')
+        } catch (e) {
+            if (e instanceof DeepSeekError) {
+                setAiError(e.message)
+                setAiDebug(e.debug)
+            } else {
+                setAiError(e instanceof Error ? e.message : 'AI 生成请求失败')
+            }
         } finally {
             setAiBusy(false)
             polishActive.current = false
@@ -346,8 +336,22 @@ export default function BuffEntityEditor({
 
     // ── buff 列表与就地编辑 ──
     const [activeBuffIdx, setActiveBuffIdx] = useState<number | null>(null)
+    const [condPanelOpen, setCondPanelOpen] = useState(false)
 
     const activeBuff = activeBuffIdx !== null ? buffs[activeBuffIdx] : null
+
+    // 条件摘要（对齐工具箱：角色 ≥N链，武器 ≥N阶，伤害属性，伤害类型短名）
+    const conditionSummary = (() => {
+        const cond = activeBuff?.condition
+        if (!cond) return ''
+        const parts: string[] = []
+        if (cond.chain !== undefined) parts.push(`角色 ≥${cond.chain}链`)
+        if (cond.refinement !== undefined) parts.push(`武器 ≥${cond.refinement}阶`)
+        if (cond.elements?.length) parts.push(`伤害属性 ${cond.elements.join('/')}`)
+        if (cond.damageTypes?.length)
+            parts.push(`伤害类型 ${cond.damageTypes.map((d) => BUFF_DAMAGE_TYPE_SHORT[d] ?? d).join('/')}`)
+        return parts.join('，')
+    })()
 
     const SCOPE_TABS: Array<{ value: BuffScope; label: string }> = [
         { value: 'self', label: '自己' },
@@ -355,9 +359,6 @@ export default function BuffEntityEditor({
         { value: 'team', label: '全队' },
         { value: 'effect_only', label: '效应' }
     ]
-
-    const conditionType: 'chain' | 'refinement' | null =
-        entityType === 'character' ? 'chain' : entityType === 'weapon' ? 'refinement' : null
 
     function addBuff() {
         const next = [
@@ -386,16 +387,37 @@ export default function BuffEntityEditor({
         updateActiveBuff({ scope, exclusive: scope === 'effect_only' })
     }
 
-    function setConditionEnabled(enabled: boolean) {
-        const type: 'chain' | 'refinement' | null =
-            entityType === 'character' ? 'chain' : entityType === 'weapon' ? 'refinement' : null
-        if (!type) return
-        updateActiveBuff({ condition: enabled ? { type, min: 1 } : null })
+    // 多字段条件：开 = 空对象（可同时设置链/精炼/属性/类型），关 = null（经面板清除）
+    function setBuffChain(min: number) {
+        if (!activeBuff?.condition) return
+        const cond = { ...activeBuff.condition }
+        if (cond.chain === min) delete cond.chain
+        else cond.chain = min
+        updateActiveBuff({ condition: cond })
     }
 
-    function setConditionMin(min: number) {
+    function setBuffRefinement(min: number) {
         if (!activeBuff?.condition) return
-        updateActiveBuff({ condition: { ...activeBuff.condition, min } })
+        const cond = { ...activeBuff.condition }
+        if (cond.refinement === min) delete cond.refinement
+        else cond.refinement = min
+        updateActiveBuff({ condition: cond })
+    }
+
+    function toggleConditionElement(el: string) {
+        if (!activeBuff?.condition) return
+        const cond = { ...activeBuff.condition }
+        const list = cond.elements ?? []
+        const next = list.includes(el) ? list.filter((e) => e !== el) : [...list, el]
+        updateActiveBuff({ condition: { ...cond, elements: next } })
+    }
+
+    function toggleConditionDamageType(dt: string) {
+        if (!activeBuff?.condition) return
+        const cond = { ...activeBuff.condition }
+        const list = cond.damageTypes ?? []
+        const next = list.includes(dt) ? list.filter((d) => d !== dt) : [...list, dt]
+        updateActiveBuff({ condition: { ...cond, damageTypes: next } })
     }
 
     function toggleZone(zoneId: string) {
@@ -534,10 +556,7 @@ export default function BuffEntityEditor({
             buffName: b.buffName,
             scope: b.scope ?? 'team',
             exclusive: !!b.exclusive,
-            condition:
-                b.condition && (b.condition.type === 'chain' || b.condition.type === 'refinement')
-                    ? { type: b.condition.type, min: b.condition.min }
-                    : null,
+            condition: sanitizeCondition(b.condition) ?? null,
             zones: b.zones.map((z) => ({
                 zoneId: z.zoneId,
                 value: String(z.value),
@@ -763,39 +782,35 @@ export default function BuffEntityEditor({
                                 </button>
                             </div>
 
-                            {/* 生效条件行 */}
-                            {conditionType && (
-                                <div className="flex shrink-0 flex-wrap items-center gap-2 border-b border-(--card-border) px-3 py-1.5">
-                                    <button
-                                        onClick={() => setConditionEnabled(!activeBuff.condition)}
-                                        className={`flex items-center gap-1 rounded-lg border px-2 py-1 text-[11px] transition-colors ${
-                                            activeBuff.condition
-                                                ? 'border-(--accent) bg-(--accent)/10 text-(--accent-text)'
-                                                : 'border-(--card-border) bg-(--input-bg) text-(--muted) hover:text-(--fg)'
-                                        }`}
-                                        title="仅当该增益确有命座/精炼门槛时开启"
-                                    >
-                                        <Icon
-                                            icon={activeBuff.condition ? 'mdi:check-circle' : 'mdi:circle-outline'}
-                                            className="size-3.5"
-                                        />
-                                        {!activeBuff.condition && '共鸣链/精炼阶数条件'}
-                                    </button>
-                                    {activeBuff.condition && (
+                            {/* 生效条件（折叠面板：整行摘要 + 展开四段） */}
+                            <div className="shrink-0 border-b border-(--card-border)">
+                                <button
+                                    onClick={() => setCondPanelOpen((v) => !v)}
+                                    className={`flex w-full items-center gap-1.5 px-3 py-2 text-left text-[11px] transition-colors hover:bg-(--card-hover) ${
+                                        conditionSummary ? 'text-(--accent-text)' : 'text-(--muted)'
+                                    }`}
+                                    title="生效条件"
+                                >
+                                    <Icon
+                                        icon={condPanelOpen ? 'mdi:chevron-down' : 'mdi:chevron-right'}
+                                        className="size-3.5 shrink-0 text-(--muted)"
+                                    />
+                                    <span className="shrink-0">生效条件</span>
+                                    {conditionSummary && (
+                                        <span className="min-w-0 truncate text-[11px]">：{conditionSummary}</span>
+                                    )}
+                                </button>
+                                {condPanelOpen && (
+                                    <div className="flex flex-wrap items-center gap-2 px-3 pb-2.5">
                                         <div className="flex items-center gap-2 rounded-lg border border-(--card-border) bg-(--input-bg) px-2 py-1">
-                                            <span className="text-[11px] text-(--fg)">
-                                                {conditionType === 'chain' ? '角色共鸣链' : '武器精炼'}
-                                            </span>
+                                            <span className="text-[11px] text-(--fg)">共鸣链</span>
                                             <div className="flex overflow-hidden rounded border border-(--card-border)">
-                                                {Array.from(
-                                                    { length: conditionType === 'chain' ? 6 : 5 },
-                                                    (_, k) => k + 1
-                                                ).map((n) => (
+                                                {Array.from({ length: CHAIN_MAX + 1 }, (_, k) => k).map((n) => (
                                                     <button
                                                         key={n}
-                                                        onClick={() => setConditionMin(n)}
+                                                        onClick={() => setBuffChain(n)}
                                                         className={`flex h-6 min-w-6 items-center justify-center px-1 text-[11px] transition-colors ${
-                                                            activeBuff.condition?.min === n
+                                                            activeBuff.condition?.chain === n
                                                                 ? 'bg-(--accent)/15 text-(--accent-text)'
                                                                 : 'text-(--muted) hover:text-(--fg)'
                                                         }`}
@@ -804,14 +819,81 @@ export default function BuffEntityEditor({
                                                     </button>
                                                 ))}
                                             </div>
-                                            <span className="w-11 text-center text-xs font-medium text-(--fg) tabular-nums">
-                                                ≥ {activeBuff.condition.min}
-                                                {conditionType === 'chain' ? ' 链' : ' 阶'}
-                                            </span>
+                                            {activeBuff.condition?.chain !== undefined && (
+                                                <span className="text-[11px] font-medium text-(--accent-text)">
+                                                    ≥{activeBuff.condition.chain}链
+                                                </span>
+                                            )}
                                         </div>
-                                    )}
-                                </div>
-                            )}
+                                        <div className="flex items-center gap-2 rounded-lg border border-(--card-border) bg-(--input-bg) px-2 py-1">
+                                            <span className="text-[11px] text-(--fg)">精炼</span>
+                                            <div className="flex overflow-hidden rounded border border-(--card-border)">
+                                                {Array.from({ length: REFINE_MAX }, (_, k) => k + 1).map((n) => (
+                                                    <button
+                                                        key={n}
+                                                        onClick={() => setBuffRefinement(n)}
+                                                        className={`flex h-6 min-w-6 items-center justify-center px-1 text-[11px] transition-colors ${
+                                                            activeBuff.condition?.refinement === n
+                                                                ? 'bg-(--accent)/15 text-(--accent-text)'
+                                                                : 'text-(--muted) hover:text-(--fg)'
+                                                        }`}
+                                                    >
+                                                        {n}
+                                                    </button>
+                                                ))}
+                                            </div>
+                                            {activeBuff.condition?.refinement && (
+                                                <span className="text-[11px] font-medium text-(--accent-text)">
+                                                    ≥{activeBuff.condition.refinement}阶
+                                                </span>
+                                            )}
+                                        </div>
+                                        <div className="flex flex-wrap items-center gap-1 rounded-lg border border-(--card-border) bg-(--input-bg) px-2 py-1">
+                                            <span className="text-[11px] text-(--fg)">伤害属性</span>
+                                            {BUFF_ELEMENTS.map((el) => (
+                                                <button
+                                                    key={el}
+                                                    onClick={() => toggleConditionElement(el)}
+                                                    className={`rounded px-1.5 py-0.5 text-[11px] transition-colors ${
+                                                        (activeBuff.condition?.elements ?? []).includes(el)
+                                                            ? 'bg-(--accent)/15 text-(--accent-text)'
+                                                            : 'text-(--muted) hover:text-(--fg)'
+                                                    }`}
+                                                >
+                                                    {el}
+                                                </button>
+                                            ))}
+                                        </div>
+                                        <div className="flex flex-wrap items-center gap-1 rounded-lg border border-(--card-border) bg-(--input-bg) px-2 py-1">
+                                            <span className="text-[11px] text-(--fg)">伤害类型</span>
+                                            {BUFF_DAMAGE_TYPES.map((dt) => (
+                                                <button
+                                                    key={dt}
+                                                    onClick={() => toggleConditionDamageType(dt)}
+                                                    title={dt}
+                                                    className={`rounded px-1.5 py-0.5 text-[11px] transition-colors ${
+                                                        (activeBuff.condition?.damageTypes ?? []).includes(dt)
+                                                            ? 'bg-(--accent)/15 text-(--accent-text)'
+                                                            : 'text-(--muted) hover:text-(--fg)'
+                                                    }`}
+                                                >
+                                                    {BUFF_DAMAGE_TYPE_SHORT[dt] ?? dt}
+                                                </button>
+                                            ))}
+                                        </div>
+                                        <button
+                                            onClick={() => {
+                                                updateActiveBuff({ condition: null })
+                                                setCondPanelOpen(false)
+                                            }}
+                                            className="flex h-6 items-center gap-1 rounded-lg border border-(--card-border) px-2 text-[10px] text-(--muted) transition-colors hover:border-(--danger)/40 hover:text-(--danger)"
+                                        >
+                                            <Icon icon="mdi:close-circle-outline" className="size-3" />
+                                            清除
+                                        </button>
+                                    </div>
+                                )}
+                            </div>
 
                             {/* Zone 行列表 */}
                             <div className="min-h-0 flex-1 space-y-1 overflow-y-auto p-2">

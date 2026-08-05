@@ -1,4 +1,4 @@
-// DeepSeek 官方 API 流式客户端（server-only，key 由前端管理员输入后透传）
+// AI 流式客户端（浏览器直连；无 CORS 的提供商自动走站点 /api/ai/stream 转发代理）
 import type { GeneratedBuff } from '@/lib/ai/types'
 import { BUFF_ZONE_MAP, BUFF_REF_ZONE_MAP, BUFF_SCOPES, sanitizeCondition } from '@/lib/consts/buff-zones'
 import type { BuffScope } from '@/lib/types/db'
@@ -7,6 +7,8 @@ const DEEPSEEK_BASE = 'https://api.deepseek.com'
 const MODEL = 'deepseek-v4-flash'
 const TIMEOUT_MS = 240000
 const MAX_TOKENS = 65536
+// 支持浏览器直连（已配置 CORS）的 host 白名单；其余走站点代理
+const DIRECT_BASE_HOSTS = ['api.deepseek.com']
 
 export interface ChatMessage {
     role: 'system' | 'user' | 'assistant' | 'tool'
@@ -77,6 +79,16 @@ export interface StreamOptions {
     maxTokens?: number
     tools?: unknown[]
     reasoningEffort?: 'low' | 'medium' | 'high'
+    baseUrl?: string
+    model?: string
+}
+
+function needsProxy(base: string): boolean {
+    try {
+        return !DIRECT_BASE_HOSTS.includes(new URL(base).host)
+    } catch {
+        return true
+    }
 }
 
 export async function chatCompletionStream(
@@ -84,11 +96,11 @@ export async function chatCompletionStream(
     messages: ChatMessage[],
     options: StreamOptions = {}
 ): Promise<ChatResult> {
-    if (!apiKey.trim()) throw new Error('未提供 DeepSeek API Key')
+    if (!apiKey.trim()) throw new Error('未提供 API Key')
 
     const maxTokens = options.maxTokens ?? MAX_TOKENS
     const body: Record<string, unknown> = {
-        model: MODEL,
+        model: options.model?.trim() || MODEL,
         messages,
         stream: true,
         stream_options: { include_usage: true },
@@ -103,37 +115,49 @@ export async function chatCompletionStream(
         body.tool_choice = 'auto'
     }
 
+    const base = (options.baseUrl ?? DEEPSEEK_BASE).trim().replace(/\/+$/, '')
+
     let res: Response
     try {
-        res = await fetch(`${DEEPSEEK_BASE}/chat/completions`, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                Authorization: `Bearer ${apiKey}`
-            },
-            body: JSON.stringify(body),
-            signal: AbortSignal.timeout(TIMEOUT_MS)
-        })
+        if (needsProxy(base)) {
+            // 无 CORS 的提供商：经站点 /api/ai/stream 转发（同源，绕过浏览器预检）
+            res = await fetch('/api/ai/stream', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ baseUrl: base, apiKey, body }),
+                signal: AbortSignal.timeout(TIMEOUT_MS)
+            })
+        } else {
+            res = await fetch(`${base}/chat/completions`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    Authorization: `Bearer ${apiKey}`
+                },
+                body: JSON.stringify(body),
+                signal: AbortSignal.timeout(TIMEOUT_MS)
+            })
+        }
     } catch (e) {
         const err = e instanceof Error ? e.message : String(e)
         if (err.includes('AbortError') || err.includes('TimeoutError')) {
-            throw new DeepSeekError('DeepSeek 请求超时', '请求超时，请重试或换模型')
+            throw new DeepSeekError('AI 请求超时', '请求超时，请重试或换模型')
         }
-        throw new DeepSeekError(`无法连接 DeepSeek：${err}`, err)
+        throw new DeepSeekError(`无法连接 AI 服务（${base}）：${err}`, err)
     }
 
     if (!res.ok) {
         let detail = ''
         try {
-            const body = (await res.json()) as { error?: { message?: string } }
-            detail = body?.error?.message ?? ''
+            const payload = (await res.json()) as { error?: { message?: string }; message?: string }
+            detail = payload?.error?.message ?? payload?.message ?? ''
         } catch {
             /* ignore */
         }
-        throw new DeepSeekError(`DeepSeek 接口错误（HTTP ${res.status}）：${detail || res.statusText}`, `HTTP ${res.status}`)
+        throw new DeepSeekError(`AI 接口错误（HTTP ${res.status}）：${detail || res.statusText}`, `HTTP ${res.status}`)
     }
 
-    if (!res.body) throw new DeepSeekError('DeepSeek 响应无 body', '响应无 body')
+    if (!res.body) throw new DeepSeekError('AI 响应无 body', '响应无 body')
 
     const reader = res.body.getReader()
     const decoder = new TextDecoder()
@@ -163,7 +187,7 @@ export async function chatCompletionStream(
                 } catch {
                     continue
                 }
-                if (chunk.error?.message) throw new DeepSeekError(`DeepSeek 流错误：${chunk.error.message}`, payload)
+                if (chunk.error?.message) throw new DeepSeekError(`AI 流错误：${chunk.error.message}`, payload)
                 const delta = chunk.choices?.[0]?.delta
                 if (delta?.content) {
                     content += delta.content

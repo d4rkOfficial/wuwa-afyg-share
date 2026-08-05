@@ -5,6 +5,7 @@ import { Icon } from '@iconify/react'
 import BuffEntityGrid from '@/components/admin/buff-entity-grid'
 import BuffEntityEditor from '@/components/admin/buff-entity-editor'
 import { DEFAULT_SYSTEM_PROMPT, DEFAULT_INITIAL_TASK_PROMPT, DEFAULT_SLANG_DICT } from '@/lib/ai/prompts'
+import type { ChatMessage } from '@/lib/ai/deepseek'
 import type { BuffEntityType, BuffSetRow } from '@/lib/types/db'
 
 interface Props {
@@ -13,12 +14,21 @@ interface Props {
 }
 
 const AI_KEY_STORAGE = 'wuwa-afyg:deepseek-api-key'
+const AI_BASE_URL_STORAGE = 'wuwa-afyg:ai-base-url'
+const AI_MODEL_STORAGE = 'wuwa-afyg:ai-model'
 const TOOL_BASE_STORAGE = 'wuwa-afyg:tool-base'
 const SYSTEM_PROMPT_STORAGE = 'wuwa-afyg:deepseek-system-prompt'
 const INITIAL_TASK_STORAGE = 'wuwa-afyg:deepseek-initial-task'
 const SLANG_DICT_STORAGE = 'wuwa-afyg:deepseek-slang-dict'
 const REASONING_EFFORT_STORAGE = 'wuwa-afyg:deepseek-reasoning-effort'
+const SESSION_SHARE_STORAGE = 'wuwa-afyg:ai-session-share'
+const SESSION_MAX_ROUNDS = 12
 const TOOL_BASE_DEFAULT = 'http://localhost:5173'
+const OPENCODE_GO_BASE_URL = 'https://opencode.ai/zen/go/v1'
+const OPENCODE_FREE_BASE_URL = 'https://opencode.ai/zen/v1'
+const AI_BASE_URL_DEFAULT = OPENCODE_GO_BASE_URL
+const AI_MODEL_DEFAULT = 'deepseek-v4-flash'
+const AI_MODEL_FREE = 'deepseek-v4-flash-free'
 
 function readStorage(key: string, fallback = ''): string {
     if (typeof window === 'undefined') return fallback
@@ -36,6 +46,8 @@ function entityKey(entityType: string, entityName: string) {
 export default function BuffSetsAdmin({ rows, isAdmin }: Props) {
     const [toolBase, setToolBase] = useState(() => readStorage(TOOL_BASE_STORAGE, TOOL_BASE_DEFAULT))
     const [apiKey, setApiKey] = useState(() => readStorage(AI_KEY_STORAGE))
+    const [aiBaseUrl, setAiBaseUrl] = useState(() => readStorage(AI_BASE_URL_STORAGE, AI_BASE_URL_DEFAULT))
+    const [aiModel, setAiModel] = useState(() => readStorage(AI_MODEL_STORAGE, AI_MODEL_DEFAULT))
     const [systemPrompt, setSystemPrompt] = useState(() =>
         readStorage(SYSTEM_PROMPT_STORAGE, DEFAULT_SYSTEM_PROMPT)
     )
@@ -47,6 +59,9 @@ export default function BuffSetsAdmin({ rows, isAdmin }: Props) {
         const v = readStorage(REASONING_EFFORT_STORAGE)
         return v === 'low' || v === 'high' ? v : 'medium'
     })
+    // 跨实体共享会话：按实体类型分组（system 前缀一致才能命中缓存），默认开启
+    const [sessionShare, setSessionShare] = useState(() => readStorage(SESSION_SHARE_STORAGE, '1') === '1')
+    const [shareSessions, setShareSessions] = useState<Record<string, ChatMessage[]>>({})
     const [showConfig, setShowConfig] = useState(false)
     const [selected, setSelected] = useState<{ entityType: BuffEntityType; entityName: string } | null>(null)
     const [editingKey, setEditingKey] = useState<string | null>(null)
@@ -67,6 +82,16 @@ export default function BuffSetsAdmin({ rows, isAdmin }: Props) {
         localStorage.setItem(AI_KEY_STORAGE, value)
     }
 
+    function persistAiBaseUrl(value: string) {
+        setAiBaseUrl(value)
+        localStorage.setItem(AI_BASE_URL_STORAGE, value)
+    }
+
+    function persistAiModel(value: string) {
+        setAiModel(value)
+        localStorage.setItem(AI_MODEL_STORAGE, value)
+    }
+
     function persistSystemPrompt(value: string) {
         setSystemPrompt(value)
         localStorage.setItem(SYSTEM_PROMPT_STORAGE, value)
@@ -85,6 +110,24 @@ export default function BuffSetsAdmin({ rows, isAdmin }: Props) {
     function persistReasoningEffort(value: 'low' | 'medium' | 'high') {
         setReasoningEffort(value)
         localStorage.setItem(REASONING_EFFORT_STORAGE, value)
+    }
+
+    function persistSessionShare(enabled: boolean) {
+        setSessionShare(enabled)
+        localStorage.setItem(SESSION_SHARE_STORAGE, enabled ? '1' : '0')
+    }
+
+    // 会话按完整轮次截断（保留最近 N 段 user 起的轮），控制体积与首轮 miss 成本
+    function trimSession(messages: ChatMessage[]): ChatMessage[] {
+        const userIdx = messages
+            .map((m, i) => (m.role === 'user' ? i : -1))
+            .filter((i) => i >= 0)
+        if (userIdx.length <= SESSION_MAX_ROUNDS) return messages
+        return messages.slice(userIdx[userIdx.length - SESSION_MAX_ROUNDS])
+    }
+
+    function handleSessionUpdate(entityType: BuffEntityType, messages: ChatMessage[]) {
+        setShareSessions((prev) => ({ ...prev, [entityType]: trimSession(messages) }))
     }
 
     function handleSelect(entity: { entityType: BuffEntityType; entityName: string }) {
@@ -135,12 +178,17 @@ export default function BuffSetsAdmin({ rows, isAdmin }: Props) {
                             initial={initial}
                             toolBase={toolBase}
                             apiKey={apiKey}
+                            aiBaseUrl={aiBaseUrl}
+                            aiModel={aiModel}
                             systemPrompt={systemPrompt}
                             initialTaskPrompt={initialTaskPrompt}
                             toolPrompts={{}}
                             slangDict={slangDict}
                             reasoningEffort={reasoningEffort}
                             isAdmin={isAdmin}
+                            sessionSeed={sessionShare ? shareSessions[selected.entityType] : undefined}
+                            onSessionUpdate={(msgs) => handleSessionUpdate(selected.entityType, msgs)}
+                            sessionShareEnabled={sessionShare}
                             onEntityDeleted={() => {
                                 setSelected(null)
                                 setEditingKey(null)
@@ -194,7 +242,64 @@ export default function BuffSetsAdmin({ rows, isAdmin }: Props) {
                                     </div>
                                 </label>
                                 <label className="flex flex-col gap-1 text-xs text-(--muted)">
-                                    DeepSeek API Key
+                                    AI 服务地址
+                                    <input
+                                        type="url"
+                                        value={aiBaseUrl}
+                                        onChange={(e) => persistAiBaseUrl(e.target.value)}
+                                        placeholder="https://api.deepseek.com"
+                                        className="w-full rounded-lg border border-(--card-border) bg-(--input-bg) px-2 py-1.5 text-sm outline-none focus:border-(--accent)/60"
+                                    />
+                                    <div className="flex flex-wrap gap-1">
+                                        {[
+                                            { label: 'DeepSeek 官方', value: 'https://api.deepseek.com' },
+                                            { label: 'opencode-go', value: OPENCODE_GO_BASE_URL },
+                                            { label: 'opencode 免费', value: OPENCODE_FREE_BASE_URL }
+                                        ].map((opt) => (
+                                            <button
+                                                key={opt.value}
+                                                onClick={() => persistAiBaseUrl(opt.value)}
+                                                className={`rounded-md px-2 py-1 text-[10px] transition-colors ${
+                                                    aiBaseUrl === opt.value
+                                                        ? 'bg-(--accent)/15 text-(--accent-text)'
+                                                        : 'text-(--muted) hover:bg-(--card-hover) hover:text-(--fg)'
+                                                }`}
+                                            >
+                                                {opt.label}
+                                            </button>
+                                        ))}
+                                    </div>
+                                </label>
+                                <label className="flex flex-col gap-1 text-xs text-(--muted)">
+                                    模型名
+                                    <input
+                                        type="text"
+                                        value={aiModel}
+                                        onChange={(e) => persistAiModel(e.target.value)}
+                                        placeholder="deepseek-v4-flash"
+                                        className="w-full rounded-lg border border-(--card-border) bg-(--input-bg) px-2 py-1.5 text-sm outline-none focus:border-(--accent)/60"
+                                    />
+                                    <div className="flex flex-wrap gap-1">
+                                        {[
+                                            { label: 'v4-flash（付费）', value: AI_MODEL_DEFAULT },
+                                            { label: 'v4-flash-free（免费）', value: AI_MODEL_FREE }
+                                        ].map((opt) => (
+                                            <button
+                                                key={opt.value}
+                                                onClick={() => persistAiModel(opt.value)}
+                                                className={`rounded-md px-2 py-1 text-[10px] transition-colors ${
+                                                    aiModel === opt.value
+                                                        ? 'bg-(--accent)/15 text-(--accent-text)'
+                                                        : 'text-(--muted) hover:bg-(--card-hover) hover:text-(--fg)'
+                                                }`}
+                                            >
+                                                {opt.label}
+                                            </button>
+                                        ))}
+                                    </div>
+                                </label>
+                                <label className="flex flex-col gap-1 text-xs text-(--muted)">
+                                    AI API Key
                                     <input
                                         type="password"
                                         value={apiKey}
@@ -202,15 +307,9 @@ export default function BuffSetsAdmin({ rows, isAdmin }: Props) {
                                         placeholder="sk-..."
                                         className="w-full rounded-lg border border-(--card-border) bg-(--input-bg) px-2 py-1.5 text-sm outline-none focus:border-(--accent)/60"
                                     />
-                                    <a
-                                        href="https://platform.deepseek.com/api_keys"
-                                        target="_blank"
-                                        rel="noopener noreferrer"
-                                        className="inline-flex items-center gap-1 text-[10px] text-(--accent-text) hover:underline"
-                                    >
-                                        <Icon icon="mdi:open-in-new" className="size-3" />
-                                        DeepSeek 开放平台（获取 API Key）
-                                    </a>
+                                    <p className="text-[10px] text-(--muted)">
+                                        opencode-go 填 OPENCODE_API_KEY（opencode 登录后 auth.json 里的 key）；DeepSeek 填官方 API Key
+                                    </p>
                                 </label>
                                 <div className="flex flex-col gap-1">
                                     <div className="flex items-center justify-between">
@@ -286,6 +385,28 @@ export default function BuffSetsAdmin({ rows, isAdmin }: Props) {
                                             ))}
                                         </div>
                                     </div>
+                                </div>
+                                <div className="flex flex-col gap-1">
+                                    <div className="flex items-center justify-between">
+                                        <span className="text-xs text-(--muted)">跨实体共享会话</span>
+                                        <button
+                                            onClick={() => persistSessionShare(!sessionShare)}
+                                            className={`flex items-center gap-1.5 rounded-md px-2 py-1 text-[11px] transition-colors ${
+                                                sessionShare
+                                                    ? 'bg-(--accent)/15 text-(--accent-text)'
+                                                    : 'text-(--muted) hover:text-(--fg)'
+                                            }`}
+                                        >
+                                            <Icon
+                                                icon={sessionShare ? 'mdi:check-circle' : 'mdi:circle-outline'}
+                                                className="size-3.5"
+                                            />
+                                            {sessionShare ? '开启' : '关闭'}
+                                        </button>
+                                    </div>
+                                    <p className="text-[10px] text-(--muted)">
+                                        连续生成时复用上一实体会话前缀（按实体类型分组，最多保留 {SESSION_MAX_ROUNDS} 轮），命中 AI 缓存、省 token
+                                    </p>
                                 </div>
                                 <p className="text-[10px] text-(--muted)">
                                     提示词与词典仅存本机浏览器。可在编辑时对生成结果追问。

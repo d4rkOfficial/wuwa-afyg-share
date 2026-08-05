@@ -40,10 +40,13 @@ export type BuffScope = 'self' | 'self_except' | 'team' | 'effect_only'
 // 引用归属：self = 引自己（角色自身面板）；owner = 引主人（武器/声骸/套装的装备者面板）
 export type BuffRefOwner = 'self' | 'owner'
 
-// 生效条件：仅角色/武器实体使用。chain = 角色共鸣链 ≥ min（0-6）；refinement = 武器精炼 ≥ min（1-5）
+// 生效条件（多字段可并存，全部满足才生效）：chain = 角色共鸣链 ≥ n（1-6）；
+// refinement = 武器精炼 ≥ n（1-5）；elements = 伤害属性多选；damageTypes = 伤害类型多选
 export interface BuffCondition {
-    type: 'chain' | 'refinement'
-    min: number
+    chain?: number
+    refinement?: number
+    elements?: string[]
+    damageTypes?: string[]
 }
 
 export interface BuffZoneRef {
@@ -73,4 +76,11 @@ export interface BuffSetRow {
     exclusive: boolean
     condition?: BuffCondition | null
     buff_set: BuffZoneValue[]
+}
+
+export interface AnnouncementRow {
+    id: string
+    title: string
+    content: string
+    created_at: string
 }
