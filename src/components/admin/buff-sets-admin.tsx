@@ -216,9 +216,9 @@ export default function BuffSetsAdmin({ rows, isAdmin }: Props) {
 
             {/* 编辑弹窗 */}
             {selected && initial && (
-                <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+                <div className="buff-editor-modal-shell fixed inset-0 z-50 flex items-center justify-center p-4">
                     <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={() => setSelected(null)} />
-                    <div className="relative flex h-[92vh] w-[min(98vw,1500px)] flex-col overflow-hidden rounded-xl border border-(--card-border) bg-(--card) shadow-2xl">
+                    <div className="buff-editor-modal relative flex h-[92vh] w-[min(98vw,1500px)] flex-col overflow-hidden rounded-xl border border-(--card-border) bg-(--card) shadow-2xl">
                         <BuffEntityEditor
                             key={editingKey ?? 'new'}
                             initial={initial}

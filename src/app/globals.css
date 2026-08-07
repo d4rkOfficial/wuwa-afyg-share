@@ -67,21 +67,6 @@ body {
         sans-serif;
 }
 
-main {
-    animation: page-in 0.18s ease-out;
-}
-
-@keyframes page-in {
-    from {
-        opacity: 0;
-        transform: translateY(4px);
-    }
-    to {
-        opacity: 1;
-        transform: none;
-    }
-}
-
 ::selection {
     background: color-mix(in srgb, var(--accent) 30%, transparent);
 }
@@ -177,4 +162,129 @@ select {
 .toolbar-btn-ghost:hover {
     color: var(--fg);
     background: var(--card-hover);
+}
+
+/* 首页筛选：导航期间保留结果，只在筛选条内给出轻量反馈。 */
+.project-filter-shell {
+    position: relative;
+    isolation: isolate;
+    overflow: hidden;
+    transition:
+        border-color 180ms ease-out,
+        background-color 180ms ease-out,
+        box-shadow 180ms ease-out;
+}
+.project-filter-shell[data-pending='true'] {
+    border-color: color-mix(in srgb, var(--accent) 34%, var(--card-border));
+    box-shadow: 0 8px 30px color-mix(in srgb, var(--bg) 55%, transparent);
+}
+.project-filter-progress {
+    position: absolute;
+    right: auto;
+    bottom: 0;
+    left: 0;
+    width: 32%;
+    height: 2px;
+    border-radius: 9999px;
+    background: var(--accent);
+    opacity: 0;
+    transform: translateX(-115%);
+    pointer-events: none;
+}
+.project-filter-shell[data-pending='true'] .project-filter-progress {
+    opacity: 0.8;
+    animation: project-filter-progress 900ms cubic-bezier(0.22, 1, 0.36, 1) infinite;
+}
+@keyframes project-filter-progress {
+    to {
+        transform: translateX(415%);
+    }
+}
+
+/* 竖屏 Buff 编辑器：列表是稳定锚点，编辑与 AI 在右侧上下分区。 */
+@media (orientation: portrait) {
+    .buff-editor-modal-shell {
+        padding: 0.5rem;
+    }
+    .buff-editor-modal {
+        width: calc(100vw - 1rem);
+        height: calc(100dvh - 1rem);
+    }
+    .buff-editor-layout {
+        display: grid;
+        grid-template-columns: clamp(11rem, 24vw, 14rem) minmax(0, 1fr) clamp(9.5rem, 18vw, 11rem);
+        grid-template-rows: minmax(0, 3fr) minmax(13rem, 2fr);
+    }
+    .buff-editor-buff-list {
+        grid-column: 1;
+        grid-row: 1 / 3;
+        width: auto;
+    }
+    .buff-editor-main {
+        grid-column: 2;
+        grid-row: 1;
+    }
+    .buff-editor-zones {
+        grid-column: 3;
+        grid-row: 1;
+        width: auto;
+        border-right: 0;
+        border-left: 1px solid var(--card-border);
+    }
+    .buff-editor-ai {
+        grid-column: 2 / 4;
+        grid-row: 2;
+        width: auto;
+        min-width: 0;
+        border-top: 1px solid var(--card-border);
+        border-left: 0;
+    }
+}
+
+/* 极窄竖屏仍保留左侧 Buff 导航，右侧改为编辑 / 乘区 / AI 三段。 */
+@media (orientation: portrait) and (max-width: 640px) {
+    .buff-editor-modal-shell {
+        padding: 0.25rem;
+    }
+    .buff-editor-modal {
+        width: calc(100vw - 0.5rem);
+        height: calc(100dvh - 0.5rem);
+        border-radius: 0.625rem;
+    }
+    .buff-editor-layout {
+        grid-template-columns: clamp(7.25rem, 34vw, 8.5rem) minmax(0, 1fr);
+        grid-template-rows: minmax(0, 3fr) minmax(7rem, 1fr) minmax(11rem, 2fr);
+    }
+    .buff-editor-buff-list {
+        grid-row: 1 / 4;
+    }
+    .buff-editor-main {
+        grid-column: 2;
+        grid-row: 1;
+    }
+    .buff-editor-zones {
+        grid-column: 2;
+        grid-row: 2;
+        border-top: 1px solid var(--card-border);
+        border-left: 0;
+    }
+    .buff-editor-ai {
+        grid-column: 2;
+        grid-row: 3;
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .project-filter-shell,
+    .project-filter-shell * {
+        scroll-behavior: auto !important;
+        animation-duration: 0.01ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: 0.01ms !important;
+    }
+    .project-filter-shell[data-pending='true'] .project-filter-progress {
+        width: 100%;
+        opacity: 0.55;
+        transform: none;
+    }
 }

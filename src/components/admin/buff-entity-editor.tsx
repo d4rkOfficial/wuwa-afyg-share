@@ -720,11 +720,11 @@ export default function BuffEntityEditor({
                 </div>
             </div>
 
-            {/* 四栏主体 */}
-            <div className="flex min-h-0 flex-1 overflow-hidden">
+            {/* 四栏主体：横屏并排；竖屏为左侧 Buff 导航 + 右侧上下工作区 */}
+            <div className="buff-editor-layout flex min-h-0 flex-1 overflow-hidden">
 
                 {/* ① 左：Buff 列表 */}
-                <div className="flex w-56 shrink-0 flex-col border-r border-(--card-border)">
+                <div className="buff-editor-buff-list flex w-56 shrink-0 flex-col border-r border-(--card-border)">
                     <div className="flex shrink-0 items-center justify-between border-b border-(--card-border) px-3 py-2">
                         <span className="text-xs font-medium text-(--muted)">Buff 条目（{buffs.length}）</span>
                         <button onClick={addBuff} className="toolbar-btn toolbar-btn-ghost px-1.5 py-0.5">
@@ -766,7 +766,7 @@ export default function BuffEntityEditor({
                 </div>
 
                 {/* ② 中：就地编辑器 */}
-                <div className="flex min-w-0 flex-1 flex-col">
+                <div className="buff-editor-main flex min-w-0 flex-1 flex-col">
                     {activeBuff ? (
                         <>
                             <div className="flex shrink-0 flex-wrap items-center gap-2 border-b border-(--card-border) px-3 py-2">
@@ -1023,7 +1023,7 @@ export default function BuffEntityEditor({
                 </div>
 
                 {/* ③ 乘区勾选面板 */}
-                <div className="flex w-44 shrink-0 flex-col border-r border-(--card-border)">
+                <div className="buff-editor-zones flex w-44 shrink-0 flex-col border-r border-(--card-border)">
                     <div className="shrink-0 border-b border-(--card-border) px-3 py-2 text-xs font-medium text-(--muted)">
                         乘区
                     </div>
@@ -1052,7 +1052,7 @@ export default function BuffEntityEditor({
                 </div>
 
                 {/* ④ AI 协作区（DeepSeek 聊天式） */}
-                <div className="flex w-80 shrink-0 flex-col border-l border-(--card-border)">
+                <div className="buff-editor-ai flex w-80 shrink-0 flex-col border-l border-(--card-border)">
                     {/* 头部 */}
                     <div className="flex shrink-0 flex-wrap items-center gap-1.5 border-b border-(--card-border) px-3 py-2">
                         <span className="flex items-center gap-1 text-xs font-medium text-(--accent-text)">

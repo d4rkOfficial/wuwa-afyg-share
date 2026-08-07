@@ -6,13 +6,15 @@ interface Props {
     totalPages: number
     q: string
     sort: 'hot' | 'latest'
+    character: string
 }
 
-function pageHref(page: number, q: string, sort: string): string {
+function pageHref(page: number, q: string, sort: string, character: string): string {
     const params = new URLSearchParams()
     params.set('page', String(page))
     if (q) params.set('q', q)
     params.set('sort', sort)
+    if (character) params.set('character', character)
     return `/?${params.toString()}`
 }
 
@@ -30,9 +32,9 @@ function pageItems(page: number, totalPages: number): (number | '…')[] {
     return out
 }
 
-export default function Pagination({ page, totalPages, q, sort }: Props) {
+export default function Pagination({ page, totalPages, q, sort, character }: Props) {
     if (totalPages <= 1) return null
-    const link = (p: number) => pageHref(p, q, sort)
+    const link = (p: number) => pageHref(p, q, sort, character)
 
     return (
         <div className="flex items-center justify-center gap-1.5 pt-2">
