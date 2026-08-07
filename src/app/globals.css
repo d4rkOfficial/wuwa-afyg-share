@@ -1,6 +1,7 @@
 @import 'tailwindcss';
 
 :root {
+    color-scheme: dark;
     --bg: #0e0e10;
     --fg: #e4e4e7;
     --muted: #71717a;
@@ -32,6 +33,7 @@
 }
 
 html.light {
+    color-scheme: light;
     --bg: #fafafa;
     --fg: #18181b;
     --muted: #8b8b93;
@@ -164,15 +166,84 @@ select {
     background: var(--card-hover);
 }
 
+html,
+body {
+    background: var(--bg);
+}
+
+.site-header {
+    background: color-mix(in srgb, var(--bg) 88%, transparent);
+}
+
+.theme-icon-light {
+    display: none;
+}
+html.light .theme-icon-dark {
+    display: none;
+}
+html.light .theme-icon-light {
+    display: block;
+}
+
+/* 链接只在自身边缘提示慢导航；不会遮挡页面，也不会拦住下一次操作。 */
+.app-link {
+    position: relative;
+}
+.app-link-hint {
+    position: absolute;
+    right: 25%;
+    bottom: 1px;
+    left: 25%;
+    height: 2px;
+    border-radius: 9999px;
+    background: currentColor;
+    opacity: 0;
+    visibility: hidden;
+    transform: scaleX(0.45);
+    transform-origin: center;
+    transition:
+        opacity 100ms cubic-bezier(0.23, 1, 0.32, 1),
+        transform 100ms cubic-bezier(0.23, 1, 0.32, 1),
+        visibility 0s linear 100ms;
+    pointer-events: none;
+}
+.app-link-hint.is-pending {
+    opacity: 0.6;
+    visibility: visible;
+    transform: scaleX(1);
+    transition-delay: 100ms;
+}
+
 /* 首页筛选：导航期间保留结果，只在筛选条内给出轻量反馈。 */
 .project-filter-shell {
     position: relative;
+    display: grid;
+    grid-template-areas: 'search sort character';
+    grid-template-columns: minmax(16rem, 1fr) max-content max-content;
+    align-items: center;
+    gap: 0.5rem;
     isolation: isolate;
     overflow: hidden;
     transition:
         border-color 180ms ease-out,
         background-color 180ms ease-out,
         box-shadow 180ms ease-out;
+}
+.project-filter-search {
+    grid-area: search;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    align-items: stretch;
+    gap: 0.5rem;
+    min-width: 0;
+}
+.project-filter-sort {
+    grid-area: sort;
+    justify-self: start;
+}
+.project-filter-character {
+    grid-area: character;
+    justify-self: stretch;
 }
 .project-filter-shell[data-pending='true'] {
     border-color: color-mix(in srgb, var(--accent) 34%, var(--card-border));
@@ -198,6 +269,28 @@ select {
 @keyframes project-filter-progress {
     to {
         transform: translateX(415%);
+    }
+}
+
+@media (max-width: 860px) {
+    .project-filter-shell {
+        grid-template-areas:
+            'search search'
+            'sort character';
+        grid-template-columns: max-content minmax(10rem, 1fr);
+    }
+}
+
+@media (max-width: 360px) {
+    .project-filter-shell {
+        grid-template-areas:
+            'search'
+            'sort'
+            'character';
+        grid-template-columns: minmax(0, 1fr);
+    }
+    .project-filter-character {
+        width: 100%;
     }
 }
 
@@ -275,6 +368,10 @@ select {
 }
 
 @media (prefers-reduced-motion: reduce) {
+    .app-link-hint {
+        transition: opacity 100ms ease;
+        transform: none;
+    }
     .project-filter-shell,
     .project-filter-shell * {
         scroll-behavior: auto !important;

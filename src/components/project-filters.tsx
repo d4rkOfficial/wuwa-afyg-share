@@ -40,12 +40,12 @@ export default function ProjectFilters({ q, sort, character }: Props) {
 
     return (
         <section
-            className="project-filter-shell flex flex-wrap items-center gap-2 rounded-xl border border-(--card-border) bg-(--card) p-2"
+            className="project-filter-shell rounded-xl border border-(--card-border) bg-(--card) p-2"
             data-pending={isPending}
             aria-label="工程筛选"
         >
             <form
-                className="flex min-w-[min(100%,18rem)] flex-1 gap-2"
+                className="project-filter-search"
                 onSubmit={(event) => {
                     event.preventDefault()
                     navigate({ q: query.trim() })
@@ -62,12 +62,12 @@ export default function ProjectFilters({ q, sort, character }: Props) {
                         value={query}
                         onChange={(event) => setQuery(event.target.value)}
                         placeholder="搜索工程名称..."
-                        className="h-9 w-full rounded-lg border border-(--card-border) bg-(--input-bg) pl-9 pr-3 text-sm outline-none transition-[border-color,box-shadow] duration-200 placeholder:text-(--muted) focus:border-(--accent)/60 focus:shadow-[0_0_0_3px_color-mix(in_srgb,var(--accent)_10%,transparent)]"
+                        className="h-10 w-full rounded-lg border border-(--card-border) bg-(--input-bg) pl-9 pr-3 text-sm outline-none transition-[border-color,box-shadow] duration-200 placeholder:text-(--muted) focus:border-(--accent)/60 focus:shadow-[0_0_0_3px_color-mix(in_srgb,var(--accent)_10%,transparent)]"
                     />
                 </label>
                 <button
                     type="submit"
-                    className="inline-flex h-9 shrink-0 items-center gap-1.5 rounded-lg px-3.5 text-sm font-medium text-(--btn-text) transition-[filter,transform] duration-200 ease-out hover:brightness-110 active:scale-[0.97]"
+                    className="inline-flex h-10 shrink-0 items-center justify-center gap-1.5 whitespace-nowrap rounded-lg px-3.5 text-sm font-medium text-(--btn-text) transition-[filter,transform] duration-200 ease-out hover:brightness-110 active:scale-[0.97]"
                     style={{ background: 'var(--btn-bg)' }}
                 >
                     <Icon icon={isPending ? 'mdi:loading' : 'mdi:arrow-right'} className={isPending ? 'size-4 animate-spin' : 'size-4'} />
@@ -75,7 +75,7 @@ export default function ProjectFilters({ q, sort, character }: Props) {
                 </button>
             </form>
 
-            <div className="flex h-9 shrink-0 items-center rounded-lg border border-(--card-border) bg-(--input-bg) p-0.5">
+            <div className="project-filter-sort flex h-10 shrink-0 items-center rounded-lg border border-(--card-border) bg-(--input-bg) p-0.5">
                 {(
                     [
                         { key: 'latest', label: '最新', icon: 'mdi:clock-outline' },
@@ -105,7 +105,7 @@ export default function ProjectFilters({ q, sort, character }: Props) {
                 })}
             </div>
 
-            <label className="group flex h-9 min-w-40 shrink-0 items-center gap-2 rounded-lg border border-(--card-border) bg-(--input-bg) pl-2.5 transition-[border-color,box-shadow] duration-200 focus-within:border-(--accent)/60 focus-within:shadow-[0_0_0_3px_color-mix(in_srgb,var(--accent)_10%,transparent)]">
+            <label className="project-filter-character group flex h-10 min-w-40 shrink-0 items-center gap-2 rounded-lg border border-(--card-border) bg-(--input-bg) pl-2.5 transition-[border-color,box-shadow] duration-200 focus-within:border-(--accent)/60 focus-within:shadow-[0_0_0_3px_color-mix(in_srgb,var(--accent)_10%,transparent)]">
                 <span className="flex items-center gap-1.5 text-xs font-medium text-(--muted)">
                     <Icon icon="mdi:account-group-outline" className="size-4" />
                     队伍
