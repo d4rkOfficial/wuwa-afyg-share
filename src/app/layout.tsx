@@ -3,12 +3,20 @@ import { Geist } from 'next/font/google'
 import './globals.css'
 import Header from '@/components/header'
 import { Toaster } from '@/components/ui/toast'
-import PageLoadingOverlay from '@/components/ui/page-loading-overlay'
 
 const geistSans = Geist({
     variable: '--font-geist-sans',
     subsets: ['latin']
 })
+
+const themeInitScript = `
+(() => {
+    let saved = null;
+    try { saved = localStorage.getItem('share-theme'); } catch {}
+    const light = saved === 'light' || (saved !== 'dark' && window.matchMedia('(prefers-color-scheme: light)').matches);
+    document.documentElement.classList.toggle('light', light);
+    document.documentElement.style.colorScheme = light ? 'light' : 'dark';
+})();`
 
 export const metadata: Metadata = {
     title: {
@@ -24,7 +32,10 @@ export default function RootLayout({
     children: React.ReactNode
 }>) {
     return (
-        <html lang="zh-CN" className={`${geistSans.variable} min-h-full antialiased`}>
+        <html lang="zh-CN" suppressHydrationWarning className={`${geistSans.variable} min-h-full antialiased`}>
+            <head>
+                <script dangerouslySetInnerHTML={{ __html: themeInitScript }} />
+            </head>
             <body className="flex min-h-dvh flex-col bg-(--bg) text-(--fg)">
                 <Header />
                 <main className="mx-auto w-full max-w-6xl flex-1 px-4 py-6">{children}</main>
@@ -32,7 +43,6 @@ export default function RootLayout({
                     椰果工坊 · 配合 椰果工具箱 使用
                 </footer>
                 <Toaster />
-                <PageLoadingOverlay />
             </body>
         </html>
     )
