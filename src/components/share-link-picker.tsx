@@ -1,8 +1,9 @@
 'use client'
 
-import { useState } from 'react'
+import { useEffect, useId, useRef, useState } from 'react'
 import { Icon } from '@iconify/react'
 import { toast } from '@/components/ui/toast'
+import { copyText } from '@/lib/utils/clipboard'
 
 // 工具箱实例快捷按钮
 const INSTANCES = [
@@ -19,19 +20,47 @@ interface Props {
 export default function ShareLinkPicker({ code, label = '复制链接' }: Props) {
     const [open, setOpen] = useState(false)
     const [toolUrl, setToolUrl] = useState(INSTANCES[0].url)
+    const titleId = useId()
+    const descriptionId = useId()
+    const inputId = useId()
+    const dialogRef = useRef<HTMLDivElement>(null)
     const shareBase = typeof window !== 'undefined' ? window.location.origin : ''
     const downloadUrl = `${shareBase}/share/${code}/download`
     const link = `${toolUrl.replace(/\/+$/, '')}/#import_project=${encodeURIComponent(downloadUrl)}`
 
-    function copy() {
+    useEffect(() => {
+        if (!open) return
+
+        const previousActiveElement = document.activeElement instanceof HTMLElement ? document.activeElement : null
+        const previousOverflow = document.body.style.overflow
+        document.body.style.overflow = 'hidden'
+        const focusFrame = requestAnimationFrame(() => dialogRef.current?.focus({ preventScroll: true }))
+
+        const onKeyDown = (event: KeyboardEvent) => {
+            if (event.key === 'Escape') setOpen(false)
+        }
+        window.addEventListener('keydown', onKeyDown)
+
+        return () => {
+            cancelAnimationFrame(focusFrame)
+            document.body.style.overflow = previousOverflow
+            window.removeEventListener('keydown', onKeyDown)
+            if (previousActiveElement?.isConnected) previousActiveElement.focus({ preventScroll: true })
+        }
+    }, [open])
+
+    async function copy() {
         if (!toolUrl.trim()) {
             toast('请先输入工具箱链接', 'error')
             return
         }
-        navigator.clipboard
-            .writeText(link)
-            .then(() => toast('已复制，可在工具箱中直接打开', 'success'))
-            .catch(() => toast('复制失败', 'error'))
+
+        if (await copyText(link)) {
+            toast('已复制，可在工具箱中直接打开', 'success')
+            setOpen(false)
+        } else {
+            toast('复制失败，请长按下方链接手动复制', 'error')
+        }
     }
 
     return (
@@ -39,41 +68,69 @@ export default function ShareLinkPicker({ code, label = '复制链接' }: Props)
             <button
                 onClick={() => setOpen(true)}
                 className="inline-flex items-center gap-1 rounded-lg border border-(--card-border) bg-(--card) px-3 py-1.5 text-sm text-(--muted) transition-colors hover:text-(--fg)"
+                aria-haspopup="dialog"
+                aria-expanded={open}
             >
                 <Icon icon="mdi:link-variant" className="size-4" />
                 {label}
             </button>
 
             {open && (
-                <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-                    <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={() => setOpen(false)} />
-                    <div className="relative w-full max-w-md rounded-xl border border-(--card-border) bg-(--card) p-5 shadow-2xl">
-                        <div className="flex items-center justify-between">
-                            <div>
-                                <h3 className="text-sm font-semibold">复制分享链接</h3>
-                                <p className="mt-1 text-xs text-(--muted)">
+                <div className="fixed inset-0 z-50 flex items-end justify-center sm:items-center sm:p-4">
+                    <div
+                        className="absolute inset-0 bg-black/60 backdrop-blur-sm"
+                        onClick={() => setOpen(false)}
+                        aria-hidden="true"
+                    />
+                    <div
+                        ref={dialogRef}
+                        role="dialog"
+                        aria-modal="true"
+                        aria-labelledby={titleId}
+                        aria-describedby={descriptionId}
+                        tabIndex={-1}
+                        className="relative flex max-h-[calc(100dvh-1rem)] w-full select-none flex-col overflow-hidden rounded-t-2xl border border-(--card-border) bg-(--card) p-4 pb-[max(1rem,env(safe-area-inset-bottom))] shadow-2xl outline-none sm:max-w-md sm:rounded-xl sm:p-5"
+                    >
+                        <div className="flex items-start gap-3">
+                            <div className="min-w-0 flex-1">
+                                <h3 id={titleId} className="text-base font-semibold sm:text-sm">
+                                    复制分享链接
+                                </h3>
+                                <p id={descriptionId} className="mt-1 text-xs leading-5 text-(--muted)">
                                     输入工具箱地址，生成「工具箱地址#import_project=工坊下载直链」链接，在工具箱中可直接打开。
                                 </p>
                             </div>
-                            <button onClick={() => setOpen(false)} className="rounded p-1 text-(--muted) hover:text-(--fg)">
+                            <button
+                                onClick={() => setOpen(false)}
+                                className="-mr-2 -mt-2 inline-flex size-11 shrink-0 items-center justify-center rounded-lg text-(--muted) transition-colors hover:bg-(--card-hover) hover:text-(--fg) sm:size-9"
+                                aria-label="关闭"
+                            >
                                 <Icon icon="mdi:close" className="size-5" />
                             </button>
                         </div>
 
                         <div className="mt-4">
-                            <label className="mb-1 block text-xs text-(--muted)">工具箱地址</label>
+                            <label htmlFor={inputId} className="mb-1.5 block text-xs font-medium text-(--muted)">
+                                工具箱地址
+                            </label>
                             <input
+                                id={inputId}
+                                type="url"
+                                inputMode="url"
+                                autoComplete="url"
+                                spellCheck={false}
                                 value={toolUrl}
                                 onChange={(e) => setToolUrl(e.target.value)}
                                 placeholder="https://wuwa-afyg-tool.200503.xyz"
-                                className="w-full rounded-lg border border-(--card-border) bg-(--input-bg) px-3 py-2 font-mono text-sm outline-none transition-colors focus:border-(--accent)/60"
+                                className="min-h-11 w-full select-text rounded-lg border border-(--card-border) bg-(--input-bg) px-3 py-2 font-mono text-base outline-none transition-colors focus:border-(--accent)/60 sm:min-h-0 sm:text-sm"
                             />
-                            <div className="mt-2 flex flex-wrap gap-1.5">
+                            <div className="mt-2 grid grid-cols-3 gap-1.5 sm:flex sm:flex-wrap">
                                 {INSTANCES.map((inst) => (
                                     <button
                                         key={inst.url}
                                         onClick={() => setToolUrl(inst.url)}
-                                        className={`rounded-md px-2.5 py-1 text-xs transition-colors ${
+                                        aria-pressed={toolUrl === inst.url}
+                                        className={`min-h-10 rounded-md px-2.5 py-1 text-xs transition-colors sm:min-h-0 ${
                                             toolUrl === inst.url
                                                 ? 'bg-(--accent)/15 text-(--accent-text)'
                                                 : 'border border-(--card-border) bg-(--card-hover) text-(--muted) hover:text-(--fg)'
@@ -85,20 +142,26 @@ export default function ShareLinkPicker({ code, label = '复制链接' }: Props)
                             </div>
                         </div>
 
-                        <p className="mt-3 rounded-lg bg-(--card-hover) px-3 py-2 font-mono text-[10px] leading-relaxed break-all text-(--muted)" title={link}>
-                            {link}
-                        </p>
+                        <div className="mt-4 min-h-0">
+                            <span className="mb-1.5 block text-xs font-medium text-(--muted)">生成链接</span>
+                            <output
+                                className="block max-h-28 select-text overflow-y-auto rounded-lg border border-(--card-border) bg-(--card-hover) px-3 py-2.5 font-mono text-[11px] leading-5 break-all text-(--muted)"
+                                title={link}
+                            >
+                                {link}
+                            </output>
+                        </div>
 
-                        <div className="mt-4 flex justify-end gap-2">
+                        <div className="mt-4 grid grid-cols-[minmax(0,1fr)_minmax(0,1.4fr)] gap-2 sm:flex sm:justify-end">
                             <button
                                 onClick={() => setOpen(false)}
-                                className="rounded-lg border border-(--card-border) bg-(--card) px-3 py-1.5 text-sm text-(--muted) hover:text-(--fg)"
+                                className="min-h-11 rounded-lg border border-(--card-border) bg-(--card) px-3 py-2 text-sm text-(--muted) transition-colors hover:bg-(--card-hover) hover:text-(--fg) sm:min-h-0 sm:py-1.5"
                             >
                                 取消
                             </button>
                             <button
                                 onClick={copy}
-                                className="inline-flex items-center gap-1 rounded-lg px-4 py-1.5 text-sm font-medium text-(--btn-text) transition-all hover:brightness-110"
+                                className="inline-flex min-h-11 items-center justify-center gap-1.5 rounded-lg px-4 py-2 text-sm font-medium text-(--btn-text) transition-all hover:brightness-110 active:scale-[0.98] sm:min-h-0 sm:py-1.5"
                                 style={{ background: 'var(--btn-bg)' }}
                             >
                                 <Icon icon="mdi:content-copy" className="size-4" />

@@ -2,6 +2,7 @@
 
 import { useState } from 'react'
 import { Icon } from '@iconify/react'
+import { copyText } from '@/lib/utils/clipboard'
 
 interface Props {
     text: string
@@ -12,11 +13,10 @@ export default function CopyButton({ text, label = '复制链接' }: Props) {
     const [copied, setCopied] = useState(false)
 
     async function onClick() {
-        try {
-            await navigator.clipboard.writeText(text)
+        if (await copyText(text)) {
             setCopied(true)
             setTimeout(() => setCopied(false), 1500)
-        } catch {
+        } else {
             setCopied(false)
         }
     }
