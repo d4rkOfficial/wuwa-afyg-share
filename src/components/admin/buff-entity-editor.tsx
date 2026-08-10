@@ -408,32 +408,28 @@ export default function BuffEntityEditor({
 
     // 多字段条件：开 = 空对象（可同时设置链/精炼/属性/类型），关 = null（经面板清除）
     function setBuffChain(min: number) {
-        if (!activeBuff?.condition) return
-        const cond = { ...activeBuff.condition }
+        const cond = { ...(activeBuff?.condition ?? {}) }
         if (cond.chain === min) delete cond.chain
         else cond.chain = min
         updateActiveBuff({ condition: cond })
     }
 
     function setBuffRefinement(min: number) {
-        if (!activeBuff?.condition) return
-        const cond = { ...activeBuff.condition }
+        const cond = { ...(activeBuff?.condition ?? {}) }
         if (cond.refinement === min) delete cond.refinement
         else cond.refinement = min
         updateActiveBuff({ condition: cond })
     }
 
     function toggleConditionElement(el: string) {
-        if (!activeBuff?.condition) return
-        const cond = { ...activeBuff.condition }
+        const cond = { ...(activeBuff?.condition ?? {}) }
         const list = cond.elements ?? []
         const next = list.includes(el) ? list.filter((e) => e !== el) : [...list, el]
         updateActiveBuff({ condition: { ...cond, elements: next } })
     }
 
     function toggleConditionDamageType(dt: string) {
-        if (!activeBuff?.condition) return
-        const cond = { ...activeBuff.condition }
+        const cond = { ...(activeBuff?.condition ?? {}) }
         const list = cond.damageTypes ?? []
         const next = list.includes(dt) ? list.filter((d) => d !== dt) : [...list, dt]
         updateActiveBuff({ condition: { ...cond, damageTypes: next } })

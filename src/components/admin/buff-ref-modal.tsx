@@ -3,6 +3,7 @@
 import { useState } from 'react'
 import { Icon } from '@iconify/react'
 import { BUFF_REF_ZONES, BUFF_ZONE_MAP } from '@/lib/consts/buff-zones'
+import SelectMenu from '@/components/ui/select-menu'
 import type { BuffEntityType } from '@/lib/types/db'
 
 // 引用草稿（字符串字段，与编辑器 ZoneRefRow 一致）
@@ -122,17 +123,15 @@ export default function BuffRefModal({ open, entityType, zoneId, initialRef, onS
                     {/* 引用属性 */}
                     <div>
                         <div className="mb-1 text-[10px] text-(--muted)">引用属性</div>
-                        <select
+                        <SelectMenu
                             value={draft.targetZoneId}
-                            onChange={(e) => set({ targetZoneId: e.target.value })}
-                            className="w-full rounded-lg border border-(--card-border) bg-(--input-bg) px-2 py-1.5 text-xs outline-none focus:border-(--accent)/60"
-                        >
-                            {BUFF_REF_ZONES.filter((rz) => rz.id !== zoneId).map((rz) => (
-                                <option key={rz.id} value={rz.id}>
-                                    {rz.label}
-                                </option>
-                            ))}
-                        </select>
+                            onChange={(v) => set({ targetZoneId: v })}
+                            options={BUFF_REF_ZONES.filter((rz) => rz.id !== zoneId).map((rz) => ({
+                                value: rz.id,
+                                label: rz.label
+                            }))}
+                            ariaLabel="选择引用属性"
+                        />
                     </div>
 
                     {/* 转换规则卡 */}

@@ -1,10 +1,19 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { Icon } from '@iconify/react'
 import BuffEntityGrid from '@/components/admin/buff-entity-grid'
 import BuffEntityEditor from '@/components/admin/buff-entity-editor'
 import { DEFAULT_SYSTEM_PROMPT, DEFAULT_INITIAL_TASK_PROMPT, DEFAULT_SLANG_DICT } from '@/lib/ai/prompts'
+import {
+    loadAiConfig,
+    saveAiConfig,
+    DEFAULT_AI_CONFIG,
+    AI_ENDPOINTS,
+    AI_MODEL_PRESETS,
+    type AiConfig
+} from '@/lib/ai/config'
+import { toast } from '@/components/ui/toast'
 import type { ChatMessage } from '@/lib/ai/deepseek'
 import type { BuffEntityType, BuffSetRow } from '@/lib/types/db'
 
@@ -13,22 +22,13 @@ interface Props {
     isAdmin: boolean
 }
 
-const AI_KEY_STORAGE = 'wuwa-afyg:deepseek-api-key'
-const AI_BASE_URL_STORAGE = 'wuwa-afyg:ai-base-url'
-const AI_MODEL_STORAGE = 'wuwa-afyg:ai-model'
 const TOOL_BASE_STORAGE = 'wuwa-afyg:tool-base'
 const SYSTEM_PROMPT_STORAGE = 'wuwa-afyg:deepseek-system-prompt'
 const INITIAL_TASK_STORAGE = 'wuwa-afyg:deepseek-initial-task'
 const SLANG_DICT_STORAGE = 'wuwa-afyg:deepseek-slang-dict'
-const REASONING_EFFORT_STORAGE = 'wuwa-afyg:deepseek-reasoning-effort'
 const SESSION_SHARE_STORAGE = 'wuwa-afyg:ai-session-share'
 const SESSION_MAX_ROUNDS = 12
 const TOOL_BASE_DEFAULT = 'http://localhost:5173'
-const OPENCODE_GO_BASE_URL = 'https://opencode.ai/zen/go/v1'
-const OPENCODE_FREE_BASE_URL = 'https://opencode.ai/zen/v1'
-const AI_BASE_URL_DEFAULT = OPENCODE_GO_BASE_URL
-const AI_MODEL_DEFAULT = 'deepseek-v4-flash'
-const AI_MODEL_FREE = 'deepseek-v4-flash-free'
 
 function readStorage(key: string, fallback = ''): string {
     if (typeof window === 'undefined') return fallback
@@ -45,9 +45,10 @@ function entityKey(entityType: string, entityName: string) {
 
 export default function BuffSetsAdmin({ rows, isAdmin }: Props) {
     const [toolBase, setToolBase] = useState(() => readStorage(TOOL_BASE_STORAGE, TOOL_BASE_DEFAULT))
-    const [apiKey, setApiKey] = useState(() => readStorage(AI_KEY_STORAGE))
-    const [aiBaseUrl, setAiBaseUrl] = useState(() => readStorage(AI_BASE_URL_STORAGE, AI_BASE_URL_DEFAULT))
-    const [aiModel, setAiModel] = useState(() => readStorage(AI_MODEL_STORAGE, AI_MODEL_DEFAULT))
+    // AI 连接配置（IndexedDB 持久化；加载后供编辑器使用）
+    const [ai, setAi] = useState<AiConfig | null>(null)
+    const [aiDraft, setAiDraft] = useState<AiConfig>({ ...DEFAULT_AI_CONFIG })
+    const [aiSaving, setAiSaving] = useState(false)
     const [systemPrompt, setSystemPrompt] = useState(() =>
         readStorage(SYSTEM_PROMPT_STORAGE, DEFAULT_SYSTEM_PROMPT)
     )
@@ -55,10 +56,6 @@ export default function BuffSetsAdmin({ rows, isAdmin }: Props) {
         readStorage(INITIAL_TASK_STORAGE, DEFAULT_INITIAL_TASK_PROMPT)
     )
     const [slangDict, setSlangDict] = useState(() => readStorage(SLANG_DICT_STORAGE, DEFAULT_SLANG_DICT))
-    const [reasoningEffort, setReasoningEffort] = useState<'low' | 'medium' | 'high'>(() => {
-        const v = readStorage(REASONING_EFFORT_STORAGE)
-        return v === 'low' || v === 'high' ? v : 'medium'
-    })
     // 跨实体共享会话：按实体类型分组（system 前缀一致才能命中缓存），默认开启
     const [sessionShare, setSessionShare] = useState(() => readStorage(SESSION_SHARE_STORAGE, '1') === '1')
     const [shareSessions, setShareSessions] = useState<Record<string, ChatMessage[]>>({})
@@ -68,6 +65,13 @@ export default function BuffSetsAdmin({ rows, isAdmin }: Props) {
     const [showConfig, setShowConfig] = useState(false)
     const [selected, setSelected] = useState<{ entityType: BuffEntityType; entityName: string } | null>(null)
     const [editingKey, setEditingKey] = useState<string | null>(null)
+
+    useEffect(() => {
+        loadAiConfig().then((c) => {
+            setAi({ ...c })
+            setAiDraft({ ...c })
+        })
+    }, [])
 
     const existingCountMap: Record<string, number> = {}
     for (const r of rows) {
@@ -80,19 +84,12 @@ export default function BuffSetsAdmin({ rows, isAdmin }: Props) {
         localStorage.setItem(TOOL_BASE_STORAGE, value)
     }
 
-    function persistApiKey(value: string) {
-        setApiKey(value)
-        localStorage.setItem(AI_KEY_STORAGE, value)
-    }
-
-    function persistAiBaseUrl(value: string) {
-        setAiBaseUrl(value)
-        localStorage.setItem(AI_BASE_URL_STORAGE, value)
-    }
-
-    function persistAiModel(value: string) {
-        setAiModel(value)
-        localStorage.setItem(AI_MODEL_STORAGE, value)
+    async function handleSaveAi() {
+        setAiSaving(true)
+        const c = await saveAiConfig({ ...aiDraft })
+        setAi({ ...c })
+        setAiSaving(false)
+        toast('AI 配置已保存', 'success')
     }
 
     function persistSystemPrompt(value: string) {
@@ -108,11 +105,6 @@ export default function BuffSetsAdmin({ rows, isAdmin }: Props) {
     function persistSlangDict(value: string) {
         setSlangDict(value)
         localStorage.setItem(SLANG_DICT_STORAGE, value)
-    }
-
-    function persistReasoningEffort(value: 'low' | 'medium' | 'high') {
-        setReasoningEffort(value)
-        localStorage.setItem(REASONING_EFFORT_STORAGE, value)
     }
 
     function persistSessionShare(enabled: boolean) {
@@ -223,14 +215,14 @@ export default function BuffSetsAdmin({ rows, isAdmin }: Props) {
                             key={editingKey ?? 'new'}
                             initial={initial}
                             toolBase={toolBase}
-                            apiKey={apiKey}
-                            aiBaseUrl={aiBaseUrl}
-                            aiModel={aiModel}
+                            apiKey={ai?.apiKey ?? ''}
+                            aiBaseUrl={ai?.baseUrl ?? ''}
+                            aiModel={ai?.model ?? ''}
                             systemPrompt={systemPrompt}
                             initialTaskPrompt={initialTaskPrompt}
                             toolPrompts={{}}
                             slangDict={slangDict}
-                            reasoningEffort={reasoningEffort}
+                            reasoningEffort={ai?.reasoningEffort ?? 'medium'}
                             isAdmin={isAdmin}
                             sessionSeed={sessionShare ? shareSessions[selected.entityType] : undefined}
                             onSessionUpdate={(msgs) => handleSessionUpdate(selected.entityType, msgs)}
@@ -291,22 +283,18 @@ export default function BuffSetsAdmin({ rows, isAdmin }: Props) {
                                     AI 服务地址
                                     <input
                                         type="url"
-                                        value={aiBaseUrl}
-                                        onChange={(e) => persistAiBaseUrl(e.target.value)}
+                                        value={aiDraft.baseUrl}
+                                        onChange={(e) => setAiDraft((d) => ({ ...d, baseUrl: e.target.value }))}
                                         placeholder="https://api.deepseek.com"
                                         className="w-full rounded-lg border border-(--card-border) bg-(--input-bg) px-2 py-1.5 text-sm outline-none focus:border-(--accent)/60"
                                     />
                                     <div className="flex flex-wrap gap-1">
-                                        {[
-                                            { label: 'DeepSeek 官方', value: 'https://api.deepseek.com' },
-                                            { label: 'opencode-go', value: OPENCODE_GO_BASE_URL },
-                                            { label: 'opencode 免费', value: OPENCODE_FREE_BASE_URL }
-                                        ].map((opt) => (
+                                        {AI_ENDPOINTS.map((opt) => (
                                             <button
                                                 key={opt.value}
-                                                onClick={() => persistAiBaseUrl(opt.value)}
+                                                onClick={() => setAiDraft((d) => ({ ...d, baseUrl: opt.value }))}
                                                 className={`rounded-md px-2 py-1 text-[10px] transition-colors ${
-                                                    aiBaseUrl === opt.value
+                                                    aiDraft.baseUrl === opt.value
                                                         ? 'bg-(--accent)/15 text-(--accent-text)'
                                                         : 'text-(--muted) hover:bg-(--card-hover) hover:text-(--fg)'
                                                 }`}
@@ -320,21 +308,18 @@ export default function BuffSetsAdmin({ rows, isAdmin }: Props) {
                                     模型名
                                     <input
                                         type="text"
-                                        value={aiModel}
-                                        onChange={(e) => persistAiModel(e.target.value)}
+                                        value={aiDraft.model}
+                                        onChange={(e) => setAiDraft((d) => ({ ...d, model: e.target.value }))}
                                         placeholder="deepseek-v4-flash"
                                         className="w-full rounded-lg border border-(--card-border) bg-(--input-bg) px-2 py-1.5 text-sm outline-none focus:border-(--accent)/60"
                                     />
                                     <div className="flex flex-wrap gap-1">
-                                        {[
-                                            { label: 'v4-flash（付费）', value: AI_MODEL_DEFAULT },
-                                            { label: 'v4-flash-free（免费）', value: AI_MODEL_FREE }
-                                        ].map((opt) => (
+                                        {AI_MODEL_PRESETS.map((opt) => (
                                             <button
                                                 key={opt.value}
-                                                onClick={() => persistAiModel(opt.value)}
+                                                onClick={() => setAiDraft((d) => ({ ...d, model: opt.value }))}
                                                 className={`rounded-md px-2 py-1 text-[10px] transition-colors ${
-                                                    aiModel === opt.value
+                                                    aiDraft.model === opt.value
                                                         ? 'bg-(--accent)/15 text-(--accent-text)'
                                                         : 'text-(--muted) hover:bg-(--card-hover) hover:text-(--fg)'
                                                 }`}
@@ -348,8 +333,8 @@ export default function BuffSetsAdmin({ rows, isAdmin }: Props) {
                                     AI API Key
                                     <input
                                         type="password"
-                                        value={apiKey}
-                                        onChange={(e) => persistApiKey(e.target.value)}
+                                        value={aiDraft.apiKey}
+                                        onChange={(e) => setAiDraft((d) => ({ ...d, apiKey: e.target.value }))}
                                         placeholder="sk-..."
                                         className="w-full rounded-lg border border-(--card-border) bg-(--input-bg) px-2 py-1.5 text-sm outline-none focus:border-(--accent)/60"
                                     />
@@ -357,6 +342,35 @@ export default function BuffSetsAdmin({ rows, isAdmin }: Props) {
                                         opencode-go 填 OPENCODE_API_KEY（opencode 登录后 auth.json 里的 key）；DeepSeek 填官方 API Key
                                     </p>
                                 </label>
+                                <div className="flex flex-col gap-1">
+                                    <span className="text-xs text-(--muted)">思考强度</span>
+                                    <div className="flex items-center gap-1">
+                                        {(['low', 'medium', 'high'] as const).map((level) => (
+                                            <button
+                                                key={level}
+                                                onClick={() => setAiDraft((d) => ({ ...d, reasoningEffort: level }))}
+                                                className={`rounded-md px-2 py-1 text-[11px] transition-colors ${
+                                                    aiDraft.reasoningEffort === level
+                                                        ? 'bg-(--accent)/15 text-(--accent-text)'
+                                                        : 'text-(--muted) hover:text-(--fg)'
+                                                }`}
+                                            >
+                                                {level === 'low' ? '低' : level === 'medium' ? '中' : '高'}
+                                            </button>
+                                        ))}
+                                    </div>
+                                </div>
+                                <div className="flex justify-end">
+                                    <button
+                                        onClick={handleSaveAi}
+                                        disabled={aiSaving}
+                                        className="inline-flex items-center gap-1.5 rounded-lg px-4 py-1.5 text-xs font-medium text-(--btn-text) transition-all hover:brightness-110 disabled:opacity-50"
+                                        style={{ background: 'var(--btn-bg)' }}
+                                    >
+                                        <Icon icon="mdi:content-save-outline" className="size-3.5" />
+                                        {aiSaving ? '保存中…' : '保存 AI 配置'}
+                                    </button>
+                                </div>
                                 {PROMPT_EDITORS.map((editor) => {
                                     const summary = editor.value.trim().replace(/\s+/g, ' ').slice(0, 60)
                                     return (
@@ -389,26 +403,6 @@ export default function BuffSetsAdmin({ rows, isAdmin }: Props) {
                                         </div>
                                     )
                                 })}
-                                <div className="flex flex-col gap-1">
-                                    <div className="flex items-center justify-between">
-                                        <span className="text-xs text-(--muted)">思考强度</span>
-                                        <div className="flex items-center gap-1">
-                                            {(['low', 'medium', 'high'] as const).map((level) => (
-                                                <button
-                                                    key={level}
-                                                    onClick={() => persistReasoningEffort(level)}
-                                                    className={`rounded-md px-2 py-1 text-[11px] transition-colors ${
-                                                        reasoningEffort === level
-                                                            ? 'bg-(--accent)/15 text-(--accent-text)'
-                                                            : 'text-(--muted) hover:text-(--fg)'
-                                                    }`}
-                                                >
-                                                    {level === 'low' ? '低' : level === 'medium' ? '中' : '高'}
-                                                </button>
-                                            ))}
-                                        </div>
-                                    </div>
-                                </div>
                                 <div className="flex flex-col gap-1">
                                     <div className="flex items-center justify-between">
                                         <span className="text-xs text-(--muted)">跨实体共享会话</span>

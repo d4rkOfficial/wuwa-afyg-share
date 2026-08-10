@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation'
 import { Icon } from '@iconify/react'
 import { CHAR_ELEMENTS } from '@/lib/data/char-elements'
 import { ELEMENTS } from '@/lib/types/project'
+import SelectMenu from '@/components/ui/select-menu'
 
 interface Props {
     q: string
@@ -105,33 +106,23 @@ export default function ProjectFilters({ q, sort, character }: Props) {
                 })}
             </div>
 
-            <label className="project-filter-character group flex h-10 min-w-40 shrink-0 items-center gap-2 rounded-lg border border-(--card-border) bg-(--input-bg) pl-2.5 transition-[border-color,box-shadow] duration-200 focus-within:border-(--accent)/60 focus-within:shadow-[0_0_0_3px_color-mix(in_srgb,var(--accent)_10%,transparent)]">
-                <span className="flex items-center gap-1.5 text-xs font-medium text-(--muted)">
-                    <Icon icon="mdi:account-group-outline" className="size-4" />
-                    队伍
-                </span>
-                <select
+            <div className="project-filter-character group flex h-10 min-w-40 shrink-0 items-center rounded-lg border border-(--card-border) bg-(--input-bg) transition-[border-color,box-shadow] duration-200 focus-within:border-(--accent)/60 focus-within:shadow-[0_0_0_3px_color-mix(in_srgb,var(--accent)_10%,transparent)]">
+                <SelectMenu
                     value={selectedCharacter}
-                    onChange={(event) => {
-                        const nextCharacter = event.target.value
+                    onChange={(nextCharacter) => {
                         setSelectedCharacter(nextCharacter)
                         navigate({ character: nextCharacter })
                     }}
-                    aria-label="按队伍角色筛选"
-                    className="h-full min-w-0 flex-1 cursor-pointer bg-transparent pr-7 text-sm font-medium text-(--fg) outline-none"
-                >
-                    <option value="">全部角色</option>
-                    {CHARACTERS_BY_ELEMENT.map(({ element, names }) => (
-                        <optgroup key={element} label={element}>
-                            {names.map((name) => (
-                                <option key={name} value={name}>
-                                    {name}
-                                </option>
-                            ))}
-                        </optgroup>
-                    ))}
-                </select>
-            </label>
+                    placeholder="全部角色"
+                    icon="mdi:account-group-outline"
+                    allOption="全部角色"
+                    groups={CHARACTERS_BY_ELEMENT.map(({ element, names }) => ({
+                        label: element,
+                        options: names.map((name) => ({ value: name, label: name }))
+                    }))}
+                    ariaLabel="按队伍角色筛选"
+                />
+            </div>
 
             <span className="sr-only" aria-live="polite">
                 {isPending ? '正在更新工程列表' : '工程列表已更新'}
