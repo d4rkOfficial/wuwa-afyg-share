@@ -31,6 +31,7 @@ export const BUFF_ZONES: BuffZoneDef[] = [
     { id: 'finalDmg', label: '最终伤害(终伤区)', unit: '%' },
     { id: 'dmgTakenInc', label: '伤害提升(易伤区)', unit: '%' },
     { id: 'customFinalDmg', label: '倍率/其它(特殊终伤)', unit: '%' },
+    { id: 'customFinalDmgMul', label: '倍率/其它(特殊终伤·乘算)', unit: '%' },
     { id: 'extraRatio', label: '额外倍率', unit: '%' }
 ]
 
