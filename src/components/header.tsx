@@ -1,6 +1,8 @@
 import AppLink from '@/components/ui/app-link'
 import { Icon } from '@iconify/react'
 import ThemeToggle from '@/components/theme-toggle'
+import ToyHeaderAuth from '@/lib/bilibili-toy/components/toy-header-auth'
+import ToyIdentityBadge from '@/lib/bilibili-toy/components/toy-identity-badge'
 import { createClient, hasEnv } from '@/lib/supabase/server'
 
 export default async function Header() {
@@ -105,15 +107,12 @@ export default async function Header() {
                                     </span>
                                 )}
                             </AppLink>
+                            {/* 登录账号后仍显示 B站 头像（有身份时） */}
+                            <ToyIdentityBadge />
                         </>
                     ) : (
-                        <AppLink
-                            href="/login"
-                            className="inline-flex h-9 shrink-0 items-center justify-center gap-1.5 whitespace-nowrap rounded-lg px-3 text-sm font-medium text-(--btn-text) transition-[filter,transform] duration-150 ease-out hover:brightness-110 active:scale-[0.97]"
-                            style={{ background: 'var(--btn-bg)' }}
-                        >
-                            登录
-                        </AppLink>
+                        // B站 Toy 身份感知：有身份 → 头像进入个人主页并隐藏登录入口；无身份 → 原登录按钮
+                        <ToyHeaderAuth />
                     )}
 
                     <ThemeToggle />

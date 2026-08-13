@@ -6,6 +6,7 @@ import { compressProjectText, assertRawSize } from '@/lib/project/compress'
 import { generateCode } from '@/lib/utils/slug'
 import { EXPORT_VERSION, type ProjectData } from '@/lib/types/project'
 import { CORS_HEADERS, handleOptions } from '@/lib/api/cors'
+import { rateLimit, rateLimited } from '@/lib/api/rate-limit'
 import { siteUrl } from '@/lib/utils/site'
 
 export { handleOptions as OPTIONS }
@@ -70,6 +71,10 @@ export async function POST(req: Request) {
     if (typeof body.fileText !== 'string' || !body.fileText.trim()) {
         return Response.json({ error: '缺少工程文件内容' }, { status: 400, headers: CORS_HEADERS })
     }
+
+    // 匿名分享防滥用：按来源 IP 限频（通用安全设施）
+    const clientIp = req.headers.get('cf-connecting-ip') ?? 'unknown'
+    if (!rateLimit(`post-ip:${clientIp}`, 20, 60_000)) return rateLimited()
 
     let project: ProjectData
     try {
