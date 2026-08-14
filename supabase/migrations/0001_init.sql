@@ -1,8 +1,9 @@
 -- ═══════════════════════════════════════════════════════════════
--- 椰果工坊 · 全量初始化（合并原 0001~0012，单文件一次执行）
+-- 椰果工坊 · 全量初始化（合并原 0001~0012 及后续增量：公告表 /
+-- buff_sets service_role 授权 / 工程 team_preview GIN 索引，单文件一次执行）
 -- 说明：本文件按顺序包含：工程表/RLS、匿名分享、service_role、
 --       过期清理、用户资料、移除点赞、工程压缩、Buff 集表、
---       管理员权限、Buff 元信息、权限调整。
+--       管理员权限、Buff 元信息、权限调整、公告表、GIN 索引。
 -- 适用：全新数据库一次性执行；已按旧迁移初始化过的库请勿重跑。
 -- ═══════════════════════════════════════════════════════════════
 
@@ -253,6 +254,56 @@ create policy projects_admin_all on public.projects
     using (public.is_admin ())
     with check (public.is_admin ());
 
+-- ─────────────────────────────────────────────────────────────
+-- [0002] buff_sets.condition 生效条件列（幂等补充）
+-- buff 生效条件：jsonb {"type":"chain"|"refinement","min":n}
+--   chain = 角色共鸣链 ≥ min（0-6）；refinement = 武器精炼 ≥ min（1-5）
+-- ─────────────────────────────────────────────────────────────
+alter table public.buff_sets
+    add column if not exists condition jsonb;
+
+-- ─────────────────────────────────────────────────────────────
+-- [0003] 公告表：工坊首页公告栏（公开读，管理员增删改）
+-- ─────────────────────────────────────────────────────────────
+create table if not exists public.announcements (
+    id         uuid primary key default gen_random_uuid(),
+    title      text not null default '',
+    content    text not null,
+    created_at timestamptz not null default now()
+);
+
+alter table public.announcements enable row level security;
+
+-- 公开只读
+drop policy if exists announcements_public_read on public.announcements;
+create policy announcements_public_read on public.announcements
+    for select
+    using (true);
+
+-- 仅管理员可写
+drop policy if exists announcements_admin_all on public.announcements;
+create policy announcements_admin_all on public.announcements
+    for all to authenticated
+    using (public.is_admin ())
+    with check (public.is_admin ());
+
+grant select on public.announcements to anon, authenticated;
+grant insert, update, delete on public.announcements to authenticated;
+
+-- ─────────────────────────────────────────────────────────────
+-- [0003] buff_sets 授予 service_role 写权限
+-- 供服务端脚本（批量改名等）用 service role key 直写 buff_sets；
+-- 此前仅 authenticated 可写，service_role 缺失导致 403。
+-- ─────────────────────────────────────────────────────────────
+grant select, insert, update, delete on public.buff_sets to service_role;
+
+-- ─────────────────────────────────────────────────────────────
+-- [0004] 工程 team_preview GIN 索引
+-- 首页角色筛选使用 JSONB 包含查询；GIN 索引避免随工程数量增长退化为全表扫描。
+-- ─────────────────────────────────────────────────────────────
+create index if not exists projects_team_preview_gin_idx
+    on public.projects using gin (team_preview jsonb_path_ops);
+
 -- ═══════════════════════════════════════════════════════════════
 -- 使用说明
 --  1. 全新库：本文件一次性执行。
@@ -260,5 +311,6 @@ create policy projects_admin_all on public.projects
 --     update public.profiles p set is_admin = true
 --     from auth.users u where u.id = p.id and u.email = 'you@example.com';
 --  3. buff_sets 写入：登录用户即可编辑（含非管理员，用于测试）；
---     站点侧"保存"按钮仅管理员可用，非管理员仅可测试生成。
+--     站点侧"保存"按钮仅管理员可用，非管理员仅可测试生成；
+--     服务端脚本可用 service_role key 直写 buff_sets（已授权）。
 -- ═══════════════════════════════════════════════════════════════
