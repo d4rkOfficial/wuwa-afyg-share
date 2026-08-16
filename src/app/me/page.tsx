@@ -4,6 +4,7 @@ import type { Metadata } from 'next'
 import { Icon } from '@iconify/react'
 import ManageProjectRow from '@/components/manage-project-row'
 import UsernameEditor from '@/components/username-editor'
+import ClearMyContent from '@/components/clear-my-content'
 import { createClient, hasEnv } from '@/lib/supabase/server'
 import { signOut } from '@/lib/actions/auth'
 import { LIST_COLUMNS } from '@/lib/project/query'
@@ -57,6 +58,7 @@ export default async function MePage() {
                     <p className="mt-1 text-sm text-(--muted)">共 {projects.length} 个</p>
                 </div>
                 <div className="flex gap-2">
+                    <ClearMyContent />
                     <form action={signOut}>
                         <button
                             type="submit"

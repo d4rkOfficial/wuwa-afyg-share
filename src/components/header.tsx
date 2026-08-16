@@ -59,18 +59,6 @@ export default async function Header() {
 
                     {isAdmin && (
                         <AppLink
-                            href="/admin/buff-sets"
-                            aria-label="Buff 集管理"
-                            title="Buff 集管理"
-                            className="inline-flex size-9 shrink-0 items-center justify-center gap-1.5 rounded-lg text-sm text-(--muted) transition-[background-color,color,transform] duration-150 ease-out hover:bg-(--card-hover) hover:text-(--fg) active:scale-[0.97] lg:w-auto lg:px-2.5"
-                        >
-                            <Icon icon="mdi:shield-edit-outline" className="size-4" />
-                            <span className="hidden lg:inline">Buff 集管理</span>
-                        </AppLink>
-                    )}
-
-                    {isAdmin && (
-                        <AppLink
                             href="/admin/projects"
                             aria-label="工程管理"
                             title="工程管理"
@@ -78,6 +66,18 @@ export default async function Header() {
                         >
                             <Icon icon="mdi:clipboard-account-outline" className="size-4" />
                             <span className="hidden lg:inline">工程管理</span>
+                        </AppLink>
+                    )}
+
+                    {isAdmin && (
+                        <AppLink
+                            href="/admin/users"
+                            aria-label="管理员管理"
+                            title="管理员管理"
+                            className="inline-flex size-9 shrink-0 items-center justify-center gap-1.5 rounded-lg text-sm text-(--muted) transition-[background-color,color,transform] duration-150 ease-out hover:bg-(--card-hover) hover:text-(--fg) active:scale-[0.97] lg:w-auto lg:px-2.5"
+                        >
+                            <Icon icon="mdi:account-group-outline" className="size-4" />
+                            <span className="hidden lg:inline">管理员管理</span>
                         </AppLink>
                     )}
 

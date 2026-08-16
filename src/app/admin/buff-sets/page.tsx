@@ -25,6 +25,14 @@ export default async function AdminBuffSetsPage() {
         .eq('id', user.id)
         .maybeSingle()
     const isAdmin = !!profile?.is_admin
+    if (!isAdmin) {
+        return (
+            <div className="mx-auto max-w-2xl space-y-4 py-12 text-center">
+                <h1 className="text-xl font-bold">无权限</h1>
+                <p className="text-(--muted)">仅管理员可访问 Buff 集管理。</p>
+            </div>
+        )
+    }
 
     const { data } = await supabase
         .from('buff_sets')
@@ -38,7 +46,7 @@ export default async function AdminBuffSetsPage() {
             <div>
                 <h1 className="text-2xl font-bold">Buff 集管理</h1>
                 <p className="mt-1 text-sm text-(--muted)">
-                    按角色/武器/声骸/套装浏览实体网格，点开某个实体弹窗编辑。仅管理员可保存，非管理员可测试生成。
+                    按角色/武器/声骸/套装浏览实体网格，点开某个实体弹窗编辑。仅管理员可保存/删除；快照（根 + 版本链）创建、对比、恢复与删除同样仅管理员可用。
                 </p>
             </div>
 

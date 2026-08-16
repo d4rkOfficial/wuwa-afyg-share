@@ -8,6 +8,7 @@ import ShareLinkPicker from '@/components/share-link-picker'
 import ExpiryCountdown from '@/components/expiry-countdown'
 import { toast } from '@/components/ui/toast'
 import { deleteProject, regenerateCode, setExpiry, updateProject, replaceProjectFile } from '@/lib/actions/projects'
+import { setProjectProtected } from '@/lib/actions/project-protection'
 import { formatDate, formatCount } from '@/lib/utils/format'
 import { isExpiredProject, isGracePeriod } from '@/lib/utils/expiry'
 import type { ProjectListItem } from '@/lib/types/db'
@@ -139,6 +140,15 @@ export default function ManageProjectRow({ project }: Props) {
                         ) : (
                             project.expires_at && <ExpiryCountdown expiresAt={project.expires_at} />
                         )}
+                        {project.protected && (
+                            <span
+                                className="inline-flex items-center gap-1 rounded-md bg-(--accent)/15 px-2 py-0.5 text-xs text-(--accent-text)"
+                                title="保护工程：批量删除、单条删除与过期清理均豁免，需先解除保护才能删除"
+                            >
+                                <Icon icon="mdi:shield-lock-outline" className="size-3.5" />
+                                已保护
+                            </span>
+                        )}
                         {grace && (
                             <button
                                 onClick={() => setConfirmDelete(true)}
@@ -191,6 +201,17 @@ export default function ManageProjectRow({ project }: Props) {
                     >
                         <Icon icon="mdi:swap-horizontal" className="size-4" />
                         换源
+                    </button>
+                    <button
+                        onClick={() =>
+                            run(() => setProjectProtected(project.id, !project.protected), project.protected ? '已解除保护' : '已开启保护')
+                        }
+                        disabled={pending}
+                        title={project.protected ? '解除保护后可删除' : '保护工程：批量删除、单条删除与过期清理均豁免'}
+                        className="inline-flex items-center gap-1 rounded-lg border border-(--card-border) bg-(--card) px-2.5 py-1.5 text-xs text-(--muted) transition-colors hover:text-(--fg) disabled:opacity-50"
+                    >
+                        <Icon icon={project.protected ? 'mdi:shield-lock-outline' : 'mdi:shield-outline'} className="size-4" />
+                        {project.protected ? '解除保护' : '保护'}
                     </button>
                 </div>
             </div>

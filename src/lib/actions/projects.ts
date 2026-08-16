@@ -227,6 +227,15 @@ export async function deleteProject(id: string): Promise<ActionResult> {
     if (!auth.user) return { error: auth.error ?? '请先登录' }
     const { supabase } = auth
 
+    // 保护工程不可删除（含批量删除；需先解除保护）
+    const { data: project } = await supabase
+        .from('projects')
+        .select('protected')
+        .eq('id', id)
+        .maybeSingle()
+    if (!project) return { error: '工程不存在' }
+    if (project.protected) return { error: '该工程处于保护状态，请先解除保护后再删除' }
+
     const { error } = await supabase.from('projects').delete().eq('id', id)
     if (error) return { error: error.message }
     revalidatePath('/')

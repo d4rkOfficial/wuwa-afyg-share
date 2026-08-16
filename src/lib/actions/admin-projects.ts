@@ -34,7 +34,7 @@ export async function adminListProjects(query: AdminProjectQuery): Promise<Actio
 
     let listQuery = supabase
         .from('projects')
-        .select('id, code, author_id, author_name, title, description, tags, game_version, team_preview, published, expires_at, view_count, clone_count, created_at, updated_at', { count: 'exact' })
+        .select('id, code, author_id, author_name, title, description, tags, game_version, team_preview, published, expires_at, view_count, clone_count, created_at, updated_at, protected', { count: 'exact' })
     if (q) {
         listQuery = listQuery.or(`title.ilike.%${q.replace(/[%_\\]/g, '\\$&')}%,code.ilike.%${q.replace(/[%_\\]/g, '\\$&')}%,author_name.ilike.%${q.replace(/[%_\\]/g, '\\$&')}%`)
     }
@@ -90,6 +90,15 @@ export async function adminDeleteProject(id: string): Promise<ActionResult> {
     const auth = await withAdmin()
     if (auth.error || !auth.supabase) return { error: auth.error ?? '无权限' }
     const supabase = auth.supabase
+
+    // 保护工程不可删除（含批量删除；需先解除保护）
+    const { data: project } = await supabase
+        .from('projects')
+        .select('protected')
+        .eq('id', id)
+        .maybeSingle()
+    if (!project) return { error: '工程不存在' }
+    if (project.protected) return { error: '该工程处于保护状态，请先解除保护后再删除' }
 
     const { error } = await supabase.from('projects').delete().eq('id', id)
     if (error) return { error: error.message }

@@ -17,7 +17,7 @@ export interface ActionResult<T = undefined> {
     debug?: string
 }
 
-// 仅管理员（保存 / 删除等写操作）
+// 仅管理员（保存 / 删除等写操作；DB 层 RLS 同步限制）
 async function withAdmin() {
     const r = await requireAdmin()
     if (!r.ok || !r.supabase) return { supabase: null as never, error: r.error ?? '无权限' }

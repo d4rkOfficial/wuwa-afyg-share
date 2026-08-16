@@ -17,6 +17,20 @@ export default async function BuffSetsPage() {
 
     const rows = (data ?? []) as BuffSetRow[]
 
+    // 底部管理入口：仅管理员可见
+    const {
+        data: { user }
+    } = await supabase.auth.getUser()
+    let isAdmin = false
+    if (user) {
+        const { data: profile } = await supabase
+            .from('profiles')
+            .select('is_admin')
+            .eq('id', user.id)
+            .maybeSingle()
+        isAdmin = !!profile?.is_admin
+    }
+
     return (
         <div className="space-y-6">
             <div>
@@ -39,12 +53,26 @@ export default async function BuffSetsPage() {
                 <BuffSetsBrowser rows={rows} />
             )}
 
-            <p className=" border-t border-(--card-border) pt-4 text-center text-xs text-(--muted)">
-                数据由维护方统一收录更新
-                <Link href="/" className="ml-2 text-(--accent) hover:underline">
-                    返回工程广场
-                </Link>
-            </p>
+            <div className="flex flex-wrap items-center justify-center gap-2 border-t border-(--card-border) pt-4">
+                <a
+                    href="/api/buff-sets/export"
+                    className="inline-flex items-center gap-1.5 rounded-lg border border-(--card-border) bg-(--card) px-4 py-2 text-sm text-(--muted) transition-colors hover:text-(--fg)"
+                    title="下载最新快照（无快照时为当前数据）的全量 SQL，可在 PostgreSQL / Supabase 直接执行"
+                >
+                    <Icon icon="mdi:database-export-outline" className="size-4" />
+                    导出 Buff 集全量 SQL
+                </a>
+                {isAdmin && (
+                    <Link
+                        href="/admin/buff-sets"
+                        className="inline-flex items-center gap-1.5 rounded-lg px-4 py-2 text-sm font-medium text-(--btn-text) transition-all hover:brightness-110"
+                        style={{ background: 'var(--btn-bg)' }}
+                    >
+                        <Icon icon="mdi:shield-edit-outline" className="size-4" />
+                        Buff 集管理
+                    </Link>
+                )}
+            </div>
         </div>
     )
 }

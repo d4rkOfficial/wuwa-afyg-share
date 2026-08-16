@@ -8,6 +8,8 @@ import {
     adminSetProjectExpiry,
     adminDeleteProject
 } from '@/lib/actions/admin-projects'
+import { setProjectProtected } from '@/lib/actions/project-protection'
+import AdminUserCleaner from '@/components/admin/admin-user-cleaner'
 import { toast } from '@/components/ui/toast'
 import { isExpiredProject, isGracePeriod } from '@/lib/utils/expiry'
 import type { ProjectListItem } from '@/lib/types/db'
@@ -98,6 +100,8 @@ export default function AdminProjects() {
                     搜索
                 </button>
                 <span className="text-xs text-(--muted)">共 {total} 个工程</span>
+                <div className="flex-1" />
+                <AdminUserCleaner />
             </div>
 
             {/* 列表 */}
@@ -124,8 +128,18 @@ export default function AdminProjects() {
                                             className="w-full rounded border border-(--card-border) bg-(--input-bg) px-1.5 py-1 text-sm outline-none focus:border-(--accent)/60"
                                         />
                                     ) : (
-                                        <span className="block truncate font-medium text-(--fg)" title={row.title}>
-                                            {row.title}
+                                        <span className="flex items-center gap-1">
+                                            <span className="block truncate font-medium text-(--fg)" title={row.title}>
+                                                {row.title}
+                                            </span>
+                                            {row.protected && (
+                                                <span title="保护工程：批量/单条删除与过期清理均豁免">
+                                                    <Icon
+                                                        icon="mdi:shield-lock-outline"
+                                                        className="size-3.5 shrink-0 text-(--accent-text)"
+                                                    />
+                                                </span>
+                                            )}
                                         </span>
                                     )}
                                 </td>
@@ -220,6 +234,22 @@ export default function AdminProjects() {
                                                     title="改过期时间"
                                                 >
                                                     <Icon icon="mdi:clock-outline" className="size-4" />
+                                                </button>
+                                                <button
+                                                    onClick={() =>
+                                                        run(
+                                                            () => setProjectProtected(row.id, !row.protected),
+                                                            row.protected ? '已解除保护' : '已开启保护'
+                                                        )
+                                                    }
+                                                    disabled={pending}
+                                                    className="rounded p-1 text-(--muted) hover:text-(--accent-text)"
+                                                    title={row.protected ? '解除保护' : '开启保护（豁免批量/单条删除与过期清理）'}
+                                                >
+                                                    <Icon
+                                                        icon={row.protected ? 'mdi:shield-lock-outline' : 'mdi:shield-outline'}
+                                                        className="size-4"
+                                                    />
                                                 </button>
                                                 {confirmDeleteId === row.id ? (
                                                     <button

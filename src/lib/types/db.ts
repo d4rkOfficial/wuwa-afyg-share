@@ -19,6 +19,8 @@ export interface ProjectRow {
     clone_count: number
     created_at: string
     updated_at: string
+    // [0004] 保护状态：批量删除 / 单条删除 / 过期清理均豁免
+    protected: boolean
 }
 
 // 列表页用投影（不含大字段 project_blob）
@@ -83,4 +85,21 @@ export interface AnnouncementRow {
     title: string
     content: string
     created_at: string
+}
+
+// Buff 集单快照行（0002_buff_set_snapshot.sql，全表至多一行）
+export interface BuffSnapshotRow {
+    id: string
+    created_by: string | null
+    created_at: string
+    note: string
+    state: BuffSetRow[]
+}
+
+// 管理员授权边（0003_admin_grants.sql；granted_by null = 根管理员）
+export interface AdminGrantRow {
+    id: string
+    grantee_id: string
+    granted_by: string | null
+    granted_at: string
 }
