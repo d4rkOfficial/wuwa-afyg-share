@@ -22,9 +22,10 @@ import type { SnapshotDiff } from '@/lib/buff-snapshots/diff'
 import { BUFF_ENTITY_LABELS } from '@/lib/consts/buff-zones'
 import { timeAgo } from '@/lib/utils/format'
 import type { BuffSetRow } from '@/lib/types/db'
+import { getProvider } from '@/lib/upstream/provider/registry'
 
 interface Props {
-    toolBase: string
+    
 }
 
 interface ZoneChange {
@@ -63,7 +64,7 @@ const KIND_CLS = {
     change: 'text-amber-400'
 } as const
 
-export default function BuffSnapshotPanel({ toolBase }: Props) {
+export default function BuffSnapshotPanel() {
     const router = useRouter()
     const [open, setOpen] = useState(false)
     const [snapshots, setSnapshots] = useState<BuffSnapshotView[]>([])
@@ -116,12 +117,7 @@ export default function BuffSnapshotPanel({ toolBase }: Props) {
     // 拉取工具箱实例最新游戏版本：默认填入备注（用户手动改过的不覆盖），并作为 hint
     async function fetchLatestVersion() {
         try {
-            const base = toolBase.trim().replace(/\/+$/, '')
-            if (!base) return
-            const res = await fetch(`${base}/api/v1/version/latest`)
-            if (!res.ok) return
-            const v = (await res.json()) as unknown
-            const version = (typeof v === 'string' ? v : String(v ?? '')).trim()
+            const version = await getProvider().getLatestVersion()
             if (!version) return
             setVersionHint(version)
             if (!note.trim() || note.trim() === lastAutoVersion.current) {

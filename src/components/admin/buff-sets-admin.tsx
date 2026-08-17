@@ -44,8 +44,49 @@ function entityKey(entityType: string, entityName: string) {
     return `${entityType}/${entityName}`
 }
 
+// 预设分组渲染：标题 + 按钮列表，当前值高亮
+function PresetGroup({
+    title,
+    items,
+    current,
+    onPick
+}: {
+    title: string
+    items: Array<{ label: string; value: string; modelHint?: string }>
+    current: string
+    onPick: (value: string) => void
+}) {
+    // 按值去重（OpenRouter 国内/国际同 value 时保留一个）
+    const uniq = items.filter((it, i, arr) => arr.findIndex((x) => x.value === it.value) === i)
+    if (!uniq.length) return null
+    return (
+        <div className="mb-3">
+            <div className="mb-1.5 text-[11px] font-medium text-(--muted)">{title}</div>
+            <div className="flex flex-wrap gap-1.5">
+                {uniq.map((opt) => {
+                    const active = current.trim() === opt.value
+                    return (
+                        <button
+                            key={opt.value + opt.label}
+                            type="button"
+                            onClick={() => onPick(opt.value)}
+                            title={opt.modelHint ? `模型示例：${opt.modelHint}` : undefined}
+                            className={`rounded-md px-2.5 py-1 text-[11px] transition-colors ${
+                                active
+                                    ? 'bg-(--accent)/15 text-(--accent-text)'
+                                    : 'text-(--muted) hover:bg-(--card-hover) hover:text-(--fg)'
+                            }`}
+                        >
+                            {opt.label}
+                        </button>
+                    )
+                })}
+            </div>
+        </div>
+    )
+}
+
 export default function BuffSetsAdmin({ rows, isAdmin }: Props) {
-    const [toolBase, setToolBase] = useState(() => readStorage(TOOL_BASE_STORAGE, TOOL_BASE_DEFAULT))
     // AI 连接配置（IndexedDB 持久化；加载后供编辑器使用）
     const [ai, setAi] = useState<AiConfig | null>(null)
     const [aiDraft, setAiDraft] = useState<AiConfig>({ ...DEFAULT_AI_CONFIG })
@@ -64,6 +105,8 @@ export default function BuffSetsAdmin({ rows, isAdmin }: Props) {
     const [editingPrompt, setEditingPrompt] = useState<'system' | 'initial' | 'slang' | null>(null)
     const [draftText, setDraftText] = useState('')
     const [showConfig, setShowConfig] = useState(false)
+    // 快捷预设弹出选择器：null 隐藏；'baseUrl' 选服务地址；'model' 选模型名
+    const [presetPicker, setPresetPicker] = useState<'baseUrl' | 'model' | null>(null)
     const [selected, setSelected] = useState<{ entityType: BuffEntityType; entityName: string } | null>(null)
     const [editingKey, setEditingKey] = useState<string | null>(null)
 
@@ -78,11 +121,6 @@ export default function BuffSetsAdmin({ rows, isAdmin }: Props) {
     for (const r of rows) {
         const key = entityKey(r.entity_type, r.entity_name)
         existingCountMap[key] = (existingCountMap[key] ?? 0) + 1
-    }
-
-    function persistToolBase(value: string) {
-        setToolBase(value)
-        localStorage.setItem(TOOL_BASE_STORAGE, value)
     }
 
     async function handleSaveAi() {
@@ -191,12 +229,12 @@ export default function BuffSetsAdmin({ rows, isAdmin }: Props) {
             <div className="flex shrink-0 items-center justify-between rounded-xl border border-(--card-border) bg-(--card) px-4 py-2.5">
                 <span className="flex items-center gap-2 text-sm font-medium text-(--muted)">实体列表</span>
                 <span className="flex items-center gap-2">
-                    <BuffSnapshotPanel toolBase={toolBase} />
+                    <BuffSnapshotPanel />
                     <button onClick={() => setShowConfig(true)} className="toolbar-btn toolbar-btn-ghost">
                         <span className="flex items-center gap-1.5">
                             <Icon icon="mdi:cog-outline" className="size-4" />
                             连接配置
-                            {!toolBase.trim() && (
+                            {false && (
                                 <span className="ml-1 rounded bg-(--warning)/15 px-1 py-0.5 text-[9px] text-(--warning)">未配置</span>
                             )}
                         </span>
@@ -207,7 +245,7 @@ export default function BuffSetsAdmin({ rows, isAdmin }: Props) {
 
             {/* 实体网格 */}
             <div className="min-h-0 flex-1">
-                <BuffEntityGrid toolBase={toolBase} existingCountMap={existingCountMap} onSelect={handleSelect} />
+                <BuffEntityGrid existingCountMap={existingCountMap} onSelect={handleSelect} />
             </div>
 
             {/* 编辑弹窗 */}
@@ -218,7 +256,7 @@ export default function BuffSetsAdmin({ rows, isAdmin }: Props) {
                         <BuffEntityEditor
                             key={editingKey ?? 'new'}
                             initial={initial}
-                            toolBase={toolBase}
+                            
                             apiKey={ai?.apiKey ?? ''}
                             aiBaseUrl={ai?.baseUrl ?? ''}
                             aiModel={ai?.model ?? ''}
@@ -255,36 +293,17 @@ export default function BuffSetsAdmin({ rows, isAdmin }: Props) {
 
                             <div className="space-y-3">
                                 <label className="flex flex-col gap-1 text-xs text-(--muted)">
-                                    工具箱地址
-                                    <input
-                                        type="url"
-                                        value={toolBase}
-                                        onChange={(e) => persistToolBase(e.target.value)}
-                                        placeholder="http://localhost:5173"
-                                        className="w-full rounded-lg border border-(--card-border) bg-(--input-bg) px-2 py-1.5 text-sm outline-none focus:border-(--accent)/60"
-                                    />
-                                    <div className="flex flex-wrap gap-1">
-                                        {[
-                                            { label: '本地部署', value: 'http://localhost:5173' },
-                                            { label: '官方主站', value: 'https://wuwa-afyg-tool.200503.xyz' },
-                                            { label: '官方副站', value: 'https://wuwa-hpyg-tool.200503.xyz' }
-                                        ].map((opt) => (
-                                            <button
-                                                key={opt.value}
-                                                onClick={() => persistToolBase(opt.value)}
-                                                className={`rounded-md px-2 py-1 text-[10px] transition-colors ${
-                                                    toolBase === opt.value
-                                                        ? 'bg-(--accent)/15 text-(--accent-text)'
-                                                        : 'text-(--muted) hover:bg-(--card-hover) hover:text-(--fg)'
-                                                }`}
-                                            >
-                                                {opt.label}
-                                            </button>
-                                        ))}
-                                    </div>
-                                </label>
-                                <label className="flex flex-col gap-1 text-xs text-(--muted)">
-                                    AI 服务地址
+                                    <span className="flex items-center justify-between">
+                                        AI 服务地址
+                                        <button
+                                            type="button"
+                                            onClick={() => setPresetPicker('baseUrl')}
+                                            className="inline-flex shrink-0 items-center gap-1 rounded-md px-2 py-0.5 text-[10px] font-medium text-(--accent-text) transition-colors hover:bg-(--card-hover)"
+                                        >
+                                            <Icon icon="mdi:view-grid-plus-outline" className="size-3" />
+                                            快捷预设…
+                                        </button>
+                                    </span>
                                     <input
                                         type="url"
                                         value={aiDraft.baseUrl}
@@ -292,24 +311,20 @@ export default function BuffSetsAdmin({ rows, isAdmin }: Props) {
                                         placeholder="https://api.deepseek.com"
                                         className="w-full rounded-lg border border-(--card-border) bg-(--input-bg) px-2 py-1.5 text-sm outline-none focus:border-(--accent)/60"
                                     />
-                                    <div className="flex flex-wrap gap-1">
-                                        {AI_ENDPOINTS.map((opt) => (
-                                            <button
-                                                key={opt.value}
-                                                onClick={() => setAiDraft((d) => ({ ...d, baseUrl: opt.value }))}
-                                                className={`rounded-md px-2 py-1 text-[10px] transition-colors ${
-                                                    aiDraft.baseUrl === opt.value
-                                                        ? 'bg-(--accent)/15 text-(--accent-text)'
-                                                        : 'text-(--muted) hover:bg-(--card-hover) hover:text-(--fg)'
-                                                }`}
-                                            >
-                                                {opt.label}
-                                            </button>
-                                        ))}
-                                    </div>
+                                    <p className="text-[10px] text-(--muted)">支持任意 OpenAI 兼容端点（需支持 POST /chat/completions）</p>
                                 </label>
                                 <label className="flex flex-col gap-1 text-xs text-(--muted)">
-                                    模型名
+                                    <span className="flex items-center justify-between">
+                                        模型名
+                                        <button
+                                            type="button"
+                                            onClick={() => setPresetPicker('model')}
+                                            className="inline-flex shrink-0 items-center gap-1 rounded-md px-2 py-0.5 text-[10px] font-medium text-(--accent-text) transition-colors hover:bg-(--card-hover)"
+                                        >
+                                            <Icon icon="mdi:view-grid-plus-outline" className="size-3" />
+                                            快捷预设…
+                                        </button>
+                                    </span>
                                     <input
                                         type="text"
                                         value={aiDraft.model}
@@ -317,21 +332,6 @@ export default function BuffSetsAdmin({ rows, isAdmin }: Props) {
                                         placeholder="deepseek-v4-flash"
                                         className="w-full rounded-lg border border-(--card-border) bg-(--input-bg) px-2 py-1.5 text-sm outline-none focus:border-(--accent)/60"
                                     />
-                                    <div className="flex flex-wrap gap-1">
-                                        {AI_MODEL_PRESETS.map((opt) => (
-                                            <button
-                                                key={opt.value}
-                                                onClick={() => setAiDraft((d) => ({ ...d, model: opt.value }))}
-                                                className={`rounded-md px-2 py-1 text-[10px] transition-colors ${
-                                                    aiDraft.model === opt.value
-                                                        ? 'bg-(--accent)/15 text-(--accent-text)'
-                                                        : 'text-(--muted) hover:bg-(--card-hover) hover:text-(--fg)'
-                                                }`}
-                                            >
-                                                {opt.label}
-                                            </button>
-                                        ))}
-                                    </div>
                                 </label>
                                 <label className="flex flex-col gap-1 text-xs text-(--muted)">
                                     AI API Key
@@ -343,13 +343,13 @@ export default function BuffSetsAdmin({ rows, isAdmin }: Props) {
                                         className="w-full rounded-lg border border-(--card-border) bg-(--input-bg) px-2 py-1.5 text-sm outline-none focus:border-(--accent)/60"
                                     />
                                     <p className="text-[10px] text-(--muted)">
-                                        opencode-go 填 OPENCODE_API_KEY（opencode 登录后 auth.json 里的 key）；DeepSeek 填官方 API Key
+                                        填所选提供商的 API Key（格式 / 获取方式按其官方文档）
                                     </p>
                                 </label>
                                 <div className="flex flex-col gap-1">
                                     <span className="text-xs text-(--muted)">思考强度</span>
                                     <div className="flex items-center gap-1">
-                                        {(['low', 'medium', 'high'] as const).map((level) => (
+                                        {(['off', 'low', 'medium', 'high'] as const).map((level) => (
                                             <button
                                                 key={level}
                                                 onClick={() => setAiDraft((d) => ({ ...d, reasoningEffort: level }))}
@@ -359,10 +359,13 @@ export default function BuffSetsAdmin({ rows, isAdmin }: Props) {
                                                         : 'text-(--muted) hover:text-(--fg)'
                                                 }`}
                                             >
-                                                {level === 'low' ? '低' : level === 'medium' ? '中' : '高'}
+                                                {level === 'off' ? '不传' : level === 'low' ? '低' : level === 'medium' ? '中' : '高'}
                                             </button>
                                         ))}
                                     </div>
+                                    <p className="text-[10px] text-(--muted)">
+                                        不传=不发送 reasoning_effort 参数（严格模式的 OpenAI 兼容服务建议选此项）
+                                    </p>
                                 </div>
                                 <div className="flex justify-end">
                                     <button
@@ -500,6 +503,63 @@ export default function BuffSetsAdmin({ rows, isAdmin }: Props) {
                                         保存
                                     </button>
                                 </div>
+                            </div>
+                        </div>
+                    </div>
+                )}
+
+                {/* 快捷预设弹出选择器（地址 / 模型） */}
+                {presetPicker && (
+                    <div className="fixed inset-0 z-[70] flex items-center justify-center p-4">
+                        <div
+                            className="absolute inset-0 bg-black/60 backdrop-blur-sm"
+                            onClick={() => setPresetPicker(null)}
+                        />
+                        <div className="relative flex max-h-[80vh] w-[min(96vw,640px)] flex-col overflow-hidden rounded-xl border border-(--card-border) bg-(--card) shadow-2xl">
+                            <div className="flex items-center justify-between border-b border-(--card-border) px-4 py-3">
+                                <span className="text-sm font-semibold text-(--fg)">
+                                    {presetPicker === 'baseUrl' ? '选择服务地址预设' : '选择模型名预设'}
+                                </span>
+                                <button
+                                    onClick={() => setPresetPicker(null)}
+                                    className="rounded p-1 text-(--muted) transition-colors hover:text-(--fg)"
+                                >
+                                    <Icon icon="mdi:close" className="size-5" />
+                                </button>
+                            </div>
+                            <div className="min-h-0 flex-1 overflow-y-auto p-4">
+                                {presetPicker === 'baseUrl' ? (
+                                    <>
+                                        <p className="mb-2 text-[10px] text-(--muted)">
+                                            点击即填入地址；仍可在输入框中手工修改。本地自建需显式允许（默认已含 Ollama / vLLM）。
+                                        </p>
+                                        <PresetGroup title="国内" items={AI_ENDPOINTS.filter((e) => e.region === 'cn')}
+                                            current={aiDraft.baseUrl} onPick={(v) => { setAiDraft((d) => ({ ...d, baseUrl: v })); setPresetPicker(null) }} />
+                                        <PresetGroup title="国外" items={AI_ENDPOINTS.filter((e) => e.region === 'intl')}
+                                            current={aiDraft.baseUrl} onPick={(v) => { setAiDraft((d) => ({ ...d, baseUrl: v })); setPresetPicker(null) }} />
+                                        <PresetGroup title="本地 / 自建" items={AI_ENDPOINTS.filter((e) => e.region === 'local')}
+                                            current={aiDraft.baseUrl} onPick={(v) => { setAiDraft((d) => ({ ...d, baseUrl: v })); setPresetPicker(null) }} />
+                                    </>
+                                ) : (
+                                    <>
+                                        <p className="mb-2 text-[10px] text-(--muted)">
+                                            点击即填入模型名；也可手工输入任意模型 ID。
+                                        </p>
+                                        <PresetGroup title="国内" items={AI_MODEL_PRESETS.filter((e) => e.region === 'cn')}
+                                            current={aiDraft.model} onPick={(v) => { setAiDraft((d) => ({ ...d, model: v })); setPresetPicker(null) }} />
+                                        <PresetGroup title="国外" items={AI_MODEL_PRESETS.filter((e) => e.region === 'intl')}
+                                            current={aiDraft.model} onPick={(v) => { setAiDraft((d) => ({ ...d, model: v })); setPresetPicker(null) }} />
+                                    </>
+                                )}
+                            </div>
+                            <div className="flex justify-end border-t border-(--card-border) px-4 py-3">
+                                <button
+                                    onClick={() => setPresetPicker(null)}
+                                    className="rounded-lg px-4 py-1.5 text-sm font-medium text-(--btn-text) transition-all hover:brightness-110"
+                                    style={{ background: 'var(--btn-bg)' }}
+                                >
+                                    完成
+                                </button>
                             </div>
                         </div>
                     </div>

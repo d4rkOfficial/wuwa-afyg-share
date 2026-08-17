@@ -43,7 +43,7 @@ interface Props {
         entityName: string
         buffs: BuffSetRow[]
     }
-    toolBase: string
+    
     apiKey: string
     aiBaseUrl: string
     aiModel: string
@@ -51,7 +51,7 @@ interface Props {
     initialTaskPrompt: string
     toolPrompts: Record<string, string>
     slangDict: string
-    reasoningEffort?: 'low' | 'medium' | 'high'
+    reasoningEffort?: 'off' | 'low' | 'medium' | 'high'
     isAdmin: boolean
     // 跨实体共享会话（省 token / 缓存命中）
     sessionSeed?: ChatMessage[]
@@ -90,7 +90,7 @@ interface BuffRow {
 
 export default function BuffEntityEditor({
     initial,
-    toolBase,
+    
     apiKey,
     aiBaseUrl,
     aiModel,
@@ -231,7 +231,7 @@ export default function BuffEntityEditor({
         try {
             await generateBuffSet({
                 apiKey: apiKey.trim(),
-                toolBase,
+          
                 entityType,
                 entityName: entityName.trim(),
                 baseUrl: aiBaseUrl.trim() || undefined,

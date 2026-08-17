@@ -26,7 +26,7 @@ export interface GenerateEvent {
 
 export interface GenerateBuffSetOptions {
     apiKey: string
-    toolBase: string
+    
     entityType: BuffEntityType
     entityName: string
     baseUrl?: string
@@ -37,7 +37,7 @@ export interface GenerateBuffSetOptions {
     slangDict?: string
     history?: ChatMessage[]
     newUserMessage?: string
-    reasoningEffort?: 'low' | 'medium' | 'high'
+    reasoningEffort?: 'off' | 'low' | 'medium' | 'high'
     getBuffSets: (queryType?: string, queryName?: string, query?: string) => Promise<unknown>
     onEvent?: (evt: GenerateEvent) => void
     // 跨实体共享会话：seed = 完整前缀消息（不含 system，来自上一实体生成）；onMessages = 本次完整序列（不含 system）回传
@@ -53,7 +53,7 @@ export interface GenerateBuffSetResult {
 
 export async function generateBuffSet(options: GenerateBuffSetOptions): Promise<GenerateBuffSetResult> {
     const apiKey = options.apiKey.trim()
-    const toolBase = options.toolBase.trim()
+    
     const entityType = options.entityType
     const entityName = options.entityName.trim().slice(0, 60)
     const systemTemplate = options.systemPrompt?.trim() || DEFAULT_SYSTEM_PROMPT
@@ -62,6 +62,7 @@ export async function generateBuffSet(options: GenerateBuffSetOptions): Promise<
     const slangDict = options.slangDict?.trim() || ''
     const history = Array.isArray(options.history) ? options.history : []
     const newUserMessage = options.newUserMessage?.trim() || ''
+    // 'off' 表示不发送 reasoning_effort（兼容严格模式的 OpenAI 兼容提供商）
     const reasoningEffort: 'low' | 'medium' | 'high' | undefined =
         options.reasoningEffort === 'low' || options.reasoningEffort === 'medium' || options.reasoningEffort === 'high'
             ? options.reasoningEffort
@@ -69,14 +70,14 @@ export async function generateBuffSet(options: GenerateBuffSetOptions): Promise<
     const emit = options.onEvent ?? (() => {})
     const tools = buildTools(toolPrompts)
 
-    if (!apiKey) throw new Error('请先填入 DeepSeek API Key')
-    if (!toolBase) throw new Error('请先填入工具箱地址')
+    if (!apiKey) throw new Error('请先填入所选 AI 提供商的 API Key')
+    
     if (!BUFF_ENTITY_TYPES.includes(entityType as (typeof BUFF_ENTITY_TYPES)[number])) {
         throw new Error('无效的实体类型')
     }
     if (!entityName) throw new Error('实体名不能为空')
 
-    const toolContext = { toolBase, entityType, entityName, getBuffSets: options.getBuffSets, slangDict }
+    const toolContext = { entityType, entityName, getBuffSets: options.getBuffSets, slangDict }
     const emitLog = (text: string, level: GenerateEvent['level'] = 'info') => emit({ type: 'log', level, text })
 
     // 结束时回传完整消息序列（不含 system），供跨实体共享会话缓存命中

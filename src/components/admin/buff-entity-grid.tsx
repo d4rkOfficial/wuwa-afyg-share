@@ -10,7 +10,7 @@ import type { ToolListEntry } from '@/lib/ai/info'
 import type { BuffEntityType } from '@/lib/types/db'
 
 interface Props {
-    toolBase: string
+    
     existingCountMap: Record<string, number>
     onSelect: (entity: { entityType: BuffEntityType; entityName: string }) => void
 }
@@ -36,7 +36,7 @@ const FILTERS: Array<{ key: 'with' | 'without'; label: string }> = [
 
 const SKELETON_COUNT = 12
 
-export default function BuffEntityGrid({ toolBase, existingCountMap, onSelect }: Props) {
+export default function BuffEntityGrid({ existingCountMap, onSelect }: Props) {
     const router = useRouter()
     const [mainTab, setMainTab] = useState<BuffEntityType>('character')
     const [setPiece, setSetPiece] = useState<BuffEntityType>('1set')
@@ -68,7 +68,7 @@ export default function BuffEntityGrid({ toolBase, existingCountMap, onSelect }:
         setError(null)
         try {
             // 工具箱已开放 CORS，浏览器直连拉取实体目录
-            const list = await fetchToolList(toolBase, type)
+            const list = await fetchToolList(type)
             const seen = new Set<string>()
             setCatalog(list.filter((e) => (seen.has(e.name) ? false : (seen.add(e.name), true))))
         } catch (e) {

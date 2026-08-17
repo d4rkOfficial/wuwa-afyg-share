@@ -1,5 +1,6 @@
 // DeepSeek 工具调用：定义工具 schema + 执行器（纯前端可执行）
 import { fetchToolList, fetchToolInfo } from '@/lib/ai/info'
+import { getProvider } from '@/lib/upstream/provider/registry'
 import { BUFF_ENTITY_TYPES, BUFF_ZONES, BUFF_ZONE_MAP, BUFF_REF_ZONES, BUFF_REF_ZONE_MAP } from '@/lib/consts/buff-zones'
 import {
     DEFAULT_SLANG_DICT,
@@ -279,7 +280,6 @@ export interface GetBuffSetsFn {
 
 // 当前编辑上下文（由 route 注入）
 export interface ToolContext {
-    toolBase: string
     entityType: BuffEntityType
     entityName: string
     getBuffSets?: GetBuffSetsFn
@@ -288,13 +288,13 @@ export interface ToolContext {
 
 // ── 执行器 ───────────────────────────────────────────────────
 export async function executeTool(ctx: ToolContext, name: string, args: Record<string, unknown>): Promise<string> {
-    const { toolBase, entityType: curType, entityName: curName, getBuffSets, slangDict } = ctx
+    const { entityType: curType, entityName: curName, getBuffSets, slangDict } = ctx
 
     switch (name) {
         case 'list_entities': {
             const entityType = args.entityType
             if (!validEntityType(entityType)) return JSON.stringify({ error: '无效的实体类型' })
-            const list = await fetchToolList(toolBase, entityType)
+            const list = await fetchToolList(entityType)
             return JSON.stringify({
                 entityType,
                 count: list.length,
@@ -309,7 +309,7 @@ export async function executeTool(ctx: ToolContext, name: string, args: Record<s
                 : (ENTITY_TYPES as BuffEntityType[])
             const results: Array<{ entityType: string; name: string }> = []
             for (const t of types) {
-                const list = await fetchToolList(toolBase, t)
+                const list = await fetchToolList(t)
                 for (const e of list) {
                     if (e.name.includes(query)) results.push({ entityType: t, name: e.name })
                 }
@@ -321,14 +321,23 @@ export async function executeTool(ctx: ToolContext, name: string, args: Record<s
             const entityName = typeof args.entityName === 'string' ? args.entityName.trim() : ''
             if (!validEntityType(entityType)) return JSON.stringify({ error: '无效的实体类型' })
             if (!entityName) return JSON.stringify({ error: '缺少实体名' })
-            const info = await fetchToolInfo(toolBase, entityType, entityName)
+            const info = await fetchToolInfo(entityType, entityName)
             if (info === null) return JSON.stringify({ error: `工具箱未找到「${entityName}」的信息` })
             return JSON.stringify(summarizeAiInfo(entityType, info))
         }
         case 'get_character_terms': {
             const entityName = typeof args.entityName === 'string' ? args.entityName.trim() : ''
             if (!entityName) return JSON.stringify({ error: '缺少实体名' })
-            const base = toolBase.replace(/\/+$/, '')
+              // 直连上游：与 wuwa-afyg-tool 同源逻辑，不再经过 tool 的 API
+              if (true) {
+                  try {
+                      const info = await getProvider().getCharacterInfo(entityName, { rich: true })
+                      return JSON.stringify(analyzeCharacterTerms(entityName, info))
+                  } catch (e) {
+                      return JSON.stringify({ error: e instanceof Error ? e.message : '直连上游获取角色术语失败' })
+                  }
+              }
+            const base = ''
             const res = await fetch(`${base}/api/v2/info/character/${encodeURIComponent(entityName)}`, {
                 headers: { Accept: 'application/json' },
                 cache: 'no-store'

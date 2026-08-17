@@ -3,8 +3,22 @@ import { requireUser } from '@/lib/supabase/admin'
 export const dynamic = 'force-dynamic'
 export const maxDuration = 300
 
-// 允许转发的上游（opencode-go 等无 CORS 的 OpenAI 兼容网关）
-const ALLOWED_ORIGINS = ['https://api.deepseek.com', 'https://opencode.ai']
+// 白名单：即使是非 HTTPS / 回环地址也允许转发（通常用于本地自建网关，如 Ollama/vLLM）
+const EXPLICIT_ALLOW = ['http://localhost:11434', 'http://localhost:8000']
+
+// 明确禁止的 SSRF 目标 host（内网/回环/链路本地/元数据），避免被用来探测内网
+const BLOCKED_HOST_NAMES = new Set([
+    'localhost',
+    '0.0.0.0',
+    '127.0.0.1',
+    '127.0.0.2',
+    '::1',
+    'fc00::',
+    'fe80::',
+    '169.254.169.254', // 云元数据
+    'metadata.google.internal',
+    'metadata'
+])
 
 interface StreamRequestBody {
     baseUrl?: string
@@ -17,6 +31,30 @@ function json(data: unknown, status: number): Response {
         status,
         headers: { 'Content-Type': 'application/json' }
     })
+}
+
+// 放行策略（方案 a）：默认允许公网 HTTPS；仅拦截明显不安全的 SSRF 目标。
+// 非 HTTPS（含本地 http）必须显式在 EXPLICIT_ALLOW 内才放行。
+function isAllowed(baseUrl: string): boolean {
+    let u: URL
+    try {
+        u = new URL(baseUrl)
+    } catch {
+        return false
+    }
+    const host = u.hostname.toLowerCase()
+
+    // 显式白名单（本地自建 http）优先放行
+    if (EXPLICIT_ALLOW.includes(u.origin)) return true
+
+    // 明确阻止内网/回环/链路本地/元数据
+    const isLoopback =
+        host === '::1' ||
+        /^(127\.|10\.|172\.(1[6-9]|2\d|3[01])\.|192\.168\.)/.test(host)
+    if (BLOCKED_HOST_NAMES.has(host) || isLoopback) return false
+
+    // 公网地址必须 HTTPS
+    return u.protocol === 'https:'
 }
 
 export async function POST(req: Request) {
@@ -39,18 +77,9 @@ export async function POST(req: Request) {
     if (!apiKey) return json({ type: 'error', message: '缺少 API Key' }, 400)
     if (!body || typeof body !== 'object') return json({ type: 'error', message: '缺少请求体' }, 400)
 
-    let allowed = false
-    try {
-        const u = new URL(baseUrl)
-        allowed = ALLOWED_ORIGINS.some(
-            (o) =>
-                u.origin === o ||
-                (o === 'https://opencode.ai' && u.hostname === 'opencode.ai' && u.pathname.startsWith('/zen/'))
-        )
-    } catch {
-        /* 非法 URL */
+    if (!isAllowed(baseUrl)) {
+        return json({ type: 'error', message: '服务地址不在允许范围' }, 400)
     }
-    if (!allowed) return json({ type: 'error', message: '服务地址不在允许列表' }, 400)
 
     let upstream: Response
     try {
