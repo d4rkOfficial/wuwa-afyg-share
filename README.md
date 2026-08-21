@@ -1,8 +1,12 @@
 # 椰果工坊 · WUWA-AFYG-SHARE
 
-配合 [椰果工具箱](https://wuwa-afyg-tool.200503.xyz/) 使用的《鸣潮》工程分享平台。
+配合 [椰果工具箱](https://github.com/d4rkOfficial/wuwa-afyg-tool) 使用的《鸣潮》工程分享平台。
 
 用户可以上传椰果工具箱导出的工程 JSON，生成带有效期的分享链接；访客可浏览、克隆（下载）他人的拉表排轴工程。
+
+### 另见
+
+[椰果工坊轻量版](https://github.com/d4rkOfficial/wuwa-afyg-share-lite)
 
 ## 功能
 
