@@ -77,7 +77,7 @@ export default function AnnouncementBar({ announcements, isAdmin }: Props) {
             {/* 公告栏（替代标题/副标题位）：只显示最新一条公告的标题和时间 */}
             <button
                 onClick={() => setOpen(true)}
-                className="flex w-full items-center gap-2.5 rounded-xl border border-(--card-border) bg-(--card) px-4 py-3 text-left transition-colors hover:border-(--accent)/50 hover:bg-(--card-hover)"
+                className="flex w-full items-center gap-2.5 rounded-none border-2 border-(--card-border) bg-(--card) px-4 py-3 text-left transition-colors hover:border-(--accent) hover:bg-(--card-hover)"
                 title="查看全部公告"
             >
                 <Icon icon="mdi:bullhorn-outline" className="size-5 shrink-0 text-(--accent-text)" />
@@ -96,10 +96,10 @@ export default function AnnouncementBar({ announcements, isAdmin }: Props) {
             {open &&
                 createPortal(
                     <div className="fixed inset-0 z-[70]">
-                        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm" onClick={() => setOpen(false)} />
+                        <div className="fixed inset-0 bg-black/60 " onClick={() => setOpen(false)} />
                         <div className="fixed inset-0 flex items-center justify-center p-4">
-                            <div className="relative flex max-h-[80vh] w-[min(96vw,560px)] flex-col overflow-hidden rounded-xl border border-(--card-border) bg-(--card) shadow-2xl">
-                        <div className="flex items-center justify-between border-b border-(--card-border) px-4 py-3">
+                            <div className="relative flex max-h-[80vh] w-[min(96vw,560px)] flex-col overflow-hidden rounded-none border-2 border-(--card-border) bg-(--card) ">
+                        <div className="flex items-center justify-between border-b-2 border-(--card-border) px-4 py-3">
                             <span className="flex items-center gap-2 text-sm font-semibold text-(--fg)">
                                 <Icon icon="mdi:bullhorn-outline" className="size-4 text-(--accent-text)" />
                                 公告
@@ -113,8 +113,7 @@ export default function AnnouncementBar({ announcements, isAdmin }: Props) {
                                             setDraftTitle('')
                                             setDraftContent('')
                                         }}
-                                        className="inline-flex items-center gap-1 rounded-lg px-2.5 py-1 text-xs font-medium text-(--btn-text) transition-all hover:brightness-110"
-                                        style={{ background: 'var(--btn-bg)' }}
+                                        className="inline-flex items-center gap-1 rounded-none px-2.5 py-1 text-xs font-medium border-2 border-(--card-border) bg-(--btn-bg) text-(--btn-text) transition-colors hover:bg-(--card) hover:text-(--fg) transition-all "
                                     >
                                         <Icon icon="mdi:plus" className="size-3.5" />
                                         发布公告
@@ -131,35 +130,34 @@ export default function AnnouncementBar({ announcements, isAdmin }: Props) {
 
                         <div className="min-h-0 flex-1 space-y-2 overflow-y-auto p-4">
                             {(creating || editingId !== null) && (
-                                <div className="space-y-2 rounded-lg border border-(--accent)/40 bg-(--input-bg) p-3">
+                                <div className="space-y-2 rounded-none border-2 border-(--accent) bg-(--input-bg) p-3">
                                     <input
                                         type="text"
                                         value={draftTitle}
                                         onChange={(e) => setDraftTitle(e.target.value)}
                                         placeholder="公告标题…"
                                         autoFocus
-                                        className="w-full rounded-lg border border-(--card-border) bg-(--input-bg) px-2.5 py-2 text-sm font-medium outline-none focus:border-(--accent)/60"
+                                        className="w-full rounded-none border-2 border-(--card-border) bg-(--input-bg) px-2.5 py-2 text-sm font-medium outline-none focus:border-(--accent)"
                                     />
                                     <textarea
                                         value={draftContent}
                                         onChange={(e) => setDraftContent(e.target.value)}
                                         placeholder="公告详情…"
                                         rows={4}
-                                        className="w-full rounded-lg border border-(--card-border) bg-(--input-bg) px-2.5 py-2 text-sm outline-none focus:border-(--accent)/60"
+                                        className="w-full rounded-none border-2 border-(--card-border) bg-(--input-bg) px-2.5 py-2 text-sm outline-none focus:border-(--accent)"
                                     />
                                     <div className="flex items-center justify-end gap-2">
                                         <button
                                             onClick={cancelEdit}
                                             disabled={busy}
-                                            className="rounded-lg px-3 py-1 text-xs text-(--muted) transition-colors hover:text-(--fg)"
+                                            className="rounded-none px-3 py-1 text-xs text-(--muted) transition-colors hover:text-(--fg)"
                                         >
                                             取消
                                         </button>
                                         <button
                                             onClick={save}
                                             disabled={busy || !draftTitle.trim() || !draftContent.trim()}
-                                            className="rounded-lg px-3 py-1 text-xs font-medium text-(--btn-text) transition-all hover:brightness-110 disabled:opacity-50"
-                                            style={{ background: 'var(--btn-bg)' }}
+                                            className="rounded-none px-3 py-1 text-xs font-medium border-2 border-(--card-border) bg-(--btn-bg) text-(--btn-text) transition-colors hover:bg-(--card) hover:text-(--fg) transition-all  disabled:opacity-50"
                                         >
                                             {busy ? '保存中…' : '保存'}
                                         </button>
@@ -176,7 +174,7 @@ export default function AnnouncementBar({ announcements, isAdmin }: Props) {
                                 return (
                                     <div
                                         key={a.id}
-                                        className="rounded-lg border border-(--card-border) bg-(--input-bg) p-3"
+                                        className="rounded-none border-2 border-(--card-border) bg-(--input-bg) p-3"
                                     >
                                         <div className="mb-1 flex items-center justify-between gap-2">
                                             <span className="text-xs text-(--muted) tabular-nums">
@@ -194,7 +192,7 @@ export default function AnnouncementBar({ announcements, isAdmin }: Props) {
                                                             </button>
                                                             <button
                                                                 onClick={() => remove(a.id)}
-                                                                className="rounded px-1.5 py-0.5 text-[11px] text-(--danger) transition-colors hover:bg-(--danger)/10"
+                                                                className="rounded px-1.5 py-0.5 text-[11px] text-(--danger) transition-colors hover:bg-(--danger) hover:text-white"
                                                             >
                                                                 删除
                                                             </button>
@@ -209,7 +207,7 @@ export default function AnnouncementBar({ announcements, isAdmin }: Props) {
                                                             </button>
                                                             <button
                                                                 onClick={() => remove(a.id)}
-                                                                className="rounded bg-(--danger)/15 px-1.5 py-0.5 text-[11px] font-medium text-(--danger)"
+                                                                className="rounded border-2 border-(--danger) px-1.5 py-0.5 text-[11px] font-bold text-(--danger)"
                                                             >
                                                                 确认删除
                                                             </button>
@@ -247,14 +245,14 @@ export default function AnnouncementBar({ announcements, isAdmin }: Props) {
                                                     onChange={(e) => setDraftTitle(e.target.value)}
                                                     autoFocus
                                                     placeholder="公告标题"
-                                                    className="mb-2 w-full rounded-lg border border-(--card-border) bg-(--input-bg) px-2.5 py-2 text-sm font-medium outline-none focus:border-(--accent)/60"
+                                                    className="mb-2 w-full rounded-none border-2 border-(--card-border) bg-(--input-bg) px-2.5 py-2 text-sm font-medium outline-none focus:border-(--accent)"
                                                 />
                                                 <textarea
                                                     value={draftContent}
                                                     onChange={(e) => setDraftContent(e.target.value)}
                                                     placeholder="公告详情"
                                                     rows={4}
-                                                    className="w-full rounded-lg border border-(--card-border) bg-(--input-bg) px-2.5 py-2 text-sm outline-none focus:border-(--accent)/60"
+                                                    className="w-full rounded-none border-2 border-(--card-border) bg-(--input-bg) px-2.5 py-2 text-sm outline-none focus:border-(--accent)"
                                                 />
                                             </>
                                         ) : (
@@ -270,15 +268,14 @@ export default function AnnouncementBar({ announcements, isAdmin }: Props) {
                                                 <button
                                                     onClick={cancelEdit}
                                                     disabled={busy}
-                                                    className="rounded-lg px-3 py-1 text-xs text-(--muted) transition-colors hover:text-(--fg)"
+                                                    className="rounded-none px-3 py-1 text-xs text-(--muted) transition-colors hover:text-(--fg)"
                                                 >
                                                     取消
                                                 </button>
                                                 <button
                                                     onClick={save}
                                                     disabled={busy || !draftTitle.trim() || !draftContent.trim()}
-                                                    className="rounded-lg px-3 py-1 text-xs font-medium text-(--btn-text) transition-all hover:brightness-110 disabled:opacity-50"
-                                                    style={{ background: 'var(--btn-bg)' }}
+                                                    className="rounded-none px-3 py-1 text-xs font-medium border-2 border-(--card-border) bg-(--btn-bg) text-(--btn-text) transition-colors hover:bg-(--card) hover:text-(--fg) transition-all  disabled:opacity-50"
                                                 >
                                                     {busy ? '保存中…' : '保存'}
                                                 </button>

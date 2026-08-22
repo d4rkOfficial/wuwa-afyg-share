@@ -41,7 +41,7 @@ export default function Pagination({ page, totalPages, q, sort, character }: Pro
             <Link
                 href={link(Math.max(1, page - 1))}
                 aria-disabled={page <= 1}
-                className="inline-flex items-center gap-1 rounded-lg border border-(--card-border) bg-(--card) px-3 py-1.5 text-sm text-(--muted) transition-colors hover:text-(--fg) aria-disabled:pointer-events-none aria-disabled:opacity-40"
+                className="inline-flex items-center gap-1 rounded-none border-2 border-(--card-border) bg-(--card) px-3 py-1.5 text-sm text-(--muted) transition-colors hover:text-(--fg) aria-disabled:pointer-events-none aria-disabled:opacity-50"
             >
                 <Icon icon="mdi:chevron-left" className="size-4" />
                 上一页
@@ -57,10 +57,10 @@ export default function Pagination({ page, totalPages, q, sort, character }: Pro
                         key={item}
                         href={link(item)}
                         aria-current={item === page ? 'page' : undefined}
-                        className={`inline-flex size-8 items-center justify-center rounded-lg text-sm transition-colors ${
+                        className={`inline-flex size-8 items-center justify-center rounded-none text-sm transition-colors ${
                             item === page
-                                ? 'bg-(--accent) font-medium text-(--accent-fg)'
-                                : 'border border-(--card-border) bg-(--card) text-(--muted) hover:text-(--fg)'
+                                ? 'border-2 border-(--accent) bg-(--accent) font-bold text-(--accent-fg)'
+                                : 'border-2 border-(--card-border) bg-(--card) text-(--muted) hover:text-(--fg)'
                         }`}
                     >
                         {item}
@@ -71,7 +71,7 @@ export default function Pagination({ page, totalPages, q, sort, character }: Pro
             <Link
                 href={link(Math.min(totalPages, page + 1))}
                 aria-disabled={page >= totalPages}
-                className="inline-flex items-center gap-1 rounded-lg border border-(--card-border) bg-(--card) px-3 py-1.5 text-sm text-(--muted) transition-colors hover:text-(--fg) aria-disabled:pointer-events-none aria-disabled:opacity-40"
+                className="inline-flex items-center gap-1 rounded-none border-2 border-(--card-border) bg-(--card) px-3 py-1.5 text-sm text-(--muted) transition-colors hover:text-(--fg) aria-disabled:pointer-events-none aria-disabled:opacity-50"
             >
                 下一页
                 <Icon icon="mdi:chevron-right" className="size-4" />

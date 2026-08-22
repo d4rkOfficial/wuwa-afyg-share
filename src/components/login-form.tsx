@@ -48,13 +48,13 @@ export default function LoginForm({ redirect, error }: Props) {
 
     if (sent) {
         return (
-            <div className="rounded-xl border border-(--card-border) bg-(--card) p-8 text-center">
+            <div className="rounded-none border-2 border-(--card-border) bg-(--card) p-8 text-center">
                 <Icon icon="mdi:email-check-outline" className="mx-auto mb-3 size-10 text-(--accent)" />
                 <p className="font-medium">验证邮件已发送</p>
                 <p className="mt-1 text-sm text-(--muted)">请前往 {email} 查收并点击链接完成登录，或输入邮件中的验证码：</p>
                 <form onSubmit={onVerifyCode} className="mt-4 flex flex-col gap-2">
                     {codeErr && (
-                        <div className="rounded-lg border border-red-500/30 bg-red-500/10 px-3 py-2 text-sm text-red-400">
+                        <div className="rounded-none border-2 border-(--danger) bg-(--danger) px-3 py-2 text-sm text-white">
                             {codeErr}
                         </div>
                     )}
@@ -66,13 +66,12 @@ export default function LoginForm({ redirect, error }: Props) {
                             autoComplete="one-time-code"
                             autoFocus
                             required
-                            className="flex-1 rounded-lg border border-(--card-border) bg-(--input-bg) px-3 py-2.5 text-center text-lg tracking-widest outline-none transition-colors placeholder:text-sm placeholder:tracking-normal focus:border-(--accent)/60"
+                            className="flex-1 rounded-none border-2 border-(--card-border) bg-(--input-bg) px-3 py-2.5 text-center text-lg tracking-widest outline-none transition-colors placeholder:text-sm placeholder:tracking-normal focus:border-(--accent)"
                         />
                         <button
                             type="submit"
                             disabled={pending || !code.trim()}
-                            className="inline-flex items-center gap-1.5 rounded-lg px-4 py-2.5 text-sm font-medium text-(--btn-text) disabled:opacity-50"
-                            style={{ background: 'var(--btn-bg)' }}
+                            className="inline-flex items-center gap-1.5 rounded-none px-4 py-2.5 text-sm font-medium border-2 border-(--card-border) bg-(--btn-bg) text-(--btn-text) transition-colors hover:bg-(--card) hover:text-(--fg) disabled:opacity-50"
                         >
                             <Icon icon="mdi:login" className="size-4" />
                             登录
@@ -86,7 +85,7 @@ export default function LoginForm({ redirect, error }: Props) {
     return (
         <div className="space-y-4">
             {err && (
-                <div className="rounded-lg border border-red-500/30 bg-red-500/10 px-3 py-2 text-sm text-red-400">
+                <div className="rounded-none border-2 border-(--danger) bg-(--danger) px-3 py-2 text-sm text-white">
                     {err}
                 </div>
             )}
@@ -94,7 +93,7 @@ export default function LoginForm({ redirect, error }: Props) {
             <button
                 onClick={onGithub}
                 disabled={pending}
-                className="flex w-full items-center justify-center gap-2 rounded-lg border border-(--card-border) bg-(--card) px-4 py-2.5 text-sm font-medium transition-colors hover:bg-(--card-hover) disabled:opacity-50"
+                className="flex w-full items-center justify-center gap-2 rounded-none border-2 border-(--card-border) bg-(--card) px-4 py-2.5 text-sm font-medium transition-colors hover:bg-(--card-hover) disabled:opacity-50"
             >
                 <Icon icon="mdi:github" className="size-5" />
                 使用 GitHub 登录
@@ -113,13 +112,12 @@ export default function LoginForm({ redirect, error }: Props) {
                     onChange={(e) => setEmail(e.target.value)}
                     placeholder="name@example.com"
                     required
-                    className="flex-1 rounded-lg border border-(--card-border) bg-(--input-bg) px-3 py-2.5 text-sm outline-none transition-colors placeholder:text-(--muted) focus:border-(--accent)/60"
+                    className="flex-1 rounded-none border-2 border-(--card-border) bg-(--input-bg) px-3 py-2.5 text-sm outline-none transition-colors placeholder:text-(--muted) focus:border-(--accent)"
                 />
                 <button
                     type="submit"
                     disabled={pending || !email}
-                    className="inline-flex items-center gap-1.5 rounded-lg px-4 py-2.5 text-sm font-medium text-(--btn-text) disabled:opacity-50"
-                    style={{ background: 'var(--btn-bg)' }}
+                    className="inline-flex items-center gap-1.5 rounded-none px-4 py-2.5 text-sm font-medium border-2 border-(--card-border) bg-(--btn-bg) text-(--btn-text) transition-colors hover:bg-(--card) hover:text-(--fg) disabled:opacity-50"
                 >
                     <Icon icon="mdi:send-outline" className="size-4" />
                     发送

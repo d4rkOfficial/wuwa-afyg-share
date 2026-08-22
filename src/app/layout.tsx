@@ -1,12 +1,13 @@
 import type { Metadata } from 'next'
-import { Geist } from 'next/font/google'
+import { Space_Grotesk } from 'next/font/google'
 import './globals.css'
 import Header from '@/components/header'
 import { Toaster } from '@/components/ui/toast'
 
-const geistSans = Geist({
+const sans = Space_Grotesk({
     variable: '--font-geist-sans',
-    subsets: ['latin']
+    subsets: ['latin'],
+    weight: ['400', '500', '600', '700']
 })
 
 const themeInitScript = `
@@ -32,14 +33,14 @@ export default function RootLayout({
     children: React.ReactNode
 }>) {
     return (
-        <html lang="zh-CN" suppressHydrationWarning className={`${geistSans.variable} min-h-full antialiased`}>
+        <html lang="zh-CN" suppressHydrationWarning className={`${sans.variable} min-h-full antialiased`}>
             <head>
                 <script dangerouslySetInnerHTML={{ __html: themeInitScript }} />
             </head>
             <body className="flex min-h-dvh flex-col bg-(--bg) text-(--fg)">
                 <Header />
-                <main className="mx-auto w-full max-w-6xl flex-1 px-4 py-6">{children}</main>
-                <footer className="border-t border-(--card-border) py-6 text-center text-xs text-(--muted)">
+                <main className="mx-auto w-full max-w-6xl flex-1 px-4 py-8 md:px-8 md:py-12">{children}</main>
+                <footer className="border-t-2 border-(--card-border) py-8 text-center text-xs text-(--muted)">
                     椰果工坊 · 配合 椰果工具箱 使用
                 </footer>
                 <Toaster />

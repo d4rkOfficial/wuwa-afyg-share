@@ -34,9 +34,9 @@ export default async function SetupUsernamePage({
     if (profile?.username) redirect(redirectTo)
 
     return (
-        <div className="mx-auto max-w-md space-y-6 py-8">
+        <div className="mx-auto max-w-md space-y-8 py-12">
             <div className="text-center">
-                <h1 className="text-2xl font-bold">设置用户名</h1>
+                <h1 className="text-3xl md:text-4xl font-bold tracking-tight">设置用户名</h1>
                 <p className="mt-1 text-sm text-(--muted)">这是你在广场上展示的名字，设置后即可开始分享</p>
             </div>
             <SetupUsernameForm redirectTo={redirectTo} />

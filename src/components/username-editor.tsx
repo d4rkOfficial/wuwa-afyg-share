@@ -34,9 +34,9 @@ export default function UsernameEditor({ initial }: Props) {
     }
 
     return (
-        <div className="flex items-center justify-between gap-3 rounded-xl border border-(--card-border) bg-(--card) p-4">
+        <div className="flex items-center justify-between gap-3 rounded-none border-2 border-(--card-border) bg-(--card) p-4">
             <div className="flex min-w-0 items-center gap-3">
-                <span className="flex size-10 shrink-0 items-center justify-center rounded-full bg-(--card-hover) text-lg font-semibold">
+                <span className="flex size-10 shrink-0 items-center justify-center rounded-none bg-(--card-hover) text-lg font-semibold">
                     {username.charAt(0)}
                 </span>
                 {editing ? (
@@ -46,13 +46,12 @@ export default function UsernameEditor({ initial }: Props) {
                             onChange={(e) => setUsername(e.target.value)}
                             maxLength={20}
                             autoFocus
-                            className="w-44 rounded-lg border border-(--card-border) bg-(--input-bg) px-3 py-1.5 text-sm outline-none transition-colors focus:border-(--accent)/60"
+                            className="w-44 rounded-none border-2 border-(--card-border) bg-(--input-bg) px-3 py-1.5 text-sm outline-none transition-colors focus:border-(--accent)"
                         />
                         <button
                             onClick={onSave}
                             disabled={pending || username.trim().length < 2}
-                            className="inline-flex items-center gap-1 rounded-lg px-3 py-1.5 text-xs font-medium text-(--btn-text) disabled:opacity-50"
-                            style={{ background: 'var(--btn-bg)' }}
+                            className="inline-flex items-center gap-1 rounded-none px-3 py-1.5 text-xs font-medium border-2 border-(--card-border) bg-(--btn-bg) text-(--btn-text) transition-colors hover:bg-(--card) hover:text-(--fg) disabled:opacity-50"
                         >
                             保存
                         </button>
@@ -62,7 +61,7 @@ export default function UsernameEditor({ initial }: Props) {
                                 setErr(null)
                                 setEditing(false)
                             }}
-                            className="rounded-lg border border-(--card-border) px-3 py-1.5 text-xs text-(--muted)"
+                            className="rounded-none border-2 border-(--card-border) px-3 py-1.5 text-xs text-(--muted)"
                         >
                             取消
                         </button>
@@ -77,13 +76,13 @@ export default function UsernameEditor({ initial }: Props) {
             {!editing && (
                 <button
                     onClick={() => setEditing(true)}
-                    className="inline-flex items-center gap-1 rounded-lg border border-(--card-border) px-3 py-1.5 text-xs text-(--muted) transition-colors hover:text-(--fg)"
+                    className="inline-flex items-center gap-1 rounded-none border-2 border-(--card-border) px-3 py-1.5 text-xs text-(--muted) transition-colors hover:text-(--fg)"
                 >
                     <Icon icon="mdi:pencil-outline" className="size-4" />
                     修改用户名
                 </button>
             )}
-            {err && <p className="text-xs text-red-400">{err}</p>}
+            {err && <p className="text-xs text-(--danger)">{err}</p>}
         </div>
     )
 }

@@ -33,16 +33,16 @@ export default async function Header() {
         '') as string
 
     return (
-        <header className="site-header sticky top-0 z-20 border-b border-(--card-border) backdrop-blur-md">
+        <header className="site-header sticky top-0 z-20 border-b-2 border-(--card-border)">
             <div className="mx-auto flex h-14 w-full max-w-6xl items-center gap-1 px-2 sm:px-4">
                 <AppLink
                     href="/"
                     aria-label="椰果工坊首页"
                     title="椰果工坊首页"
-                    className="inline-flex size-9 shrink-0 items-center justify-center gap-2 rounded-lg text-sm font-semibold transition-transform duration-150 ease-out active:scale-[0.97] lg:w-auto lg:px-2"
+                    className="inline-flex size-9 shrink-0 items-center justify-center gap-2 text-sm font-bold transition-colors hover:bg-(--card-hover) lg:w-auto lg:px-2"
                 >
                     {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img src="/favicon.svg" alt="" className="size-7 shrink-0 rounded-md" />
+                    <img src="/favicon.svg" alt="" className="size-7 shrink-0 rounded-none" />
                     <span className="hidden lg:inline">椰果工坊</span>
                 </AppLink>
 
@@ -51,7 +51,7 @@ export default async function Header() {
                         href="/buff-sets"
                         aria-label="Buff 集"
                         title="Buff 集"
-                        className="inline-flex size-9 shrink-0 items-center justify-center gap-1.5 rounded-lg text-sm text-(--muted) transition-[background-color,color,transform] duration-150 ease-out hover:bg-(--card-hover) hover:text-(--fg) active:scale-[0.97] lg:w-auto lg:px-2.5"
+                        className="inline-flex size-9 shrink-0 items-center justify-center gap-1.5 text-sm text-(--muted) transition-colors hover:bg-(--card-hover) hover:text-(--fg) lg:w-auto lg:px-2.5"
                     >
                         <Icon icon="mdi:view-dashboard-outline" className="size-4" />
                         <span className="hidden lg:inline">Buff 集</span>
@@ -62,7 +62,7 @@ export default async function Header() {
                             href="/admin/projects"
                             aria-label="工程管理"
                             title="工程管理"
-                            className="inline-flex size-9 shrink-0 items-center justify-center gap-1.5 rounded-lg text-sm text-(--muted) transition-[background-color,color,transform] duration-150 ease-out hover:bg-(--card-hover) hover:text-(--fg) active:scale-[0.97] lg:w-auto lg:px-2.5"
+                            className="inline-flex size-9 shrink-0 items-center justify-center gap-1.5 text-sm text-(--muted) transition-colors hover:bg-(--card-hover) hover:text-(--fg) lg:w-auto lg:px-2.5"
                         >
                             <Icon icon="mdi:clipboard-account-outline" className="size-4" />
                             <span className="hidden lg:inline">工程管理</span>
@@ -74,7 +74,7 @@ export default async function Header() {
                             href="/admin/users"
                             aria-label="管理员管理"
                             title="管理员管理"
-                            className="inline-flex size-9 shrink-0 items-center justify-center gap-1.5 rounded-lg text-sm text-(--muted) transition-[background-color,color,transform] duration-150 ease-out hover:bg-(--card-hover) hover:text-(--fg) active:scale-[0.97] lg:w-auto lg:px-2.5"
+                            className="inline-flex size-9 shrink-0 items-center justify-center gap-1.5 text-sm text-(--muted) transition-colors hover:bg-(--card-hover) hover:text-(--fg) lg:w-auto lg:px-2.5"
                         >
                             <Icon icon="mdi:account-group-outline" className="size-4" />
                             <span className="hidden lg:inline">管理员管理</span>
@@ -87,8 +87,7 @@ export default async function Header() {
                                 href="/upload"
                                 aria-label="上传工程"
                                 title="上传工程"
-                                className="inline-flex size-9 shrink-0 items-center justify-center gap-1.5 whitespace-nowrap rounded-lg text-sm font-medium text-(--btn-text) transition-[filter,transform] duration-150 ease-out hover:brightness-110 active:scale-[0.97] md:w-auto md:px-3"
-                                style={{ background: 'var(--btn-bg)' }}
+                                className="inline-flex size-9 shrink-0 items-center justify-center gap-1.5 whitespace-nowrap border-2 border-(--card-border) bg-(--btn-bg) text-sm font-bold border-2 border-(--card-border) bg-(--btn-bg) text-(--btn-text) transition-colors hover:bg-(--card) hover:text-(--fg) transition-colors hover:bg-(--card) hover:text-(--fg) md:w-auto md:px-3"
                             >
                                 <Icon icon="mdi:plus" className="size-4 shrink-0" />
                                 <span className="hidden md:inline">上传工程</span>
@@ -97,12 +96,12 @@ export default async function Header() {
                                 href="/me"
                                 aria-label={displayName || '我的工程'}
                                 title={displayName || '我的工程'}
-                                className="inline-flex size-9 min-w-0 shrink-0 items-center justify-center gap-2 whitespace-nowrap rounded-lg border border-(--card-border) bg-(--card) text-sm transition-[background-color,transform] duration-150 ease-out hover:bg-(--card-hover) active:scale-[0.97] xl:w-auto xl:max-w-52 xl:px-3"
+                                className="inline-flex size-9 min-w-0 shrink-0 items-center justify-center gap-2 whitespace-nowrap border-2 border-(--card-border) bg-(--card) text-sm transition-colors hover:bg-(--fg) hover:text-(--bg) xl:w-auto xl:max-w-52 xl:px-3"
                             >
                                 <Icon icon="mdi:account-circle-outline" className="size-4 shrink-0 text-(--muted)" />
                                 <span className="hidden min-w-0 truncate xl:inline">{displayName || '我的工程'}</span>
                                 {isAdmin && (
-                                    <span className="hidden shrink-0 rounded bg-(--accent)/15 px-1.5 py-0.5 text-[10px] font-medium leading-none text-(--accent-text) 2xl:inline">
+                                    <span className="hidden shrink-0 border-2 border-(--accent) bg-(--accent) px-1.5 py-0.5 text-[10px] font-bold leading-none text-(--accent-fg) 2xl:inline">
                                         管理员
                                     </span>
                                 )}

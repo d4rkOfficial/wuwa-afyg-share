@@ -15,7 +15,7 @@ export default function TeamBanner({ names, size = 'sm' }: Props) {
                     return (
                         <span
                             key={i}
-                            className="rounded-lg border border-(--card-border) bg-(--card) px-3 py-1.5 text-sm text-(--muted)"
+                            className="rounded-none border-2 border-(--card-border) bg-(--card) px-3 py-1.5 text-sm text-(--muted)"
                         >
                             空位
                         </span>
@@ -26,7 +26,7 @@ export default function TeamBanner({ names, size = 'sm' }: Props) {
                     return (
                         <span
                             key={i}
-                            className="inline-flex items-center rounded-lg border border-(--card-border) bg-(--card) px-3 py-1.5 text-sm text-(--fg)"
+                            className="inline-flex items-center rounded-none border-2 border-(--card-border) bg-(--card) px-3 py-1.5 text-sm text-(--fg)"
                         >
                             {name}
                         </span>
@@ -36,13 +36,13 @@ export default function TeamBanner({ names, size = 'sm' }: Props) {
                 return (
                     <span
                         key={i}
-                        className={`inline-flex items-center rounded-lg border px-3 py-1.5 text-sm font-medium ${
-                            size === 'lg' ? 'px-4 py-2' : ''
+                        className={`inline-flex items-center rounded-none border-2 px-3 py-1.5 text-sm font-bold ${
+                            size === 'lg' ? 'px-4 py-2 text-base' : ''
                         }`}
                         style={{
-                            background: `color-mix(in srgb, ${elVar} 15%, transparent)`,
-                            color: elVar,
-                            borderColor: `color-mix(in srgb, ${elVar} 45%, transparent)`
+                            background: elVar,
+                            color: '#000000',
+                            borderColor: elVar
                         }}
                     >
                         {name}

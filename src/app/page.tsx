@@ -6,6 +6,7 @@ import Pagination from '@/components/pagination'
 import SetupNotice from '@/components/setup-notice'
 import AnnouncementBar from '@/components/announcement-bar'
 import { createClient, hasEnv } from '@/lib/supabase/server'
+import { getProvider } from '@/lib/upstream'
 import { CHAR_ELEMENTS } from '@/lib/data/char-elements'
 import { LIST_COLUMNS } from '@/lib/project/query'
 import { isExpiredProject } from '@/lib/utils/expiry'
@@ -31,17 +32,26 @@ export default async function HomePage({
 
     const supabase = await createClient()
 
-    let query = supabase
-        .from('projects')
-        .select(LIST_COLUMNS, { count: 'exact' })
-        .eq('published', true)
-        .not('author_id', 'is', null)
-    if (q) query = query.ilike('title', `%${q}%`)
-    if (character) query = query.contains('team_preview', { names: [character] })
-    query = query.order(sort === 'hot' ? 'clone_count' : 'created_at', { ascending: false })
-
     const from = (page - 1) * PER_PAGE
-    const { data, count, error } = await query.range(from, from + PER_PAGE - 1)
+    let result
+    if (q) {
+        // 文本搜索走 RPC：跨 title / description / author_name / tags / team_preview.names 模糊匹配
+        // （仅 q 非空时调用；函数未建到库时会报错，但不影响无关键词的浏览路径）
+        result = await supabase
+            .rpc('search_projects', { p_q: q, p_character: character, p_sort: sort }, { count: 'exact' })
+            .select(LIST_COLUMNS)
+            .range(from, from + PER_PAGE - 1)
+    } else {
+        let query = supabase
+            .from('projects')
+            .select(LIST_COLUMNS, { count: 'exact' })
+            .eq('published', true)
+            .not('author_id', 'is', null)
+        if (character) query = query.contains('team_preview', { names: [character] })
+        query = query.order(sort === 'hot' ? 'clone_count' : 'created_at', { ascending: false })
+        result = await query.range(from, from + PER_PAGE - 1)
+    }
+    const { data, count, error } = result
     // 应用层按有效期限（含非匿名宽限一周）过滤，已失效工程不展示
     const items = ((data ?? []) as ProjectListItem[]).filter(
         (p) => !isExpiredProject(p.expires_at, p.author_name)
@@ -54,6 +64,14 @@ export default async function HomePage({
         .select('id, title, content, created_at')
         .order('created_at', { ascending: false })
     const announcements = (announcementRows ?? []) as AnnouncementRow[]
+
+    // 角色头像（上游 nanoka CDN；失败时用占位图兜底，不影响列表展示）
+    let charIcons: Record<string, string> = {}
+    try {
+        charIcons = await getProvider().getCharacterIcons()
+    } catch {
+        /* 上游不可用时静默降级 */
+    }
 
     // 当前用户是否管理员（决定公告栏是否显示编辑入口）
     const {
@@ -70,21 +88,21 @@ export default async function HomePage({
     }
 
     return (
-        <div className="space-y-6">
+        <div className="space-y-8 md:space-y-10">
             <AnnouncementBar announcements={announcements} isAdmin={isAdmin} />
 
             <ProjectFilters key={`${q}:${sort}:${character}`} q={q} sort={sort} character={character} />
 
             {error ? (
-                <div className="rounded-xl border border-(--card-border) bg-(--card) p-8 text-center text-(--muted)">
+                <div className="rounded-none border-2 border-(--card-border) bg-(--card) p-8 text-center text-(--muted)">
                     加载失败：{error.message}
                 </div>
             ) : items.length === 0 ? (
-                <div className="rounded-xl border border-(--card-border) bg-(--card) p-12 text-center">
+                <div className="rounded-none border-2 border-(--card-border) bg-(--card) p-12 text-center">
                     <Icon icon={q || character ? 'mdi:account-search-outline' : 'mdi:package-variant-closed'} className="mx-auto mb-3 size-10 text-(--muted)" />
                     <p className="font-medium">
                         {q || character
-                            ? `没有找到${q ? `名称含「${q}」` : ''}${q && character ? '且' : ''}${character ? `队伍包含「${character}」` : ''}的工程`
+                            ? `没有找到${q ? `包含「${q}」` : ''}${q && character ? '且' : ''}${character ? `队伍包含「${character}」` : ''}的工程`
                             : '这里还没有人分享工程'}
                     </p>
                     <p className="mt-1 text-sm text-(--muted)">
@@ -92,8 +110,7 @@ export default async function HomePage({
                     </p>
                     <Link
                         href="/upload"
-                        className="mt-4 inline-flex items-center gap-1.5 rounded-lg px-4 py-2 text-sm font-medium text-(--btn-text)"
-                        style={{ background: 'var(--btn-bg)' }}
+                        className="mt-4 inline-flex items-center gap-1.5 rounded-none px-4 py-2 text-sm font-medium border-2 border-(--card-border) bg-(--btn-bg) text-(--btn-text) transition-colors hover:bg-(--card) hover:text-(--fg)"
                     >
                         <Icon icon="mdi:plus" className="size-4" />
                         上传工程
@@ -103,7 +120,7 @@ export default async function HomePage({
                 <>
                     <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
                         {items.map((p) => (
-                            <ProjectCard key={p.id} project={p} />
+                            <ProjectCard key={p.id} project={p} icons={charIcons} />
                         ))}
                     </div>
                     <Pagination page={page} totalPages={totalPages} q={q} sort={sort} character={character} />

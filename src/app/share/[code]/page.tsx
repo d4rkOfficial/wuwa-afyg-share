@@ -62,7 +62,7 @@ export default async function SharePage({ params }: { params: Promise<{ code: st
 
     if (expired) {
         return (
-            <div className="mx-auto max-w-4xl space-y-6">
+            <div className="mx-auto max-w-4xl space-y-8 md:space-y-12">
                 <Link
                     href="/"
                     className="inline-flex items-center gap-1 text-sm text-(--muted) transition-colors hover:text-(--fg)"
@@ -70,7 +70,7 @@ export default async function SharePage({ params }: { params: Promise<{ code: st
                     <Icon icon="mdi:arrow-left" className="size-4" />
                     返回广场
                 </Link>
-                <div className="rounded-2xl border border-(--card-border) bg-(--card) p-12 text-center">
+                <div className="rounded-none border-2 border-(--card-border) bg-(--card) p-12 text-center">
                     <Icon icon="mdi:clock-alert-outline" className="mx-auto mb-3 size-10 text-(--muted)" />
                     <p className="font-medium">该工程分享已过期</p>
                     <p className="mt-1 text-sm text-(--muted)">链接已失效，可联系作者重新分享。</p>
@@ -89,10 +89,10 @@ export default async function SharePage({ params }: { params: Promise<{ code: st
                 返回广场
             </Link>
 
-            <div className="space-y-4 rounded-2xl border border-(--card-border) bg-(--card) p-6">
+            <div className="space-y-4 rounded-none border-2 border-(--card-border) bg-(--card) p-6">
                 <div className="flex flex-wrap items-start justify-between gap-3">
                     <div className="min-w-0">
-                        <h1 className="text-2xl font-bold">{project.title}</h1>
+                        <h1 className="text-3xl md:text-4xl font-bold tracking-tight">{project.title}</h1>
                         <div className="mt-1.5 flex flex-wrap items-center gap-x-3 gap-y-1 text-sm text-(--muted)">
                             <span className="flex items-center gap-1">
                                 <Icon icon="mdi:account-outline" className="size-4" />
@@ -101,7 +101,7 @@ export default async function SharePage({ params }: { params: Promise<{ code: st
                             <span>{formatDate(project.created_at)}</span>
                             {project.game_version && <span>v{project.game_version}</span>}
                             {grace ? (
-                                <span className="inline-flex items-center gap-1 rounded-md bg-orange-500/15 px-2 py-0.5 text-xs text-orange-400">
+                                <span className="inline-flex items-center gap-1 rounded-none border-2 border-(--warning) px-2 py-0.5 text-xs text-(--warning)">
                                     <Icon icon="mdi:clock-alert-outline" className="size-3.5" />
                                     宽限期中
                                 </span>
@@ -123,7 +123,7 @@ export default async function SharePage({ params }: { params: Promise<{ code: st
                         {project.tags.map((tag) => (
                             <span
                                 key={tag}
-                                className="rounded-md bg-(--card-hover) px-2 py-0.5 text-xs text-(--muted)"
+                                className="rounded-none bg-(--card-hover) px-2 py-0.5 text-xs text-(--muted)"
                             >
                                 #{tag}
                             </span>
@@ -131,11 +131,10 @@ export default async function SharePage({ params }: { params: Promise<{ code: st
                     </div>
                 )}
 
-                <div className="flex flex-wrap items-center gap-2 border-t border-(--card-border) pt-4">
+                <div className="flex flex-wrap items-center gap-2 border-t-2 border-(--card-border) pt-4">
                     <a
                         href={`/share/${project.code}/download`}
-                        className="inline-flex items-center gap-1.5 rounded-lg px-4 py-2 text-sm font-medium text-(--btn-text)"
-                        style={{ background: 'var(--btn-bg)' }}
+                        className="inline-flex items-center gap-1.5 rounded-none px-4 py-2 text-sm font-medium border-2 border-(--card-border) bg-(--btn-bg) text-(--btn-text) transition-colors hover:bg-(--card) hover:text-(--fg)"
                     >
                         <Icon icon="mdi:download" className="size-4" />
                         下载工程 JSON
@@ -144,7 +143,7 @@ export default async function SharePage({ params }: { params: Promise<{ code: st
                     {isOwner && (
                         <Link
                             href="/me"
-                            className="inline-flex items-center gap-1.5 rounded-lg border border-(--card-border) bg-(--card) px-3 py-1.5 text-sm text-(--muted) transition-colors hover:text-(--fg)"
+                            className="inline-flex items-center gap-1.5 rounded-none border-2 border-(--card-border) bg-(--card) px-3 py-1.5 text-sm text-(--muted) transition-colors hover:text-(--fg)"
                         >
                             <Icon icon="mdi:account-cog-outline" className="size-4" />
                             管理

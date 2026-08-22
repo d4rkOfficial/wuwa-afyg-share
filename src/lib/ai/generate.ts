@@ -5,7 +5,6 @@ import { renderSystemPrompt, renderInitialTaskPrompt, DEFAULT_SYSTEM_PROMPT, DEF
 import { BUFF_ENTITY_TYPES } from '@/lib/consts/buff-zones'
 import type { BuffEntityType } from '@/lib/types/db'
 
-export const MAX_TOOL_ROUNDS = 8
 export const MAX_FIX_RETRY = 2
 
 export interface GenerateEvent {
@@ -120,7 +119,7 @@ export async function generateBuffSet(options: GenerateBuffSetOptions): Promise<
     let reasoning = ''
     let fixCount = 0
 
-    for (let round = 0; round < MAX_TOOL_ROUNDS; round++) {
+    for (let round = 1; ; round++) {
         const result = await chatCompletionStream(apiKey, messages, {
             tools,
             reasoningEffort,
@@ -139,7 +138,7 @@ export async function generateBuffSet(options: GenerateBuffSetOptions): Promise<
         })
 
         emitLog(
-            `第 ${round + 1} 轮：finish_reason=${result.finishReason ?? '(无)'}, content=${result.toolCalls ? 0 : content.length} 字符, tool_calls=${result.toolCalls?.length ?? 0}`,
+            `第 ${round} 轮：finish_reason=${result.finishReason ?? '(无)'}, content=${result.toolCalls ? 0 : content.length} 字符, tool_calls=${result.toolCalls?.length ?? 0}`,
             'debug'
         )
 
@@ -173,7 +172,7 @@ export async function generateBuffSet(options: GenerateBuffSetOptions): Promise<
                 emit({ type: 'tool', name: tc.name, args, resultLen: output.length })
                 messages.push({ role: 'tool', tool_call_id: tc.id, content: output })
             }
-            emitLog(`工具调用完成，继续下一轮（${round + 2}/${MAX_TOOL_ROUNDS}）`, 'info')
+            emitLog(`工具调用完成，继续下一轮（第 ${round + 1} 轮）`, 'info')
             continue
         }
 
@@ -224,7 +223,4 @@ export async function generateBuffSet(options: GenerateBuffSetOptions): Promise<
         emit({ type: 'result', data: null, rawContent: content, parseError })
         return finish({ buffs: null, rawContent: content, parseError })
     }
-
-    emit({ type: 'error', message: `超过最大工具轮数（${MAX_TOOL_ROUNDS}）` })
-    return finish({ buffs: null, rawContent: content, parseError: `超过最大工具轮数（${MAX_TOOL_ROUNDS}）` })
 }

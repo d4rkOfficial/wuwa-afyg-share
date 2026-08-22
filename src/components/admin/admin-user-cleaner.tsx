@@ -63,10 +63,10 @@ export default function AdminUserCleaner() {
 
             {open && (
                 <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-                    <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={() => setOpen(false)} />
-                    <div className="relative w-full max-w-md rounded-xl border border-(--card-border) bg-(--card) p-5 shadow-2xl">
+                    <div className="absolute inset-0 bg-black/60 " onClick={() => setOpen(false)} />
+                    <div className="relative w-full max-w-md rounded-none border-2 border-(--card-border) bg-(--card) p-5 ">
                         <div className="flex items-center gap-2">
-                            <Icon icon="mdi:alert-decagram-outline" className="size-5 text-red-400" />
+                            <Icon icon="mdi:alert-decagram-outline" className="size-5 text-(--danger)" />
                             <h3 className="text-sm font-semibold">按用户删除全部内容</h3>
                         </div>
                         <p className="mt-2 text-sm text-(--muted)">
@@ -82,19 +82,19 @@ export default function AdminUserCleaner() {
                                     setSummary(null)
                                 }}
                                 placeholder="输入目标用户名"
-                                className="w-full rounded-lg border border-(--card-border) bg-(--input-bg) px-3 py-2 text-sm outline-none transition-colors focus:border-(--accent)/60"
+                                className="w-full rounded-none border-2 border-(--card-border) bg-(--input-bg) px-3 py-2 text-sm outline-none transition-colors focus:border-(--accent)"
                             />
                             <button
                                 onClick={onLookup}
                                 disabled={pending || !username.trim()}
-                                className="shrink-0 rounded-lg border border-(--card-border) px-3 py-2 text-sm text-(--muted) transition-colors hover:text-(--fg) disabled:opacity-50"
+                                className="shrink-0 rounded-none border-2 border-(--card-border) px-3 py-2 text-sm text-(--muted) transition-colors hover:text-(--fg) disabled:opacity-50"
                             >
                                 查询
                             </button>
                         </div>
 
                         {summary && (
-                            <div className="mt-3 rounded-lg border border-(--card-border) bg-(--input-bg) px-3 py-2 text-sm">
+                            <div className="mt-3 rounded-none border-2 border-(--card-border) bg-(--input-bg) px-3 py-2 text-sm">
                                 <p>
                                     用户 <span className="font-medium text-(--fg)">{summary.username}</span>：
                                     <span className="text-(--fg)">{summary.projectCount}</span> 个工程
@@ -106,7 +106,7 @@ export default function AdminUserCleaner() {
                                     value={confirmText}
                                     onChange={(e) => setConfirmText(e.target.value)}
                                     placeholder={summary.username}
-                                    className="mt-1 w-full rounded-lg border border-(--card-border) bg-(--card) px-3 py-1.5 text-sm outline-none transition-colors focus:border-(--danger)/60"
+                                    className="mt-1 w-full rounded-none border-2 border-(--card-border) bg-(--card) px-3 py-1.5 text-sm outline-none transition-colors focus:border-(--danger)"
                                 />
                             </div>
                         )}
@@ -119,14 +119,14 @@ export default function AdminUserCleaner() {
                                     setSummary(null)
                                     setConfirmText('')
                                 }}
-                                className="rounded-lg border border-(--card-border) bg-(--card) px-3 py-1.5 text-sm text-(--muted) hover:text-(--fg)"
+                                className="rounded-none border-2 border-(--card-border) bg-(--card) px-3 py-1.5 text-sm text-(--muted) hover:text-(--fg)"
                             >
                                 取消
                             </button>
                             <button
                                 onClick={onConfirm}
                                 disabled={pending || !summary || confirmText !== summary.username}
-                                className="inline-flex items-center gap-1 rounded-lg bg-red-600 px-3 py-1.5 text-sm text-white hover:brightness-110 disabled:opacity-50"
+                                className="inline-flex items-center gap-1 rounded-none border-2 border-(--danger) bg-(--danger) transition-colors hover:bg-(--card) hover:text-(--danger) px-3 py-1.5 text-sm text-white  disabled:opacity-50"
                             >
                                 <Icon icon={pending ? 'mdi:loading' : 'mdi:account-remove-outline'} className={`size-4 ${pending ? 'animate-spin' : ''}`} />
                                 确认删除

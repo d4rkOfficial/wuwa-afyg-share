@@ -27,7 +27,7 @@ export default function ExpiryCountdown({ expiresAt }: Props) {
 
     if (remain <= 0) {
         return (
-            <span className="inline-flex items-center gap-1 rounded-md bg-red-500/15 px-2 py-0.5 text-xs text-red-400">
+            <span className="inline-flex items-center gap-1 rounded-none border-2 border-(--danger) px-2 py-0.5 text-xs text-(--danger)">
                 <Icon icon="mdi:alert-decagram-outline" className="size-3.5" />
                 已过期
             </span>
@@ -35,7 +35,7 @@ export default function ExpiryCountdown({ expiresAt }: Props) {
     }
 
     return (
-        <span className="inline-flex items-center gap-1 rounded-md bg-amber-500/15 px-2 py-0.5 text-xs text-amber-500">
+        <span className="inline-flex items-center gap-1 rounded-none border-2 border-(--warning) px-2 py-0.5 text-xs text-(--warning)">
             <Icon icon="mdi:clock-outline" className="size-3.5" />
             {formatRemain(remain)}
         </span>

@@ -1,29 +1,48 @@
 @import 'tailwindcss';
 
+/* ──────────────────────────────────────────────────────────────
+   Minimalist Flat 设计系统 · Token 层
+   纯色背景 / 纯黑纯白文字 / 单一强调色 / 零阴影零渐变 / 一致锐角
+   圆角统一为 0（rounded-none）；阴影全局置零；仅保留「刻意弱化」的灰阶文字
+   ────────────────────────────────────────────────────────────── */
+
+@theme {
+    /* 一致锐角：所有 rounded-* 工具类收敛为 0 */
+    --radius-xs: 0px;
+    --radius-sm: 0px;
+    --radius: 0px;
+    --radius-md: 0px;
+    --radius-lg: 0px;
+    --radius-xl: 0px;
+    --radius-2xl: 0px;
+    --radius-3xl: 0px;
+}
+
+/* 默认深色：纯黑底 / 纯白字 / 强调色反白 */
 :root {
     color-scheme: dark;
-    --bg: #0e0e10;
-    --fg: #e4e4e7;
-    --muted: #71717a;
-    --card: rgba(255, 255, 255, 0.02);
-    --card-hover: rgba(255, 255, 255, 0.05);
-    --card-border: rgba(255, 255, 255, 0.1);
-    --btn-bg: linear-gradient(135deg, #e4e4e7, #a1a1aa);
-    --btn-text: #18181b;
-    --accent: #e4e4e7;
-    --accent-fg: #18181b;
-    --accent-text: #a1a1aa;
-    --input-bg: rgba(255, 255, 255, 0.05);
-    --danger: #ef4444;
-    --danger-text: #fca5a5;
+    --bg: #000000;
+    --fg: #ffffff;
+    --muted: #a3a3a3; /* 刻意弱化的次要文字，对比度满足 AA */
+    --card: #000000;
+    --card-hover: #171717; /* 实色表面，不使用低透明度 */
+    --card-border: #3f3f3f; /* 深色边框：暗灰，不刺眼，仍与纯黑背景区分 */
+    --btn-bg: #ffffff;
+    --btn-text: #000000;
+    --accent: #ff3366;
+    --accent-fg: #ffffff;
+    --accent-text: #ff5c7f;
+    --input-bg: #000000;
+    --danger: #f87171;
+    --danger-text: #f87171;
     --success: #34d399;
-    --success-text: #6ee7b7;
+    --success-text: #34d399;
     --warning: #fbbf24;
-    --warning-text: #fcd34d;
+    --warning-text: #fbbf24;
     --info: #38bdf8;
-    --info-text: #7dd3fc;
-    --code-bg: rgba(0, 0, 0, 0.25);
-    --code-bg-strong: rgba(0, 0, 0, 0.4);
+    --info-text: #38bdf8;
+    --code-bg: #171717;
+    --code-bg-strong: #262626;
     --element-冷凝: #38bdf8;
     --element-热熔: #fb923c;
     --element-导电: #a855f7;
@@ -32,19 +51,20 @@
     --element-湮灭: #f472b6;
 }
 
+/* 浅色：纯白底 / 纯黑字 / 强调色反白 */
 html.light {
     color-scheme: light;
-    --bg: #fafafa;
-    --fg: #18181b;
-    --muted: #8b8b93;
+    --bg: #ffffff;
+    --fg: #000000;
+    --muted: #525252;
     --card: #ffffff;
-    --card-hover: #f4f4f5;
-    --card-border: #e4e4e7;
-    --btn-bg: linear-gradient(135deg, #18181b, #3f3f46);
+    --card-hover: #f2f2f2;
+    --card-border: #000000;
+    --btn-bg: #000000;
     --btn-text: #ffffff;
-    --accent: #18181b;
+    --accent: #ff3366;
     --accent-fg: #ffffff;
-    --accent-text: #52525b;
+    --accent-text: #d11e4a;
     --input-bg: #ffffff;
     --danger: #dc2626;
     --danger-text: #dc2626;
@@ -54,8 +74,8 @@ html.light {
     --warning-text: #d97706;
     --info: #0284c7;
     --info-text: #0284c7;
-    --code-bg: rgba(0, 0, 0, 0.05);
-    --code-bg-strong: rgba(0, 0, 0, 0.1);
+    --code-bg: #f2f2f2;
+    --code-bg-strong: #e5e5e5;
 }
 
 body {
@@ -69,25 +89,41 @@ body {
         sans-serif;
 }
 
-::selection {
-    background: color-mix(in srgb, var(--accent) 30%, transparent);
+@layer base {
+    /* 零阴影：硬性要求，任何 box-shadow 均被收敛 */
+    *,
+    *::before,
+    *::after {
+        box-shadow: none !important;
+    }
+
+    /* 键盘聚焦：以 2px 强调色边框建立层次，替代阴影/光晕 */
+    :focus-visible {
+        outline: none;
+        border-color: var(--accent) !important;
+    }
 }
 
-/* 细滚动条 */
+::selection {
+    background: var(--accent);
+    color: var(--accent-fg);
+}
+
+/* 细滚动条：实色滑块，不依赖透明度 */
 * {
     scrollbar-width: thin;
-    scrollbar-color: color-mix(in srgb, var(--fg) 22%, transparent) transparent;
+    scrollbar-color: var(--card-hover) transparent;
 }
 *::-webkit-scrollbar {
     width: 6px;
     height: 6px;
 }
 *::-webkit-scrollbar-thumb {
-    background: color-mix(in srgb, var(--fg) 22%, transparent);
-    border-radius: 9999px;
+    background: var(--card-hover);
+    border-radius: 0;
 }
 *::-webkit-scrollbar-thumb:hover {
-    background: color-mix(in srgb, var(--fg) 38%, transparent);
+    background: var(--muted);
 }
 *::-webkit-scrollbar-track {
     background: transparent;
@@ -132,33 +168,46 @@ select {
     min-height: 5rem;
 }
 
-/* 统一工具栏按钮样式 */
+/* 统一工具栏按钮：扁平、2px 边框、颜色反转反馈 */
 .toolbar-btn {
     display: inline-flex;
     align-items: center;
     gap: 0.375rem;
-    border-radius: 0.5rem;
+    border-radius: 0;
     padding: 0.375rem 0.75rem;
     font-size: 0.75rem;
     line-height: 1.25rem;
-    transition: filter 0.15s ease, opacity 0.15s ease;
+    border: 2px solid var(--card-border);
+    background: transparent;
+    color: var(--muted);
+    transition:
+        background-color 0.15s ease-out,
+        color 0.15s ease-out,
+        border-color 0.15s ease-out;
     cursor: pointer;
 }
 .toolbar-btn:hover {
-    filter: brightness(1.1);
+    color: var(--fg);
+    background: var(--card-hover);
 }
 .toolbar-btn:disabled {
-    opacity: 0.4;
+    opacity: 0.5;
     cursor: not-allowed;
 }
 .toolbar-btn-primary {
     background: var(--btn-bg);
     color: var(--btn-text);
+    border-color: var(--btn-bg);
     font-weight: 600;
+}
+.toolbar-btn-primary:hover {
+    background: var(--card);
+    color: var(--fg);
+    border-color: var(--card-border);
 }
 .toolbar-btn-ghost {
     color: var(--muted);
-    border: 1px solid var(--card-border);
+    border: 2px solid var(--card-border);
     background: transparent;
 }
 .toolbar-btn-ghost:hover {
@@ -171,8 +220,9 @@ body {
     background: var(--bg);
 }
 
+/* 顶栏：实色背景，无模糊 */
 .site-header {
-    background: color-mix(in srgb, var(--bg) 88%, transparent);
+    background: var(--bg);
 }
 
 .theme-icon-light {
@@ -185,7 +235,7 @@ html.light .theme-icon-light {
     display: block;
 }
 
-/* 链接只在自身边缘提示慢导航；不会遮挡页面，也不会拦住下一次操作。 */
+/* 链接慢导航提示：底部 2px 实色细线，不做 Z 轴反馈 */
 .app-link {
     position: relative;
 }
@@ -195,7 +245,7 @@ html.light .theme-icon-light {
     bottom: 1px;
     left: 25%;
     height: 2px;
-    border-radius: 9999px;
+    border-radius: 0;
     background: currentColor;
     opacity: 0;
     visibility: hidden;
@@ -214,7 +264,7 @@ html.light .theme-icon-light {
     transition-delay: 100ms;
 }
 
-/* 首页筛选：导航期间保留结果，只在筛选条内给出轻量反馈。 */
+/* 首页筛选：导航期间保留结果，只在筛选条内给出轻量反馈 */
 .project-filter-shell {
     position: relative;
     display: grid;
@@ -226,8 +276,7 @@ html.light .theme-icon-light {
     overflow: hidden;
     transition:
         border-color 180ms ease-out,
-        background-color 180ms ease-out,
-        box-shadow 180ms ease-out;
+        background-color 180ms ease-out;
 }
 .project-filter-search {
     grid-area: search;
@@ -246,8 +295,7 @@ html.light .theme-icon-light {
     justify-self: stretch;
 }
 .project-filter-shell[data-pending='true'] {
-    border-color: color-mix(in srgb, var(--accent) 34%, var(--card-border));
-    box-shadow: 0 8px 30px color-mix(in srgb, var(--bg) 55%, transparent);
+    border-color: var(--accent);
 }
 .project-filter-progress {
     position: absolute;
@@ -256,7 +304,7 @@ html.light .theme-icon-light {
     left: 0;
     width: 32%;
     height: 2px;
-    border-radius: 9999px;
+    border-radius: 0;
     background: var(--accent);
     opacity: 0;
     transform: translateX(-115%);
@@ -302,6 +350,7 @@ html.light .theme-icon-light {
     .buff-editor-modal {
         width: calc(100vw - 1rem);
         height: calc(100dvh - 1rem);
+        border-radius: 0;
     }
     .buff-editor-layout {
         display: grid;
@@ -322,14 +371,14 @@ html.light .theme-icon-light {
         grid-row: 1;
         width: auto;
         border-right: 0;
-        border-left: 1px solid var(--card-border);
+        border-left: 2px solid var(--card-border);
     }
     .buff-editor-ai {
         grid-column: 2 / 4;
         grid-row: 2;
         width: auto;
         min-width: 0;
-        border-top: 1px solid var(--card-border);
+        border-top: 2px solid var(--card-border);
         border-left: 0;
     }
 }
@@ -342,7 +391,7 @@ html.light .theme-icon-light {
     .buff-editor-modal {
         width: calc(100vw - 0.5rem);
         height: calc(100dvh - 0.5rem);
-        border-radius: 0.625rem;
+        border-radius: 0;
     }
     .buff-editor-layout {
         grid-template-columns: clamp(7.25rem, 34vw, 8.5rem) minmax(0, 1fr);
@@ -358,7 +407,7 @@ html.light .theme-icon-light {
     .buff-editor-zones {
         grid-column: 2;
         grid-row: 2;
-        border-top: 1px solid var(--card-border);
+        border-top: 2px solid var(--card-border);
         border-left: 0;
     }
     .buff-editor-ai {
@@ -367,17 +416,19 @@ html.light .theme-icon-light {
     }
 }
 
+/* 动效备选：尊重 prefers-reduced-motion */
 @media (prefers-reduced-motion: reduce) {
-    .app-link-hint {
-        transition: opacity 100ms ease;
-        transform: none;
-    }
-    .project-filter-shell,
-    .project-filter-shell * {
-        scroll-behavior: auto !important;
+    *,
+    *::before,
+    *::after {
         animation-duration: 0.01ms !important;
         animation-iteration-count: 1 !important;
         transition-duration: 0.01ms !important;
+        scroll-behavior: auto !important;
+    }
+    .app-link-hint {
+        transition: opacity 100ms ease;
+        transform: none;
     }
     .project-filter-shell[data-pending='true'] .project-filter-progress {
         width: 100%;

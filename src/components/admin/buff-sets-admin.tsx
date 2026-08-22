@@ -10,8 +10,6 @@ import {
     loadAiConfig,
     saveAiConfig,
     DEFAULT_AI_CONFIG,
-    AI_ENDPOINTS,
-    AI_MODEL_PRESETS,
     type AiConfig
 } from '@/lib/ai/config'
 import { toast } from '@/components/ui/toast'
@@ -28,7 +26,6 @@ const SYSTEM_PROMPT_STORAGE = 'wuwa-afyg:deepseek-system-prompt'
 const INITIAL_TASK_STORAGE = 'wuwa-afyg:deepseek-initial-task'
 const SLANG_DICT_STORAGE = 'wuwa-afyg:deepseek-slang-dict'
 const SESSION_SHARE_STORAGE = 'wuwa-afyg:ai-session-share'
-const SESSION_MAX_ROUNDS = 12
 const TOOL_BASE_DEFAULT = 'http://localhost:5173'
 
 function readStorage(key: string, fallback = ''): string {
@@ -42,48 +39,6 @@ function readStorage(key: string, fallback = ''): string {
 
 function entityKey(entityType: string, entityName: string) {
     return `${entityType}/${entityName}`
-}
-
-// 预设分组渲染：标题 + 按钮列表，当前值高亮
-function PresetGroup({
-    title,
-    items,
-    current,
-    onPick
-}: {
-    title: string
-    items: Array<{ label: string; value: string; modelHint?: string }>
-    current: string
-    onPick: (value: string) => void
-}) {
-    // 按值去重（OpenRouter 国内/国际同 value 时保留一个）
-    const uniq = items.filter((it, i, arr) => arr.findIndex((x) => x.value === it.value) === i)
-    if (!uniq.length) return null
-    return (
-        <div className="mb-3">
-            <div className="mb-1.5 text-[11px] font-medium text-(--muted)">{title}</div>
-            <div className="flex flex-wrap gap-1.5">
-                {uniq.map((opt) => {
-                    const active = current.trim() === opt.value
-                    return (
-                        <button
-                            key={opt.value + opt.label}
-                            type="button"
-                            onClick={() => onPick(opt.value)}
-                            title={opt.modelHint ? `模型示例：${opt.modelHint}` : undefined}
-                            className={`rounded-md px-2.5 py-1 text-[11px] transition-colors ${
-                                active
-                                    ? 'bg-(--accent)/15 text-(--accent-text)'
-                                    : 'text-(--muted) hover:bg-(--card-hover) hover:text-(--fg)'
-                            }`}
-                        >
-                            {opt.label}
-                        </button>
-                    )
-                })}
-            </div>
-        </div>
-    )
 }
 
 export default function BuffSetsAdmin({ rows, isAdmin }: Props) {
@@ -105,8 +60,6 @@ export default function BuffSetsAdmin({ rows, isAdmin }: Props) {
     const [editingPrompt, setEditingPrompt] = useState<'system' | 'initial' | 'slang' | null>(null)
     const [draftText, setDraftText] = useState('')
     const [showConfig, setShowConfig] = useState(false)
-    // 快捷预设弹出选择器：null 隐藏；'baseUrl' 选服务地址；'model' 选模型名
-    const [presetPicker, setPresetPicker] = useState<'baseUrl' | 'model' | null>(null)
     const [selected, setSelected] = useState<{ entityType: BuffEntityType; entityName: string } | null>(null)
     const [editingKey, setEditingKey] = useState<string | null>(null)
 
@@ -151,13 +104,9 @@ export default function BuffSetsAdmin({ rows, isAdmin }: Props) {
         localStorage.setItem(SESSION_SHARE_STORAGE, enabled ? '1' : '0')
     }
 
-    // 会话按完整轮次截断（保留最近 N 段 user 起的轮），控制体积与首轮 miss 成本
+    // 会话按完整轮次保留全部历史，不做截断（解除对话轮次上限）
     function trimSession(messages: ChatMessage[]): ChatMessage[] {
-        const userIdx = messages
-            .map((m, i) => (m.role === 'user' ? i : -1))
-            .filter((i) => i >= 0)
-        if (userIdx.length <= SESSION_MAX_ROUNDS) return messages
-        return messages.slice(userIdx[userIdx.length - SESSION_MAX_ROUNDS])
+        return messages
     }
 
     function handleSessionUpdate(entityType: BuffEntityType, messages: ChatMessage[]) {
@@ -226,7 +175,7 @@ export default function BuffSetsAdmin({ rows, isAdmin }: Props) {
     return (
         <div className="flex h-[calc(100vh-8rem)] flex-col gap-3">
             {/* 顶部工具栏 */}
-            <div className="flex shrink-0 items-center justify-between rounded-xl border border-(--card-border) bg-(--card) px-4 py-2.5">
+            <div className="flex shrink-0 items-center justify-between rounded-none border-2 border-(--card-border) bg-(--card) px-4 py-2.5">
                 <span className="flex items-center gap-2 text-sm font-medium text-(--muted)">实体列表</span>
                 <span className="flex items-center gap-2">
                     <BuffSnapshotPanel />
@@ -235,7 +184,7 @@ export default function BuffSetsAdmin({ rows, isAdmin }: Props) {
                             <Icon icon="mdi:cog-outline" className="size-4" />
                             连接配置
                             {false && (
-                                <span className="ml-1 rounded bg-(--warning)/15 px-1 py-0.5 text-[9px] text-(--warning)">未配置</span>
+                                <span className="ml-1 rounded border-2 border-(--warning) px-1 py-0.5 text-[9px] text-(--warning)">未配置</span>
                             )}
                         </span>
                         <Icon icon="mdi:cog" className="size-4" />
@@ -251,8 +200,8 @@ export default function BuffSetsAdmin({ rows, isAdmin }: Props) {
             {/* 编辑弹窗 */}
             {selected && initial && (
                 <div className="buff-editor-modal-shell fixed inset-0 z-50 flex items-center justify-center p-4">
-                    <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={() => setSelected(null)} />
-                    <div className="buff-editor-modal relative flex h-[92vh] w-[min(98vw,1500px)] flex-col overflow-hidden rounded-xl border border-(--card-border) bg-(--card) shadow-2xl">
+                    <div className="absolute inset-0 bg-black/60 " onClick={() => setSelected(null)} />
+                    <div className="buff-editor-modal relative flex h-[92vh] w-[min(98vw,1500px)] flex-col overflow-hidden rounded-none border-2 border-(--card-border) bg-(--card) ">
                         <BuffEntityEditor
                             key={editingKey ?? 'new'}
                             initial={initial}
@@ -282,8 +231,8 @@ export default function BuffSetsAdmin({ rows, isAdmin }: Props) {
             {/* 连接配置弹窗（整个弹窗随内容滚动） */}
             {showConfig && (
                 <div className="fixed inset-0 z-50 overflow-y-auto">
-                    <div className="fixed inset-0 bg-black/60 backdrop-blur-sm" onClick={() => setShowConfig(false)} />
-                        <div className="relative mx-auto my-8 w-[calc(100vw-2rem)] max-w-xl rounded-xl border border-(--card-border) bg-(--card) p-4 shadow-2xl">
+                    <div className="fixed inset-0 bg-black/60 " onClick={() => setShowConfig(false)} />
+                        <div className="relative mx-auto my-8 w-[calc(100vw-2rem)] max-w-xl rounded-none border-2 border-(--card-border) bg-(--card) p-4 ">
                             <div className="mb-3 flex items-center justify-between">
                                 <span className="text-sm font-semibold text-(--fg)">连接配置</span>
                                 <button onClick={() => setShowConfig(false)} className="rounded p-1 text-(--muted) hover:text-(--fg)">
@@ -295,42 +244,26 @@ export default function BuffSetsAdmin({ rows, isAdmin }: Props) {
                                 <label className="flex flex-col gap-1 text-xs text-(--muted)">
                                     <span className="flex items-center justify-between">
                                         AI 服务地址
-                                        <button
-                                            type="button"
-                                            onClick={() => setPresetPicker('baseUrl')}
-                                            className="inline-flex shrink-0 items-center gap-1 rounded-md px-2 py-0.5 text-[10px] font-medium text-(--accent-text) transition-colors hover:bg-(--card-hover)"
-                                        >
-                                            <Icon icon="mdi:view-grid-plus-outline" className="size-3" />
-                                            快捷预设…
-                                        </button>
                                     </span>
                                     <input
                                         type="url"
                                         value={aiDraft.baseUrl}
                                         onChange={(e) => setAiDraft((d) => ({ ...d, baseUrl: e.target.value }))}
                                         placeholder="https://api.deepseek.com"
-                                        className="w-full rounded-lg border border-(--card-border) bg-(--input-bg) px-2 py-1.5 text-sm outline-none focus:border-(--accent)/60"
+                                        className="w-full rounded-none border-2 border-(--card-border) bg-(--input-bg) px-2 py-1.5 text-sm outline-none focus:border-(--accent)"
                                     />
                                     <p className="text-[10px] text-(--muted)">支持任意 OpenAI 兼容端点（需支持 POST /chat/completions）</p>
                                 </label>
                                 <label className="flex flex-col gap-1 text-xs text-(--muted)">
                                     <span className="flex items-center justify-between">
                                         模型名
-                                        <button
-                                            type="button"
-                                            onClick={() => setPresetPicker('model')}
-                                            className="inline-flex shrink-0 items-center gap-1 rounded-md px-2 py-0.5 text-[10px] font-medium text-(--accent-text) transition-colors hover:bg-(--card-hover)"
-                                        >
-                                            <Icon icon="mdi:view-grid-plus-outline" className="size-3" />
-                                            快捷预设…
-                                        </button>
                                     </span>
                                     <input
                                         type="text"
                                         value={aiDraft.model}
                                         onChange={(e) => setAiDraft((d) => ({ ...d, model: e.target.value }))}
                                         placeholder="deepseek-v4-flash"
-                                        className="w-full rounded-lg border border-(--card-border) bg-(--input-bg) px-2 py-1.5 text-sm outline-none focus:border-(--accent)/60"
+                                        className="w-full rounded-none border-2 border-(--card-border) bg-(--input-bg) px-2 py-1.5 text-sm outline-none focus:border-(--accent)"
                                     />
                                 </label>
                                 <label className="flex flex-col gap-1 text-xs text-(--muted)">
@@ -340,7 +273,7 @@ export default function BuffSetsAdmin({ rows, isAdmin }: Props) {
                                         value={aiDraft.apiKey}
                                         onChange={(e) => setAiDraft((d) => ({ ...d, apiKey: e.target.value }))}
                                         placeholder="sk-..."
-                                        className="w-full rounded-lg border border-(--card-border) bg-(--input-bg) px-2 py-1.5 text-sm outline-none focus:border-(--accent)/60"
+                                        className="w-full rounded-none border-2 border-(--card-border) bg-(--input-bg) px-2 py-1.5 text-sm outline-none focus:border-(--accent)"
                                     />
                                     <p className="text-[10px] text-(--muted)">
                                         填所选提供商的 API Key（格式 / 获取方式按其官方文档）
@@ -353,9 +286,9 @@ export default function BuffSetsAdmin({ rows, isAdmin }: Props) {
                                             <button
                                                 key={level}
                                                 onClick={() => setAiDraft((d) => ({ ...d, reasoningEffort: level }))}
-                                                className={`rounded-md px-2 py-1 text-[11px] transition-colors ${
+                                                className={`rounded-none px-2 py-1 text-[11px] transition-colors ${
                                                     aiDraft.reasoningEffort === level
-                                                        ? 'bg-(--accent)/15 text-(--accent-text)'
+                                                        ? 'bg-(--accent) text-(--accent-fg)'
                                                         : 'text-(--muted) hover:text-(--fg)'
                                                 }`}
                                             >
@@ -371,8 +304,7 @@ export default function BuffSetsAdmin({ rows, isAdmin }: Props) {
                                     <button
                                         onClick={handleSaveAi}
                                         disabled={aiSaving}
-                                        className="inline-flex items-center gap-1.5 rounded-lg px-4 py-1.5 text-xs font-medium text-(--btn-text) transition-all hover:brightness-110 disabled:opacity-50"
-                                        style={{ background: 'var(--btn-bg)' }}
+                                        className="inline-flex items-center gap-1.5 rounded-none px-4 py-1.5 text-xs font-medium border-2 border-(--card-border) bg-(--btn-bg) text-(--btn-text) transition-colors hover:bg-(--card) hover:text-(--fg) transition-all  disabled:opacity-50"
                                     >
                                         <Icon icon="mdi:content-save-outline" className="size-3.5" />
                                         {aiSaving ? '保存中…' : '保存 AI 配置'}
@@ -383,7 +315,7 @@ export default function BuffSetsAdmin({ rows, isAdmin }: Props) {
                                     return (
                                         <div
                                             key={editor.key}
-                                            className="flex items-center gap-2 rounded-lg border border-(--card-border) bg-(--input-bg) px-2.5 py-2"
+                                            className="flex items-center gap-2 rounded-none border-2 border-(--card-border) bg-(--input-bg) px-2.5 py-2"
                                         >
                                             <div className="min-w-0 flex-1">
                                                 <div className="flex items-center justify-between gap-2">
@@ -395,14 +327,13 @@ export default function BuffSetsAdmin({ rows, isAdmin }: Props) {
                                                         恢复默认
                                                     </button>
                                                 </div>
-                                                <p className="truncate text-[10px] text-(--muted)/60" title={editor.value}>
+                                                <p className="truncate text-[10px] text-(--muted)" title={editor.value}>
                                                     {summary || `（未填写） ${editor.hint}`}
                                                 </p>
                                             </div>
                                             <button
                                                 onClick={() => openPromptEditor(editor.key)}
-                                                className="inline-flex shrink-0 items-center gap-1 rounded-lg px-2.5 py-1 text-xs font-medium text-(--btn-text) transition-all hover:brightness-110"
-                                                style={{ background: 'var(--btn-bg)' }}
+                                                className="inline-flex shrink-0 items-center gap-1 rounded-none px-2.5 py-1 text-xs font-medium border-2 border-(--card-border) bg-(--btn-bg) text-(--btn-text) transition-colors hover:bg-(--card) hover:text-(--fg) transition-all "
                                             >
                                                 <Icon icon="mdi:pencil-outline" className="size-3.5" />
                                                 编辑
@@ -415,9 +346,9 @@ export default function BuffSetsAdmin({ rows, isAdmin }: Props) {
                                         <span className="text-xs text-(--muted)">跨实体共享会话</span>
                                         <button
                                             onClick={() => persistSessionShare(!sessionShare)}
-                                            className={`flex items-center gap-1.5 rounded-md px-2 py-1 text-[11px] transition-colors ${
+                                            className={`flex items-center gap-1.5 rounded-none px-2 py-1 text-[11px] transition-colors ${
                                                 sessionShare
-                                                    ? 'bg-(--accent)/15 text-(--accent-text)'
+                                                    ? 'bg-(--accent) text-(--accent-fg)'
                                                     : 'text-(--muted) hover:text-(--fg)'
                                             }`}
                                         >
@@ -429,7 +360,7 @@ export default function BuffSetsAdmin({ rows, isAdmin }: Props) {
                                         </button>
                                     </div>
                                     <p className="text-[10px] text-(--muted)">
-                                        连续生成时复用上一实体会话前缀（按实体类型分组，最多保留 {SESSION_MAX_ROUNDS} 轮），命中 AI 缓存、省 token
+                                        连续生成时复用上一实体会话前缀（按实体类型分组，保留全部历史轮次），命中 AI 缓存、省 token
                                     </p>
                                 </div>
                                 <p className="text-[10px] text-(--muted)">
@@ -437,11 +368,10 @@ export default function BuffSetsAdmin({ rows, isAdmin }: Props) {
                                 </p>
                             </div>
 
-                             <div className="mt-3 flex justify-end border-t border-(--card-border) pt-3">
+                             <div className="mt-3 flex justify-end border-t-2 border-(--card-border) pt-3">
                                 <button
                                     onClick={() => setShowConfig(false)}
-                                    className="rounded-lg px-4 py-1.5 text-sm font-medium text-(--btn-text) transition-all hover:brightness-110"
-                                    style={{ background: 'var(--btn-bg)' }}
+                                    className="rounded-none px-4 py-1.5 text-sm font-medium border-2 border-(--card-border) bg-(--btn-bg) text-(--btn-text) transition-colors hover:bg-(--card) hover:text-(--fg) transition-all "
                                 >
                                     完成
                                 </button>
@@ -454,11 +384,11 @@ export default function BuffSetsAdmin({ rows, isAdmin }: Props) {
                 {activePromptEditor && (
                     <div className="fixed inset-0 z-[60] flex items-center justify-center p-4">
                         <div
-                            className="absolute inset-0 bg-black/60 backdrop-blur-sm"
+                            className="absolute inset-0 bg-black/60 "
                             onClick={() => setEditingPrompt(null)}
                         />
-                        <div className="relative flex max-h-[85vh] w-[min(96vw,720px)] flex-col overflow-hidden rounded-xl border border-(--card-border) bg-(--card) shadow-2xl">
-                            <div className="flex items-center justify-between border-b border-(--card-border) px-4 py-3">
+                        <div className="relative flex max-h-[85vh] w-[min(96vw,720px)] flex-col overflow-hidden rounded-none border-2 border-(--card-border) bg-(--card) ">
+                            <div className="flex items-center justify-between border-b-2 border-(--card-border) px-4 py-3">
                                 <span className="text-sm font-semibold text-(--fg)">{activePromptEditor.label}</span>
                                 <button
                                     onClick={() => setEditingPrompt(null)}
@@ -474,11 +404,11 @@ export default function BuffSetsAdmin({ rows, isAdmin }: Props) {
                                     onChange={(e) => setDraftText(e.target.value)}
                                     autoFocus
                                     placeholder={activePromptEditor.hint}
-                                    className="w-full rounded-lg border border-(--card-border) bg-(--input-bg) px-2.5 py-2 font-mono text-[11px] leading-relaxed outline-none focus:border-(--accent)/60"
+                                    className="w-full rounded-none border-2 border-(--card-border) bg-(--input-bg) px-2.5 py-2 font-mono text-[11px] leading-relaxed outline-none focus:border-(--accent)"
                                     style={{ minHeight: `${activePromptEditor.minHeight}px` }}
                                 />
                             </div>
-                            <div className="flex items-center justify-between border-t border-(--card-border) px-4 py-3">
+                            <div className="flex items-center justify-between border-t-2 border-(--card-border) px-4 py-3">
                                 <button
                                     onClick={() => {
                                         setDraftText(activePromptEditor.reset)
@@ -491,75 +421,17 @@ export default function BuffSetsAdmin({ rows, isAdmin }: Props) {
                                 <div className="flex items-center gap-2">
                                     <button
                                         onClick={() => setEditingPrompt(null)}
-                                        className="rounded-lg px-3 py-1.5 text-xs text-(--muted) transition-colors hover:text-(--fg)"
+                                        className="rounded-none px-3 py-1.5 text-xs text-(--muted) transition-colors hover:text-(--fg)"
                                     >
                                         取消
                                     </button>
                                     <button
                                         onClick={savePromptEditor}
-                                        className="rounded-lg px-4 py-1.5 text-sm font-medium text-(--btn-text) transition-all hover:brightness-110"
-                                        style={{ background: 'var(--btn-bg)' }}
+                                        className="rounded-none px-4 py-1.5 text-sm font-medium border-2 border-(--card-border) bg-(--btn-bg) text-(--btn-text) transition-colors hover:bg-(--card) hover:text-(--fg) transition-all "
                                     >
                                         保存
                                     </button>
                                 </div>
-                            </div>
-                        </div>
-                    </div>
-                )}
-
-                {/* 快捷预设弹出选择器（地址 / 模型） */}
-                {presetPicker && (
-                    <div className="fixed inset-0 z-[70] flex items-center justify-center p-4">
-                        <div
-                            className="absolute inset-0 bg-black/60 backdrop-blur-sm"
-                            onClick={() => setPresetPicker(null)}
-                        />
-                        <div className="relative flex max-h-[80vh] w-[min(96vw,640px)] flex-col overflow-hidden rounded-xl border border-(--card-border) bg-(--card) shadow-2xl">
-                            <div className="flex items-center justify-between border-b border-(--card-border) px-4 py-3">
-                                <span className="text-sm font-semibold text-(--fg)">
-                                    {presetPicker === 'baseUrl' ? '选择服务地址预设' : '选择模型名预设'}
-                                </span>
-                                <button
-                                    onClick={() => setPresetPicker(null)}
-                                    className="rounded p-1 text-(--muted) transition-colors hover:text-(--fg)"
-                                >
-                                    <Icon icon="mdi:close" className="size-5" />
-                                </button>
-                            </div>
-                            <div className="min-h-0 flex-1 overflow-y-auto p-4">
-                                {presetPicker === 'baseUrl' ? (
-                                    <>
-                                        <p className="mb-2 text-[10px] text-(--muted)">
-                                            点击即填入地址；仍可在输入框中手工修改。本地自建需显式允许（默认已含 Ollama / vLLM）。
-                                        </p>
-                                        <PresetGroup title="国内" items={AI_ENDPOINTS.filter((e) => e.region === 'cn')}
-                                            current={aiDraft.baseUrl} onPick={(v) => { setAiDraft((d) => ({ ...d, baseUrl: v })); setPresetPicker(null) }} />
-                                        <PresetGroup title="国外" items={AI_ENDPOINTS.filter((e) => e.region === 'intl')}
-                                            current={aiDraft.baseUrl} onPick={(v) => { setAiDraft((d) => ({ ...d, baseUrl: v })); setPresetPicker(null) }} />
-                                        <PresetGroup title="本地 / 自建" items={AI_ENDPOINTS.filter((e) => e.region === 'local')}
-                                            current={aiDraft.baseUrl} onPick={(v) => { setAiDraft((d) => ({ ...d, baseUrl: v })); setPresetPicker(null) }} />
-                                    </>
-                                ) : (
-                                    <>
-                                        <p className="mb-2 text-[10px] text-(--muted)">
-                                            点击即填入模型名；也可手工输入任意模型 ID。
-                                        </p>
-                                        <PresetGroup title="国内" items={AI_MODEL_PRESETS.filter((e) => e.region === 'cn')}
-                                            current={aiDraft.model} onPick={(v) => { setAiDraft((d) => ({ ...d, model: v })); setPresetPicker(null) }} />
-                                        <PresetGroup title="国外" items={AI_MODEL_PRESETS.filter((e) => e.region === 'intl')}
-                                            current={aiDraft.model} onPick={(v) => { setAiDraft((d) => ({ ...d, model: v })); setPresetPicker(null) }} />
-                                    </>
-                                )}
-                            </div>
-                            <div className="flex justify-end border-t border-(--card-border) px-4 py-3">
-                                <button
-                                    onClick={() => setPresetPicker(null)}
-                                    className="rounded-lg px-4 py-1.5 text-sm font-medium text-(--btn-text) transition-all hover:brightness-110"
-                                    style={{ background: 'var(--btn-bg)' }}
-                                >
-                                    完成
-                                </button>
                             </div>
                         </div>
                     </div>

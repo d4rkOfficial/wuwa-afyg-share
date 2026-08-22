@@ -12,6 +12,10 @@ export interface SelectOption {
 export interface SelectGroup {
     label: string
     options: SelectOption[]
+    /** 分组标题图标路径（可选） */
+    icon?: string
+    /** 分组标题强调色（可选，作用于图标与标签） */
+    accentColor?: string
 }
 
 interface Props {
@@ -100,7 +104,7 @@ export default function SelectMenu({
         <div
             ref={panelRef}
             role="listbox"
-            className="overflow-y-auto rounded-lg border p-1 shadow-xl"
+            className="overflow-y-auto rounded-none border-2 p-1"
             style={{
                 position: 'fixed',
                 left: pos?.left ?? 0,
@@ -117,7 +121,13 @@ export default function SelectMenu({
             )}
             {groups?.map((group) => (
                 <div key={group.label}>
-                    <div className="px-2.5 py-1 text-[10px] font-medium text-(--muted)">{group.label}</div>
+                    <div className="flex items-center gap-1.5 px-2.5 py-1 text-[10px] font-bold uppercase tracking-widest" style={group.accentColor ? { color: group.accentColor } : undefined}>
+                        {group.icon && (
+                            // eslint-disable-next-line @next/next/no-img-element
+                            <img src={group.icon} alt="" className="size-3.5 shrink-0 object-contain" />
+                        )}
+                        <span>{group.label}</span>
+                    </div>
                     {group.options.map((opt) => (
                         <SelectItem key={opt.value} opt={opt} selected={opt.value === value} onSelect={select} />
                     ))}
@@ -139,7 +149,7 @@ export default function SelectMenu({
                 aria-haspopup="listbox"
                 aria-expanded={open}
                 aria-label={ariaLabel}
-                className="flex h-full w-full min-w-0 items-center gap-1.5 rounded-lg border border-(--card-border) bg-(--input-bg) px-2.5 text-sm font-medium text-(--fg) outline-none transition-[border-color,box-shadow] duration-200 focus:border-(--accent)/60 focus:shadow-[0_0_0_3px_color-mix(in_srgb,var(--accent)_10%,transparent)]"
+                className="flex h-full w-full min-w-0 items-center gap-1.5 rounded-none border-2 border-(--card-border) bg-(--input-bg) px-2.5 text-sm font-medium text-(--fg) outline-none transition-[border-color,box-shadow] duration-200 focus:border-(--accent) "
             >
                 {icon && <Icon icon={icon} className="size-4 shrink-0 text-(--muted)" />}
                 <span className={`min-w-0 flex-1 truncate text-left ${current ? '' : 'text-(--muted)'}`}>
@@ -171,8 +181,8 @@ function SelectItem({
             role="option"
             aria-selected={selected}
             onClick={() => onSelect(opt.value)}
-            className={`flex w-full items-center gap-2 rounded-md px-2.5 py-1.5 text-left text-xs transition-colors ${
-                selected ? 'bg-(--accent)/15 font-medium text-(--accent-text)' : 'text-(--fg) hover:bg-(--card-hover)'
+            className={`flex w-full items-center gap-2 rounded-none px-2.5 py-1.5 text-left text-xs transition-colors ${
+                selected ? 'bg-(--accent) font-medium text-(--accent-fg)' : 'text-(--fg) hover:bg-(--card-hover)'
             }`}
         >
             <span className="min-w-0 flex-1 truncate">{opt.label}</span>

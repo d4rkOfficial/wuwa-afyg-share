@@ -85,7 +85,7 @@ export default function AdminProjects() {
                     value={q}
                     onChange={(e) => onSearch(e.target.value)}
                     placeholder="搜索标题 / 分享码 / 作者"
-                    className="w-64 rounded-lg border border-(--card-border) bg-(--input-bg) px-2 py-1.5 text-sm outline-none focus:border-(--accent)/60"
+                    className="w-64 rounded-none border-2 border-(--card-border) bg-(--input-bg) px-2 py-1.5 text-sm outline-none focus:border-(--accent)"
                 />
                 <button
                     onClick={() => {
@@ -94,7 +94,6 @@ export default function AdminProjects() {
                     }}
                     disabled={pending}
                     className="toolbar-btn toolbar-btn-primary"
-                    style={{ background: 'var(--btn-bg)' }}
                 >
                     <Icon icon={loading ? 'mdi:loading' : 'mdi:magnify'} className={loading ? 'size-3.5 animate-spin' : 'size-3.5'} />
                     搜索
@@ -105,10 +104,10 @@ export default function AdminProjects() {
             </div>
 
             {/* 列表 */}
-            <div className="overflow-x-auto rounded-xl border border-(--card-border) bg-(--card)">
+            <div className="overflow-x-auto rounded-none border-2 border-(--card-border) bg-(--card)">
                 <table className="w-full min-w-[760px] text-left text-sm">
                     <thead>
-                        <tr className="border-b border-(--card-border) text-xs text-(--muted)">
+                        <tr className="border-b-2 border-(--card-border) text-xs text-(--muted)">
                             <th className="px-3 py-2 font-semibold">标题</th>
                             <th className="px-3 py-2 font-semibold">分享码</th>
                             <th className="px-3 py-2 font-semibold">作者</th>
@@ -119,13 +118,13 @@ export default function AdminProjects() {
                     </thead>
                     <tbody>
                         {items.map((row) => (
-                            <tr key={row.id} className="border-b border-(--card-border) last:border-0 hover:bg-(--card-hover)">
+                            <tr key={row.id} className="border-b-2 border-(--card-border) last:border-0 hover:bg-(--card-hover)">
                                 <td className="max-w-52 px-3 py-2">
                                     {editingId === row.id ? (
                                         <input
                                             value={editTitle}
                                             onChange={(e) => setEditTitle(e.target.value)}
-                                            className="w-full rounded border border-(--card-border) bg-(--input-bg) px-1.5 py-1 text-sm outline-none focus:border-(--accent)/60"
+                                            className="w-full rounded border-2 border-(--card-border) bg-(--input-bg) px-1.5 py-1 text-sm outline-none focus:border-(--accent)"
                                         />
                                     ) : (
                                         <span className="flex items-center gap-1">
@@ -149,7 +148,7 @@ export default function AdminProjects() {
                                         <input
                                             value={editAuthor}
                                             onChange={(e) => setEditAuthor(e.target.value)}
-                                            className="w-28 rounded border border-(--card-border) bg-(--input-bg) px-1.5 py-1 text-sm outline-none focus:border-(--accent)/60"
+                                            className="w-28 rounded border-2 border-(--card-border) bg-(--input-bg) px-1.5 py-1 text-sm outline-none focus:border-(--accent)"
                                         />
                                     ) : (
                                         <span className="text-(--fg)">{row.author_name}</span>
@@ -161,13 +160,13 @@ export default function AdminProjects() {
                                         const grace = isGracePeriod(row.expires_at, row.author_name)
                                         if (expired)
                                             return (
-                                                <span className="rounded bg-(--danger)/15 px-1.5 py-0.5 text-[10px] text-(--danger)">
+                                                <span className="rounded border-2 border-(--danger) px-1.5 py-0.5 text-[10px] text-(--danger)">
                                                     已过期
                                                 </span>
                                             )
                                         if (grace)
                                             return (
-                                                <span className="rounded bg-(--warning)/15 px-1.5 py-0.5 text-[10px] text-(--warning)">
+                                                <span className="rounded border-2 border-(--warning) px-1.5 py-0.5 text-[10px] text-(--warning)">
                                                     宽限中
                                                 </span>
                                             )
@@ -197,7 +196,7 @@ export default function AdminProjects() {
                                                         )
                                                     }
                                                     disabled={pending}
-                                                    className="rounded border border-(--accent)/40 px-2 py-1 text-[10px] text-(--accent-text) hover:bg-(--accent)/15 disabled:opacity-40"
+                                                    className="rounded border-2 border-(--accent) px-2 py-1 text-[10px] text-(--accent-text) hover:bg-(--accent) hover:text-(--accent-fg) disabled:opacity-50"
                                                 >
                                                     保存
                                                 </button>
@@ -255,7 +254,7 @@ export default function AdminProjects() {
                                                     <button
                                                         onClick={() => run(() => adminDeleteProject(row.id), '已删除工程')}
                                                         disabled={pending}
-                                                        className="rounded bg-(--danger) px-2 py-1 text-[10px] text-white hover:brightness-110 disabled:opacity-50"
+                                                        className="rounded bg-(--danger) px-2 py-1 text-[10px] text-white  disabled:opacity-50"
                                                     >
                                                         确认删除
                                                     </button>
@@ -293,14 +292,14 @@ export default function AdminProjects() {
                     <button
                         onClick={() => setPage((p) => Math.max(1, p - 1))}
                         disabled={page <= 1 || pending}
-                        className="rounded border border-(--card-border) px-2 py-1 disabled:opacity-40"
+                        className="rounded border-2 border-(--card-border) px-2 py-1 disabled:opacity-50"
                     >
                         上一页
                     </button>
                     <button
                         onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
                         disabled={page >= totalPages || pending}
-                        className="rounded border border-(--card-border) px-2 py-1 disabled:opacity-40"
+                        className="rounded border-2 border-(--card-border) px-2 py-1 disabled:opacity-50"
                     >
                         下一页
                     </button>

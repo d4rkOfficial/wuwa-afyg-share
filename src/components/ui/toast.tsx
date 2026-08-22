@@ -30,9 +30,9 @@ export function dismissToast(id: number): void {
 }
 
 const TYPE_STYLE: Record<ToastType, { icon: string; ring: string }> = {
-    success: { icon: 'mdi:check-circle', ring: 'border-l-(--success) text-(--success)' },
-    error: { icon: 'mdi:alert-circle', ring: 'border-l-(--danger) text-(--danger)' },
-    info: { icon: 'mdi:information', ring: 'border-l-(--info) text-(--info)' }
+    success: { icon: 'mdi:check-circle', ring: 'border-(--success) text-(--success)' },
+    error: { icon: 'mdi:alert-circle', ring: 'border-(--danger) text-(--danger)' },
+    info: { icon: 'mdi:information', ring: 'border-(--info) text-(--info)' }
 }
 
 export function Toaster() {
@@ -54,8 +54,8 @@ export function Toaster() {
                 return (
                     <div
                         key={t.id}
-                        className={`pointer-events-auto flex items-start gap-2 rounded-lg border border-(--card-border) border-l-4 bg-(--card) px-3 py-2.5 text-sm text-(--fg) shadow-lg backdrop-blur-lg ${style.ring}`}
-                        style={{ animation: 'toast-in 0.2s ease-out' }}
+                        className={`pointer-events-auto flex items-start gap-2 rounded-none border-2 bg-(--card) px-3 py-2.5 text-sm text-(--fg) ${style.ring}`}
+                        style={{ animation: 'toast-in 0.1s ease-out' }}
                     >
                         <Icon icon={style.icon} className="mt-0.5 size-4 shrink-0" />
                         <span className="min-w-0 flex-1 break-words">{t.message}</span>
@@ -69,7 +69,7 @@ export function Toaster() {
                     </div>
                 )
             })}
-            <style>{`@keyframes toast-in { from { opacity: 0; transform: translateX(8px); } to { opacity: 1; transform: none; } }`}</style>
+            <style>{`@keyframes toast-in { from { opacity: 0 } to { opacity: 1 } }`}</style>
         </div>
     )
 }

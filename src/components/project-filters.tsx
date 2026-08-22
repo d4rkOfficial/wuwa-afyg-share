@@ -4,7 +4,8 @@ import { useState, useTransition } from 'react'
 import { useRouter } from 'next/navigation'
 import { Icon } from '@iconify/react'
 import { CHAR_ELEMENTS } from '@/lib/data/char-elements'
-import { ELEMENTS } from '@/lib/types/project'
+import { ELEMENTS, ELEMENT_COLORS } from '@/lib/types/project'
+import { elementIcon } from '@/lib/consts/element-icons'
 import SelectMenu from '@/components/ui/select-menu'
 
 interface Props {
@@ -41,7 +42,7 @@ export default function ProjectFilters({ q, sort, character }: Props) {
 
     return (
         <section
-            className="project-filter-shell rounded-xl border border-(--card-border) bg-(--card) p-2"
+            className="project-filter-shell rounded-none border-2 border-(--card-border) bg-(--card) p-2"
             data-pending={isPending}
             aria-label="工程筛选"
         >
@@ -63,20 +64,19 @@ export default function ProjectFilters({ q, sort, character }: Props) {
                         value={query}
                         onChange={(event) => setQuery(event.target.value)}
                         placeholder="搜索工程名称..."
-                        className="h-10 w-full rounded-lg border border-(--card-border) bg-(--input-bg) pl-9 pr-3 text-sm outline-none transition-[border-color,box-shadow] duration-200 placeholder:text-(--muted) focus:border-(--accent)/60 focus:shadow-[0_0_0_3px_color-mix(in_srgb,var(--accent)_10%,transparent)]"
+                        className="h-10 w-full rounded-none border-2 border-(--card-border) bg-(--input-bg) pl-9 pr-3 text-sm outline-none transition-[border-color,box-shadow] duration-200 placeholder:text-(--muted) focus:border-(--accent) "
                     />
                 </label>
                 <button
                     type="submit"
-                    className="inline-flex h-10 shrink-0 items-center justify-center gap-1.5 whitespace-nowrap rounded-lg px-3.5 text-sm font-medium text-(--btn-text) transition-[filter,transform] duration-200 ease-out hover:brightness-110 active:scale-[0.97]"
-                    style={{ background: 'var(--btn-bg)' }}
+                    className="inline-flex h-10 shrink-0 items-center justify-center gap-1.5 whitespace-nowrap rounded-none px-3.5 text-sm font-medium border-2 border-(--card-border) bg-(--btn-bg) text-(--btn-text) transition-colors hover:bg-(--card) hover:text-(--fg) transition-[filter,transform] duration-200 ease-out  "
                 >
                     <Icon icon={isPending ? 'mdi:loading' : 'mdi:arrow-right'} className={isPending ? 'size-4 animate-spin' : 'size-4'} />
                     搜索
                 </button>
             </form>
 
-            <div className="project-filter-sort flex h-10 shrink-0 items-center rounded-lg border border-(--card-border) bg-(--input-bg) p-0.5">
+            <div className="project-filter-sort flex h-10 shrink-0 items-center rounded-none border-2 border-(--card-border) bg-(--input-bg) p-0.5">
                 {(
                     [
                         { key: 'latest', label: '最新', icon: 'mdi:clock-outline' },
@@ -93,9 +93,9 @@ export default function ProjectFilters({ q, sort, character }: Props) {
                                 setSelectedSort(key)
                                 navigate({ sort: key })
                             }}
-                            className={`inline-flex h-8 items-center gap-1.5 rounded-md px-2.5 text-sm transition-[background-color,color,transform] duration-200 ease-out active:scale-[0.97] ${
+                            className={`inline-flex h-8 items-center gap-1.5 rounded-none px-2.5 text-sm transition-[background-color,color,transform] duration-200 ease-out  ${
                                 active
-                                    ? 'bg-(--accent) font-medium text-(--accent-fg) shadow-sm'
+                                    ? 'bg-(--accent) font-medium text-(--accent-fg) '
                                     : 'text-(--muted) hover:text-(--fg)'
                             }`}
                         >
@@ -106,7 +106,7 @@ export default function ProjectFilters({ q, sort, character }: Props) {
                 })}
             </div>
 
-            <div className="project-filter-character group flex h-10 min-w-40 shrink-0 items-center rounded-lg border border-(--card-border) bg-(--input-bg) transition-[border-color,box-shadow] duration-200 focus-within:border-(--accent)/60 focus-within:shadow-[0_0_0_3px_color-mix(in_srgb,var(--accent)_10%,transparent)]">
+            <div className="project-filter-character group flex h-10 min-w-40 shrink-0 items-center rounded-none border-2 border-(--card-border) bg-(--input-bg) transition-[border-color,box-shadow] duration-200 focus-within:border-(--accent) ">
                 <SelectMenu
                     value={selectedCharacter}
                     onChange={(nextCharacter) => {
@@ -118,6 +118,8 @@ export default function ProjectFilters({ q, sort, character }: Props) {
                     allOption="全部角色"
                     groups={CHARACTERS_BY_ELEMENT.map(({ element, names }) => ({
                         label: element,
+                        icon: elementIcon(element),
+                        accentColor: ELEMENT_COLORS[element],
                         options: names.map((name) => ({ value: name, label: name }))
                     }))}
                     ariaLabel="按队伍角色筛选"

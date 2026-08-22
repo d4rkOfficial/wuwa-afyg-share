@@ -59,9 +59,9 @@ function rowLabel(row: BuffSetRow): string {
 }
 
 const KIND_CLS = {
-    add: 'text-emerald-400',
-    remove: 'text-red-400',
-    change: 'text-amber-400'
+    add: 'text-(--success)',
+    remove: 'text-(--danger)',
+    change: 'text-(--warning)'
 } as const
 
 export default function BuffSnapshotPanel() {
@@ -174,15 +174,15 @@ export default function BuffSnapshotPanel() {
                 <span className="flex items-center gap-1.5">
                     <Icon icon="mdi:camera-outline" className="size-4" />
                     快照
-                    {hasRoot && <span className="ml-1 rounded bg-(--accent)/15 px-1 py-0.5 text-[9px] text-(--accent-text)">有</span>}
+                    {hasRoot && <span className="ml-1 rounded bg-(--accent) px-1 py-0.5 text-[9px] text-(--accent-fg)">有</span>}
                 </span>
                 <Icon icon="mdi:camera" className="size-4" />
             </button>
 
             {open && (
                 <div className="fixed inset-0 z-50 overflow-y-auto">
-                    <div className="fixed inset-0 bg-black/60 backdrop-blur-sm" onClick={() => setOpen(false)} />
-                    <div className="relative mx-auto my-8 w-[calc(100vw-2rem)] max-w-2xl rounded-xl border border-(--card-border) bg-(--card) p-4 shadow-2xl">
+                    <div className="fixed inset-0 bg-black/60 " onClick={() => setOpen(false)} />
+                    <div className="relative mx-auto my-8 w-[calc(100vw-2rem)] max-w-2xl rounded-none border-2 border-(--card-border) bg-(--card) p-4 ">
                         <div className="mb-3 flex items-center justify-between">
                             <span className="text-sm font-semibold text-(--fg)">Buff 集快照</span>
                             <button onClick={() => setOpen(false)} className="rounded p-1 text-(--muted) hover:text-(--fg)">
@@ -199,7 +199,7 @@ export default function BuffSnapshotPanel() {
                                     onChange={(e) => setNote(e.target.value)}
                                     maxLength={100}
                                     placeholder={versionHint ? `${versionHint} · 游戏最新版本` : '例如：v1.2 版本基线'}
-                                    className="w-full rounded-lg border border-(--card-border) bg-(--input-bg) px-2 py-1.5 text-sm outline-none focus:border-(--accent)/60"
+                                    className="w-full rounded-none border-2 border-(--card-border) bg-(--input-bg) px-2 py-1.5 text-sm outline-none focus:border-(--accent)"
                                 />
                                 {versionHint && (
                                     <span className="text-[10px] text-(--muted)">
@@ -212,8 +212,7 @@ export default function BuffSnapshotPanel() {
                             <button
                                 onClick={() => setConfirmUpdate(true)}
                                 disabled={pending}
-                                className="inline-flex w-full items-center justify-center gap-1.5 rounded-lg px-3 py-2 text-sm font-medium text-(--btn-text) transition-all hover:brightness-110 disabled:opacity-50"
-                                style={{ background: 'var(--btn-bg)' }}
+                                className="inline-flex w-full items-center justify-center gap-1.5 rounded-none px-3 py-2 text-sm font-medium border-2 border-(--card-border) bg-(--btn-bg) text-(--btn-text) transition-colors hover:bg-(--card) hover:text-(--fg) transition-all  disabled:opacity-50"
                                 title={hasRoot ? '以当前 Buff 集状态追加一个新版本（只存差异）' : '原原本本复制整个 Buff 集作为根快照'}
                             >
                                 <Icon icon="mdi:camera-plus-outline" className="size-4" />
@@ -221,8 +220,8 @@ export default function BuffSnapshotPanel() {
                             </button>
 
                             {/* 快照列表（最新在上，根在底部） */}
-                            <div className="rounded-lg border border-(--card-border)">
-                                <div className="flex items-center justify-between border-b border-(--card-border) px-3 py-2 text-xs text-(--muted)">
+                            <div className="rounded-none border-2 border-(--card-border)">
+                                <div className="flex items-center justify-between border-b-2 border-(--card-border) px-3 py-2 text-xs text-(--muted)">
                                     <span>快照列表{loading && <Icon icon="mdi:loading" className="ml-1 inline size-3 animate-spin" />}</span>
                                     <span>{hasRoot ? `根 + ${versionNo.size} 个版本` : '暂无根快照'}</span>
                                 </div>
@@ -236,11 +235,11 @@ export default function BuffSnapshotPanel() {
                                         const isRoot = s.isRoot
                                         const label = isRoot ? '根快照' : `v${versionNo.get(s.id)}`
                                         return (
-                                            <div key={s.id} className="rounded-lg border border-(--card-border) bg-(--input-bg)/50 px-2.5 py-2">
+                                            <div key={s.id} className="rounded-none border-2 border-(--card-border) bg-(--input-bg) px-2.5 py-2">
                                                 <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-xs">
                                                     <span
-                                                        className={`inline-flex items-center gap-1 rounded-md px-1.5 py-0.5 text-[10px] ${
-                                                            isRoot ? 'bg-(--accent)/15 text-(--accent-text)' : 'bg-(--card-hover) text-(--muted)'
+                                                        className={`inline-flex items-center gap-1 rounded-none px-1.5 py-0.5 text-[10px] ${
+                                                            isRoot ? 'bg-(--accent) text-(--accent-fg)' : 'bg-(--card-hover) text-(--muted)'
                                                         }`}
                                                     >
                                                         <Icon icon={isRoot ? 'mdi:home-variant-outline' : 'mdi:source-branch'} className="size-3" />
@@ -248,7 +247,7 @@ export default function BuffSnapshotPanel() {
                                                         {isRoot && <span className="opacity-70">· 全量基准</span>}
                                                     </span>
                                                     {s.isLatest && !isRoot && (
-                                                        <span className="rounded bg-emerald-500/15 px-1.5 py-0.5 text-[10px] text-emerald-400">最新</span>
+                                                        <span className="rounded border-2 border-(--success) px-1.5 py-0.5 text-[10px] text-(--success)">最新</span>
                                                     )}
                                                     <span className="text-(--muted)">{s.createdBy ?? '未知'} · {timeAgo(s.createdAt)}</span>
                                                     <span className="flex-1" />
@@ -263,7 +262,7 @@ export default function BuffSnapshotPanel() {
                                                         <button
                                                             onClick={() => onRestore(s.id)}
                                                             disabled={pending}
-                                                            className="rounded bg-red-600 px-2 py-0.5 text-[11px] text-white hover:brightness-110 disabled:opacity-50"
+                                                            className="rounded border-2 border-(--danger) bg-(--danger) transition-colors hover:bg-(--card) hover:text-(--danger) px-2 py-0.5 text-[11px] text-white  disabled:opacity-50"
                                                         >
                                                             确认恢复
                                                         </button>
@@ -272,7 +271,7 @@ export default function BuffSnapshotPanel() {
                                                             onClick={() => setConfirmRestoreId(s.id)}
                                                             onBlur={() => setTimeout(() => setConfirmRestoreId(null), 2500)}
                                                             disabled={pending}
-                                                            className="rounded px-1.5 py-0.5 text-[11px] text-(--muted) transition-colors hover:text-red-400 disabled:opacity-50"
+                                                            className="rounded px-1.5 py-0.5 text-[11px] text-(--muted) transition-colors hover:text-(--danger) disabled:opacity-50"
                                                             title={isRoot ? '恢复为根快照（删除全部版本）' : '恢复到此版本（删除比其新的版本）'}
                                                         >
                                                             恢复
@@ -283,7 +282,7 @@ export default function BuffSnapshotPanel() {
                                                             <button
                                                                 onClick={() => onDelete(s.id)}
                                                                 disabled={pending}
-                                                                className="rounded bg-red-600 px-2 py-0.5 text-[11px] text-white hover:brightness-110 disabled:opacity-50"
+                                                                className="rounded border-2 border-(--danger) bg-(--danger) transition-colors hover:bg-(--card) hover:text-(--danger) px-2 py-0.5 text-[11px] text-white  disabled:opacity-50"
                                                             >
                                                                 确认删除
                                                             </button>
@@ -292,7 +291,7 @@ export default function BuffSnapshotPanel() {
                                                                 onClick={() => setConfirmDeleteId(s.id)}
                                                                 onBlur={() => setTimeout(() => setConfirmDeleteId(null), 2500)}
                                                                 disabled={pending}
-                                                                className="rounded px-1.5 py-0.5 text-[11px] text-(--muted) transition-colors hover:text-red-400 disabled:opacity-50"
+                                                                className="rounded px-1.5 py-0.5 text-[11px] text-(--muted) transition-colors hover:text-(--danger) disabled:opacity-50"
                                                             >
                                                                 删除
                                                             </button>
@@ -317,25 +316,25 @@ export default function BuffSnapshotPanel() {
 
                             {/* 差异展示 */}
                             {diff && (
-                                <div className="max-h-80 overflow-y-auto rounded-lg border border-(--card-border)">
-                                    <div className="sticky top-0 border-b border-(--card-border) bg-(--card) px-3 py-2 text-xs text-(--muted)">
+                                <div className="max-h-80 overflow-y-auto rounded-none border-2 border-(--card-border)">
+                                    <div className="sticky top-0 border-b-2 border-(--card-border) bg-(--card) px-3 py-2 text-xs text-(--muted)">
                                         当前 vs {diffTarget}：{' '}
-                                        <span className="text-emerald-400">新增 {diff.added.length}</span>
+                                        <span className="text-(--success)">新增 {diff.added.length}</span>
                                         {' / '}
-                                        <span className="text-amber-400">修改 {diff.modified.length}</span>
+                                        <span className="text-(--warning)">修改 {diff.modified.length}</span>
                                         {' / '}
-                                        <span className="text-red-400">删除 {diff.removed.length}</span>
+                                        <span className="text-(--danger)">删除 {diff.removed.length}</span>
                                     </div>
                                     <div className="space-y-1 p-2 text-xs">
                                         {diffTotal === 0 && <p className="px-2 py-3 text-center text-(--muted)">无差异，当前状态与快照一致</p>}
                                         {diff.added.map((row, i) => (
-                                            <div key={`a${i}`} className="flex items-start gap-1.5 rounded bg-emerald-500/5 px-2 py-1">
+                                            <div key={`a${i}`} className="flex items-start gap-1.5 rounded px-2 py-1">
                                                 <span className={`shrink-0 font-bold ${KIND_CLS.add}`}>+</span>
                                                 <span className="text-(--fg)">{rowLabel(row)}</span>
                                             </div>
                                         ))}
                                         {diff.modified.map((m, i) => (
-                                            <div key={`m${i}`} className="rounded bg-amber-500/5 px-2 py-1">
+                                            <div key={`m${i}`} className="rounded px-2 py-1">
                                                 <div className="flex items-start gap-1.5">
                                                     <span className={`shrink-0 font-bold ${KIND_CLS.change}`}>~</span>
                                                     <span className="text-(--fg)">{rowLabel(m.new)}</span>
@@ -352,7 +351,7 @@ export default function BuffSnapshotPanel() {
                                             </div>
                                         ))}
                                         {diff.removed.map((r, i) => (
-                                            <div key={`r${i}`} className="flex items-start gap-1.5 rounded bg-red-500/5 px-2 py-1">
+                                            <div key={`r${i}`} className="flex items-start gap-1.5 rounded px-2 py-1">
                                                 <span className={`shrink-0 font-bold ${KIND_CLS.remove}`}>-</span>
                                                 <span className="text-(--muted) line-through">{rowLabel(r.old)}</span>
                                             </div>
@@ -362,11 +361,10 @@ export default function BuffSnapshotPanel() {
                             )}
                         </div>
 
-                        <div className="mt-4 flex justify-end border-t border-(--card-border) pt-3">
+                        <div className="mt-4 flex justify-end border-t-2 border-(--card-border) pt-3">
                             <button
                                 onClick={() => setOpen(false)}
-                                className="rounded-lg px-4 py-1.5 text-sm font-medium text-(--btn-text) transition-all hover:brightness-110"
-                                style={{ background: 'var(--btn-bg)' }}
+                                className="rounded-none px-4 py-1.5 text-sm font-medium border-2 border-(--card-border) bg-(--btn-bg) text-(--btn-text) transition-colors hover:bg-(--card) hover:text-(--fg) transition-all "
                             >
                                 完成
                             </button>
@@ -377,10 +375,10 @@ export default function BuffSnapshotPanel() {
                     {confirmUpdate && (
                         <div className="fixed inset-0 z-[60] flex items-center justify-center p-4">
                             <div
-                                className="absolute inset-0 bg-black/60 backdrop-blur-sm"
+                                className="absolute inset-0 bg-black/60 "
                                 onClick={() => setConfirmUpdate(false)}
                             />
-                            <div className="relative w-full max-w-sm rounded-xl border border-(--card-border) bg-(--card) p-5 shadow-2xl">
+                            <div className="relative w-full max-w-sm rounded-none border-2 border-(--card-border) bg-(--card) p-5 ">
                                 <div className="flex items-center gap-2">
                                     <Icon icon="mdi:camera-iris" className="size-5 text-(--accent-text)" />
                                     <h3 className="text-sm font-semibold">{hasRoot ? '追加新版本快照？' : '创建根快照？'}</h3>
@@ -406,15 +404,14 @@ export default function BuffSnapshotPanel() {
                                 <div className="mt-4 flex justify-end gap-2">
                                     <button
                                         onClick={() => setConfirmUpdate(false)}
-                                        className="rounded-lg border border-(--card-border) bg-(--card) px-3 py-1.5 text-sm text-(--muted) hover:text-(--fg)"
+                                        className="rounded-none border-2 border-(--card-border) bg-(--card) px-3 py-1.5 text-sm text-(--muted) hover:text-(--fg)"
                                     >
                                         取消
                                     </button>
                                     <button
                                         onClick={onSaveSnapshot}
                                         disabled={pending}
-                                        className="inline-flex items-center gap-1 rounded-lg px-3 py-1.5 text-sm font-medium text-(--btn-text) hover:brightness-110 disabled:opacity-50"
-                                        style={{ background: 'var(--btn-bg)' }}
+                                        className="inline-flex items-center gap-1 rounded-none px-3 py-1.5 text-sm font-medium border-2 border-(--card-border) bg-(--btn-bg) text-(--btn-text) transition-colors hover:bg-(--card) hover:text-(--fg)  disabled:opacity-50"
                                     >
                                         <Icon icon={pending ? 'mdi:loading' : 'mdi:camera-plus-outline'} className={`size-4 ${pending ? 'animate-spin' : ''}`} />
                                         确认更新

@@ -29,9 +29,9 @@ export default function SetupUsernameForm({ redirectTo }: Props) {
     }
 
     return (
-        <form onSubmit={onSubmit} className="space-y-3 rounded-xl border border-(--card-border) bg-(--card) p-6">
+        <form onSubmit={onSubmit} className="space-y-3 rounded-none border-2 border-(--card-border) bg-(--card) p-6">
             {err && (
-                <div className="rounded-lg border border-red-500/30 bg-red-500/10 px-3 py-2 text-sm text-red-400">
+                <div className="rounded-none border-2 border-(--danger) bg-(--danger) px-3 py-2 text-sm text-white">
                     {err}
                 </div>
             )}
@@ -42,13 +42,12 @@ export default function SetupUsernameForm({ redirectTo }: Props) {
                 autoFocus
                 required
                 maxLength={20}
-                className="w-full rounded-lg border border-(--card-border) bg-(--input-bg) px-3 py-2.5 text-sm outline-none transition-colors placeholder:text-(--muted) focus:border-(--accent)/60"
+                className="w-full rounded-none border-2 border-(--card-border) bg-(--input-bg) px-3 py-2.5 text-sm outline-none transition-colors placeholder:text-(--muted) focus:border-(--accent)"
             />
             <button
                 type="submit"
                 disabled={pending || username.trim().length < 2}
-                className="inline-flex w-full items-center justify-center gap-1.5 rounded-lg px-4 py-2.5 text-sm font-medium text-(--btn-text) disabled:opacity-50"
-                style={{ background: 'var(--btn-bg)' }}
+                className="inline-flex w-full items-center justify-center gap-1.5 rounded-none px-4 py-2.5 text-sm font-medium border-2 border-(--card-border) bg-(--btn-bg) text-(--btn-text) transition-colors hover:bg-(--card) hover:text-(--fg) disabled:opacity-50"
             >
                 <Icon icon="mdi:check" className="size-4" />
                 {pending ? '保存中...' : '确认'}
