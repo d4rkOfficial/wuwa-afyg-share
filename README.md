@@ -6,9 +6,11 @@
 
 ### 另见
 
+> 这里提供了两种更简单的工坊部署方案。
+
 [椰果工坊轻量版（sqlite）](https://github.com/d4rkOfficial/wuwa-afyg-share-lite)
 
-[椰果工坊白嫖版（bushi）](https://github.com/d4rkOfficial/wuwa-afyg-share-github)
+[椰果工坊白嫖版（bushi）](https://github.com/d4rkOfficial/wuwa-afyg-share-github)（最推荐自行部署使用，如果您是有需要自建轴表大全的攻略作者，则无脑选择这个方案）
 
 ## 功能
 
