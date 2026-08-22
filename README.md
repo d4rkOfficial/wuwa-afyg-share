@@ -6,7 +6,9 @@
 
 ### 另见
 
-[椰果工坊轻量版](https://github.com/d4rkOfficial/wuwa-afyg-share-lite)
+[椰果工坊轻量版（sqlite）](https://github.com/d4rkOfficial/wuwa-afyg-share-lite)
+
+[椰果工坊白嫖版（bushi）](https://github.com/d4rkOfficial/wuwa-afyg-share-github)
 
 ## 功能
 
