@@ -5,13 +5,11 @@
 import type { BuffSetRow } from '@/lib/types/db'
 
 export interface SnapshotDiffModified {
-    key: string
     old: BuffSetRow
     new: BuffSetRow
 }
 
 export interface SnapshotDiffRemoved {
-    key: string
     old: BuffSetRow
 }
 
@@ -21,7 +19,10 @@ export interface SnapshotDiff {
     removed: SnapshotDiffRemoved[]
 }
 
-// 行键：entity_type 为固定枚举不含分隔符；\u0000 不可能出现在合法输入中
+// 行键：仅作为内存 Map 的去重键，绝不可被序列化进 PostgreSQL jsonb。
+// 早期实现把 key 也塞进 SnapshotDiff 的 modified/removed 数组，结果 \u0000
+// 转义序列被 PG 的 jsonb 解析器拒绝并抛 "unsupported Unicode escape sequence"，
+// 导致追加版本快照失败。applyDiff 已通过 m.new / r.old 现场重算键，无需持久化 key。
 export function buffRowKey(row: Pick<BuffSetRow, 'entity_type' | 'entity_name' | 'buff_name'>): string {
     return `${row.entity_type}\u0000${row.entity_name}\u0000${row.buff_name}`
 }
@@ -66,10 +67,10 @@ export function diffBuffSets(base: BuffSetRow[], current: BuffSetRow[]): Snapsho
     for (const [key, row] of currentMap) {
         const baseRow = baseMap.get(key)
         if (!baseRow) added.push(row)
-        else if (!buffRowsEqual(baseRow, row)) modified.push({ key, old: baseRow, new: row })
+        else if (!buffRowsEqual(baseRow, row)) modified.push({ old: baseRow, new: row })
     }
     for (const [key, row] of baseMap) {
-        if (!currentMap.has(key)) removed.push({ key, old: row })
+        if (!currentMap.has(key)) removed.push({ old: row })
     }
 
     return { added, modified, removed }
