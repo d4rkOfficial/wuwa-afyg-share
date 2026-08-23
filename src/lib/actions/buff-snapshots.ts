@@ -187,3 +187,29 @@ export async function deleteBuffSnapshot(id: string): Promise<ActionResult<{ mes
     revalidatePath('/admin/buff-sets')
     return { data: { message: String(data ?? '') } }
 }
+
+// 合并快照（squash 到根）：以链尾重建全量替换根 state，清空全部版本节点。
+// 链压回单行（根）。用于版本过多、历史 diff 不再需要时重置基准；不碰 buff_sets。
+export async function squashBuffSnapshot(noteRaw: string): Promise<ActionResult<{ message: string }>> {
+    const auth = await withAdmin()
+    if (auth.error || !auth.supabase) return { error: auth.error ?? '无权限' }
+    const supabase = auth.supabase
+
+    const chain = await loadChain(supabase)
+    const root = chain.find((s) => s.is_root)
+    if (!root) return { error: '暂无根快照' }
+    if (chain.length === 1) return { error: '仅根快照，无需合并' }
+
+    const latestId = chain[chain.length - 1].id
+    const state = rebuildSnapshotState(chain, latestId)
+    if (!state) return { error: '无法重建链尾状态' }
+
+    const note = noteRaw.trim().slice(0, 100)
+    const { data, error } = await supabase.rpc('squash_buff_set_snapshot', {
+        p_state: serializeSnapshotState(state),
+        p_note: note || null
+    })
+    if (error) return { error: error.message }
+    revalidatePath('/admin/buff-sets')
+    return { data: { message: String(data ?? '') } }
+}

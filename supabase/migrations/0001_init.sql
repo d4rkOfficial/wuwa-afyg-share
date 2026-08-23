@@ -256,7 +256,9 @@ grant insert, update, delete on public.announcements to authenticated;
 -- 版本快照：相对前一状态的差异（diff 只存差异），沿 prev_id 构成单向链；
 -- 创建：无根 → 建根（全量复制）；有根 → 追加版本（diff = 相对最新状态）；
 -- 恢复：可恢复到任意版本/根（级联删除比目标新的版本，git reset 语义）；
--- 删除：仅最新版本可删除（根与中间版本不可删）。
+-- 删除：仅最新版本可删除（根与中间版本不可删）；
+-- 合并：squash 到根——以链尾重建全量替换根 state，清空全部版本节点，
+--       链压回单行。用于版本过多、历史 diff 不再需要时重置基准。
 -- ─────────────────────────────────────────────────────────────
 -- 兼容重跑：旧单例索引已废弃
 drop index if exists buff_set_snapshot_singleton;
@@ -435,6 +437,52 @@ $$;
 grant execute on function public.save_buff_set_snapshot (jsonb, jsonb, text) to authenticated;
 grant execute on function public.restore_buff_set_snapshot (uuid, jsonb) to authenticated;
 grant execute on function public.delete_buff_set_snapshot (uuid) to authenticated;
+
+-- 合并快照（squash 到根）：以服务端重建的最新全量状态替换根 state，清空全部版本节点。
+-- 链压回单行（根）。用于版本过多、历史 diff 不再需要时重置基准。
+-- p_state = 链尾重建全量；p_note = null 时保留原根 note，否则覆盖。
+create or replace function public.squash_buff_set_snapshot (p_state jsonb, p_note text default null)
+    returns text
+    language plpgsql
+    security definer
+    set search_path = public
+as $$
+declare
+    v_root_id uuid;
+    v_versions int;
+begin
+    if not public.is_admin () then
+        raise exception '无权限：仅管理员可执行该操作';
+    end if;
+    if p_state is null then
+        raise exception '缺少全量状态';
+    end if;
+
+    select id into v_root_id from public.buff_set_snapshot where is_root limit 1;
+    if v_root_id is null then
+        raise exception '暂无根快照';
+    end if;
+
+    select count(*) into v_versions
+    from public.buff_set_snapshot
+    where is_root = false;
+
+    -- 删除全部版本节点（prev_id 链被 on delete cascade 自动清理级联引用）
+    delete from public.buff_set_snapshot where is_root = false;
+
+    -- 根以重建全量刷新基准；note 传入则覆盖，否则保留
+    update public.buff_set_snapshot
+    set state = p_state,
+        diff = null,
+        prev_id = null,
+        note = coalesce (p_note, note)
+    where id = v_root_id;
+
+    return format ('已合并 %s 个版本到根', v_versions);
+end;
+$$;
+
+grant execute on function public.squash_buff_set_snapshot (jsonb, text) to authenticated;
 
 -- ─────────────────────────────────────────────────────────────
 -- 9. 管理员权限链（0003）

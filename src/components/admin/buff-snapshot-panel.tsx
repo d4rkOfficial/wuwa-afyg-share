@@ -15,6 +15,7 @@ import {
     getBuffSnapshotDiff,
     restoreBuffSnapshot,
     deleteBuffSnapshot,
+    squashBuffSnapshot,
     listBuffSnapshots,
     type BuffSnapshotView
 } from '@/lib/actions/buff-snapshots'
@@ -79,6 +80,7 @@ export default function BuffSnapshotPanel() {
     const [confirmUpdate, setConfirmUpdate] = useState(false)
     const [confirmRestoreId, setConfirmRestoreId] = useState<string | null>(null)
     const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null)
+    const [confirmSquash, setConfirmSquash] = useState(false)
 
     const hasRoot = snapshots.some((s) => s.isRoot)
     // 版本序号：按创建顺序 v1、v2…
@@ -98,6 +100,7 @@ export default function BuffSnapshotPanel() {
             setConfirmUpdate(false)
             setConfirmRestoreId(null)
             setConfirmDeleteId(null)
+            setConfirmSquash(false)
             await loadList()
             router.refresh()
         })
@@ -134,6 +137,7 @@ export default function BuffSnapshotPanel() {
         setConfirmUpdate(false)
         setConfirmRestoreId(null)
         setConfirmDeleteId(null)
+        setConfirmSquash(false)
         setDiff(null)
         setDiffTarget('')
         void loadList()
@@ -142,6 +146,10 @@ export default function BuffSnapshotPanel() {
 
     function onSaveSnapshot() {
         run(() => saveBuffSnapshot(note))
+    }
+
+    function onSquash() {
+        run(() => squashBuffSnapshot(note))
     }
 
     function onRestore(id: string) {
@@ -218,6 +226,19 @@ export default function BuffSnapshotPanel() {
                                 <Icon icon="mdi:camera-plus-outline" className="size-4" />
                                 {hasRoot ? '更新快照（追加新版本）' : '更新快照（创建根）'}
                             </button>
+
+                            {/* 合并到根（仅存在版本时显示） */}
+                            {hasRoot && versionNo.size > 0 && (
+                                <button
+                                    onClick={() => setConfirmSquash(true)}
+                                    disabled={pending}
+                                    className="inline-flex w-full items-center justify-center gap-1.5 rounded-none px-3 py-1.5 text-xs font-medium border-2 border-(--card-border) text-(--muted) transition-colors hover:border-(--warning) hover:text-(--warning) disabled:opacity-50"
+                                    title="以最新快照状态作为根的全量基准，清空全部版本节点（链压回单行）。不改变当前 Buff 集。"
+                                >
+                                    <Icon icon="mdi:call-merge" className="size-4" />
+                                    合并到根（清空版本链）
+                                </button>
+                            )}
 
                             {/* 快照列表（最新在上，根在底部） */}
                             <div className="rounded-none border-2 border-(--card-border)">
@@ -415,6 +436,54 @@ export default function BuffSnapshotPanel() {
                                     >
                                         <Icon icon={pending ? 'mdi:loading' : 'mdi:camera-plus-outline'} className={`size-4 ${pending ? 'animate-spin' : ''}`} />
                                         确认更新
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    )}
+
+                    {/* 合并到根二次确认弹窗 */}
+                    {confirmSquash && (
+                        <div className="fixed inset-0 z-[60] flex items-center justify-center p-4">
+                            <div
+                                className="absolute inset-0 bg-black/60 "
+                                onClick={() => setConfirmSquash(false)}
+                            />
+                            <div className="relative w-full max-w-sm rounded-none border-2 border-(--card-border) bg-(--card) p-5 ">
+                                <div className="flex items-center gap-2">
+                                    <Icon icon="mdi:call-merge" className="size-5 text-(--warning)" />
+                                    <h3 className="text-sm font-semibold">合并快照到根？</h3>
+                                </div>
+                                <p className="mt-2 text-sm text-(--muted)">
+                                    将以<strong className="text-(--fg)">最新快照的重建状态</strong>替换根的全量基准，
+                                    <strong className="text-(--danger)">清空全部 {versionNo.size} 个版本节点</strong>
+                                    （链压回单行）。此操作<strong className="text-(--fg)">不改变当前 Buff 集</strong>，
+                                    仅重置快照基准，不可撤销。
+                                </p>
+                                {note.trim() && (
+                                    <p className="mt-2 text-xs text-(--muted)">
+                                        备注将覆盖根：<span className="text-(--fg)">{note.trim()}</span>
+                                    </p>
+                                )}
+                                {!note.trim() && (
+                                    <p className="mt-2 text-xs text-(--muted)">
+                                        未填备注：保留根原备注。
+                                    </p>
+                                )}
+                                <div className="mt-4 flex justify-end gap-2">
+                                    <button
+                                        onClick={() => setConfirmSquash(false)}
+                                        className="rounded-none border-2 border-(--card-border) bg-(--card) px-3 py-1.5 text-sm text-(--muted) hover:text-(--fg)"
+                                    >
+                                        取消
+                                    </button>
+                                    <button
+                                        onClick={onSquash}
+                                        disabled={pending}
+                                        className="inline-flex items-center gap-1 rounded-none px-3 py-1.5 text-sm font-medium border-2 border-(--warning) bg-(--warning) text-white transition-colors hover:bg-(--card) hover:text-(--warning) disabled:opacity-50"
+                                    >
+                                        <Icon icon={pending ? 'mdi:loading' : 'mdi:call-merge'} className={`size-4 ${pending ? 'animate-spin' : ''}`} />
+                                        确认合并
                                     </button>
                                 </div>
                             </div>
