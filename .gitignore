@@ -46,3 +46,6 @@ wrangler-local/
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# pnpm-old
+pnpm-workspace.yaml
