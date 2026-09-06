@@ -1,6 +1,6 @@
 // AI 流式客户端（浏览器直连；无 CORS 的提供商自动走站点 /api/ai/stream 转发代理）
 import type { GeneratedBuff } from '@/lib/ai/types'
-import { BUFF_ZONE_MAP, BUFF_REF_ZONE_MAP, BUFF_SCOPES, sanitizeCondition } from '@/lib/consts/buff-zones'
+import { BUFF_ZONE_MAP, ZONE_NO_REF_IDS, BUFF_REF_ZONE_MAP, BUFF_SCOPES, sanitizeCondition } from '@/lib/consts/buff-zones'
 import type { BuffScope } from '@/lib/types/db'
 
 const DEEPSEEK_BASE = 'https://api.deepseek.com'
@@ -237,7 +237,8 @@ export function sanitizeBuffs(buffs: GeneratedBuff[]): GeneratedBuff[] {
                 zoneId: z.zoneId,
                 value: z.value,
                 ...(z.override ? { override: true } : {}),
-                ...(sanitizeRef(z.ref) ? { ref: sanitizeRef(z.ref) } : {})
+                // 层数类乘区（集谐干涉/同奏增益等）只填固定层数，丢弃模型误输出的引用
+                ...(!ZONE_NO_REF_IDS.has(z.zoneId) && sanitizeRef(z.ref) ? { ref: sanitizeRef(z.ref) } : {})
             }))
         if (!zones.length) continue
         const scope: BuffScope =

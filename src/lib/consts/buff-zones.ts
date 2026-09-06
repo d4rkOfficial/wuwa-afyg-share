@@ -28,6 +28,7 @@ export const BUFF_ZONES: BuffZoneDef[] = [
     { id: 'dmgRedPen', label: '对目标免伤无视(穿免)', unit: '%' },
     { id: 'resDown', label: '目标抗性降低(减抗)', unit: '%' },
     { id: 'tuneStrainLayer', label: '集谐干涉层数', unit: 'flat' },
+    { id: 'unisonBoonLayer', label: '同奏增益层数', unit: 'flat' },
     { id: 'finalDmg', label: '最终伤害(终伤区)', unit: '%' },
     { id: 'dmgTakenInc', label: '伤害提升(易伤区)', unit: '%' },
     { id: 'customFinalDmg', label: '倍率/其它(特殊终伤)', unit: '%' },
@@ -36,6 +37,9 @@ export const BUFF_ZONES: BuffZoneDef[] = [
 ]
 
 export const BUFF_ZONE_MAP = new Map(BUFF_ZONES.map((z) => [z.id, z]))
+
+/** @desc 层数类乘区（集谐干涉/同奏增益等）：只支持直接填固定层数，不支持 ref 引用/转模（对齐 wuwa-afyg-tool） */
+export const ZONE_NO_REF_IDS = new Set<string>(['tuneStrainLayer', 'unisonBoonLayer'])
 
 export const BUFF_ENTITY_TYPES = ['character', 'weapon', 'echo', '1set', '2set', '3set', '4set', '5set'] as const
 

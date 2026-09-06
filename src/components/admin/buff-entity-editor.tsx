@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation'
 import { Icon } from '@iconify/react'
 import { upsertBuffEntity, deleteBuffEntity } from '@/lib/actions/buff-sets'
 import { toast } from '@/components/ui/toast'
-import { BUFF_ENTITY_LABELS, BUFF_ZONES, BUFF_ZONE_MAP, BUFF_REF_ZONES, BUFF_REF_ZONE_MAP, BUFF_SCOPE_LABELS, BUFF_ELEMENTS, BUFF_DAMAGE_TYPES, BUFF_DAMAGE_TYPE_SHORT, CHAIN_MAX, REFINE_MAX, sanitizeCondition } from '@/lib/consts/buff-zones'
+import { BUFF_ENTITY_LABELS, BUFF_ZONES, BUFF_ZONE_MAP, ZONE_NO_REF_IDS, BUFF_REF_ZONES, BUFF_REF_ZONE_MAP, BUFF_SCOPE_LABELS, BUFF_ELEMENTS, BUFF_DAMAGE_TYPES, BUFF_DAMAGE_TYPE_SHORT, CHAIN_MAX, REFINE_MAX, sanitizeCondition } from '@/lib/consts/buff-zones'
 import type { BuffEntityType, BuffScope, BuffSetRow, BuffCondition } from '@/lib/types/db'
 import type { GeneratedBuff } from '@/lib/ai/types'
 import { generateBuffSet, type GenerateEvent } from '@/lib/ai/generate'
@@ -919,6 +919,7 @@ export default function BuffEntityEditor({
                                 ) : (
                                     activeBuff.zones.map((z) => {
                                         const def = BUFF_ZONE_MAP.get(z.zoneId)
+                                        const noRef = ZONE_NO_REF_IDS.has(z.zoneId)
                                         return (
                                             <div
                                                 key={z.zoneId}
@@ -928,7 +929,7 @@ export default function BuffEntityEditor({
                                                 <span className="min-w-0 flex-1 truncate text-[11px]">
                                                     {def?.label ?? z.zoneId}
                                                 </span>
-                                                {z.ref ? (
+                                                {z.ref && !noRef ? (
                                                     (() => {
                                                         const refDef = BUFF_REF_ZONE_MAP.get(z.ref!.targetZoneId)
                                                         const th = Number(z.ref!.threshold ?? 0)
@@ -980,24 +981,26 @@ export default function BuffEntityEditor({
                                                         {z.override ? '覆盖' : '追加'}
                                                     </button>
                                                 )}
-                                                <button
-                                                    onClick={() => setRefTarget({ buffIdx: activeBuffIdx!, zoneId: z.zoneId })}
-                                                    className={`shrink-0 rounded border px-1.5 py-1 text-[10px] transition-colors ${
-                                                        z.ref
-                                                            ? 'border-(--accent) text-(--accent-text)'
-                                                            : 'border-transparent text-(--muted) hover:text-(--fg)'
-                                                    }`}
-                                                    title={
-                                                        z.ref
-                                                            ? `引${entityType === 'character' ? '自己' : '主人'} ${
-                                                                  BUFF_REF_ZONE_MAP.get(z.ref.targetZoneId)?.label ?? z.ref.targetZoneId
-                                                              } × ${z.ref.pct}%`
-                                                            : '引用某属性（如 当前攻击×N%）'
-                                                    }
-                                                >
-                                                    <Icon icon="mdi:link-variant" className="mr-0.5 size-3" />
-                                                    {z.ref ? '已引用' : '引用'}
-                                                </button>
+                                                {!noRef && (
+                                                    <button
+                                                        onClick={() => setRefTarget({ buffIdx: activeBuffIdx!, zoneId: z.zoneId })}
+                                                        className={`shrink-0 rounded border px-1.5 py-1 text-[10px] transition-colors ${
+                                                            z.ref
+                                                                ? 'border-(--accent) text-(--accent-text)'
+                                                                : 'border-transparent text-(--muted) hover:text-(--fg)'
+                                                        }`}
+                                                        title={
+                                                            z.ref
+                                                                ? `引${entityType === 'character' ? '自己' : '主人'} ${
+                                                                      BUFF_REF_ZONE_MAP.get(z.ref.targetZoneId)?.label ?? z.ref.targetZoneId
+                                                                  } × ${z.ref.pct}%`
+                                                                : '引用某属性（如 当前攻击×N%）'
+                                                        }
+                                                    >
+                                                        <Icon icon="mdi:link-variant" className="mr-0.5 size-3" />
+                                                        {z.ref ? '已引用' : '引用'}
+                                                    </button>
+                                                )}
                                                 <button
                                                     onClick={() => toggleZone(z.zoneId)}
                                                     className="shrink-0 rounded p-1 text-(--muted) transition-colors hover:text-(--danger)"
