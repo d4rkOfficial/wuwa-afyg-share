@@ -1,9 +1,10 @@
 'use client'
 
-import { useState, useTransition } from 'react'
+import { useEffect, useState, useTransition } from 'react'
 import { useRouter } from 'next/navigation'
 import { Icon } from '@iconify/react'
 import { CHAR_ELEMENTS } from '@/lib/data/char-elements'
+import type { LatestCharElements } from '@/lib/data/char-elements-latest'
 import { ELEMENTS, ELEMENT_COLORS } from '@/lib/types/project'
 import { elementIcon } from '@/lib/consts/element-icons'
 import SelectMenu from '@/components/ui/select-menu'
@@ -14,10 +15,24 @@ interface Props {
     character: string
 }
 
-const CHARACTERS_BY_ELEMENT = ELEMENTS.map((element) => ({
-    element,
-    names: Object.keys(CHAR_ELEMENTS).filter((name) => CHAR_ELEMENTS[name] === element)
-})).filter((group) => group.names.length > 0)
+const CHAR_ELEMENTS_CACHE_KEY = 'wuwa-afyg:char-elements'
+
+function readCachedCharElements(): Record<string, string> {
+    if (typeof window === 'undefined') return CHAR_ELEMENTS
+    try {
+        const cached = JSON.parse(localStorage.getItem(CHAR_ELEMENTS_CACHE_KEY) ?? '') as Partial<LatestCharElements>
+        return cached.elements && typeof cached.elements === 'object' ? cached.elements : CHAR_ELEMENTS
+    } catch {
+        return CHAR_ELEMENTS
+    }
+}
+
+function groupCharacters(elements: Record<string, string>) {
+    return ELEMENTS.map((element) => ({
+        element,
+        names: Object.keys(elements).filter((name) => elements[name] === element)
+    })).filter((group) => group.names.length > 0)
+}
 
 export default function ProjectFilters({ q, sort, character }: Props) {
     const router = useRouter()
@@ -25,6 +40,38 @@ export default function ProjectFilters({ q, sort, character }: Props) {
     const [query, setQuery] = useState(q)
     const [selectedSort, setSelectedSort] = useState(sort)
     const [selectedCharacter, setSelectedCharacter] = useState(character)
+    const [charElements, setCharElements] = useState(CHAR_ELEMENTS)
+
+    useEffect(() => {
+        let active = true
+        Promise.resolve().then(() => {
+            if (active) setCharElements(readCachedCharElements())
+        })
+
+        fetch('/api/char-elements', { cache: 'no-store' })
+            .then((response) => {
+                if (!response.ok) throw new Error('角色数据获取失败')
+                return response.json() as Promise<LatestCharElements>
+            })
+            .then((latest) => {
+                if (!latest.elements || typeof latest.elements !== 'object') return
+                try {
+                    localStorage.setItem(CHAR_ELEMENTS_CACHE_KEY, JSON.stringify(latest))
+                } catch {
+                    // 本地存储不可用时仍使用本次请求的数据
+                }
+                if (active) setCharElements(latest.elements)
+            })
+            .catch(() => {
+                // 使用生成文件或本地缓存作为离线兜底
+            })
+
+        return () => {
+            active = false
+        }
+    }, [])
+
+    const charactersByElement = groupCharacters(charElements)
 
     function navigate(next: { q?: string; sort?: 'hot' | 'latest'; character?: string }) {
         const params = new URLSearchParams()
@@ -116,7 +163,7 @@ export default function ProjectFilters({ q, sort, character }: Props) {
                     placeholder="全部角色"
                     icon="mdi:account-group-outline"
                     allOption="全部角色"
-                    groups={CHARACTERS_BY_ELEMENT.map(({ element, names }) => ({
+                    groups={charactersByElement.map(({ element, names }) => ({
                         label: element,
                         icon: elementIcon(element),
                         accentColor: ELEMENT_COLORS[element],

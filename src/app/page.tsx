@@ -7,7 +7,7 @@ import SetupNotice from '@/components/setup-notice'
 import AnnouncementBar from '@/components/announcement-bar'
 import { createClient, hasEnv } from '@/lib/supabase/server'
 import { getProvider } from '@/lib/upstream'
-import { CHAR_ELEMENTS } from '@/lib/data/char-elements'
+import { getLatestCharElements } from '@/lib/data/char-elements-latest'
 import { LIST_COLUMNS } from '@/lib/project/query'
 import { isExpiredProject } from '@/lib/utils/expiry'
 import type { ProjectListItem, AnnouncementRow } from '@/lib/types/db'
@@ -25,7 +25,8 @@ export default async function HomePage({
     const q = typeof sp.q === 'string' ? sp.q.trim() : ''
     const sort = typeof sp.sort === 'string' && sp.sort === 'hot' ? 'hot' : 'latest'
     const characterParam = typeof sp.character === 'string' ? sp.character.trim() : ''
-    const character = Object.hasOwn(CHAR_ELEMENTS, characterParam) ? characterParam : ''
+    const { elements: characterElements } = await getLatestCharElements()
+    const character = Object.hasOwn(characterElements, characterParam) ? characterParam : ''
     const page = Math.max(1, parseInt(typeof sp.page === 'string' ? sp.page : '1', 10) || 1)
 
     if (!hasEnv()) return <SetupNotice />
