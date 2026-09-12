@@ -1,3 +1,6 @@
+'use client'
+
+import { useEffect, useState } from 'react'
 import { charElement } from '@/lib/data/char-elements'
 
 interface Props {
@@ -7,6 +10,20 @@ interface Props {
 
 export default function TeamBanner({ names, size = 'sm' }: Props) {
     const slots = [0, 1, 2]
+    const [elements, setElements] = useState<Record<string, string>>({})
+    const namesKey = names.join('|')
+
+    useEffect(() => {
+        let active = true
+        const currentNames = namesKey.split('|').filter(Boolean)
+        Promise.all(currentNames.map(async (name) => [name, await charElement(name)] as const)).then((entries) => {
+            if (active) setElements(Object.fromEntries(entries))
+        })
+        return () => {
+            active = false
+        }
+    }, [namesKey])
+
     return (
         <div className="flex flex-wrap items-center gap-2">
             {slots.map((i) => {
@@ -21,7 +38,7 @@ export default function TeamBanner({ names, size = 'sm' }: Props) {
                         </span>
                     )
                 }
-                const el = charElement(name)
+                const el = elements[name] ?? ''
                 if (!el) {
                     return (
                         <span

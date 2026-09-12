@@ -1,5 +1,5 @@
 // 角色名 → 属性（由 scripts/generate-char-elements.mjs 生成，勿手改）
-// 数据版本：3.6.1+8296177
+// 数据版本：3.7.1
 export const CHAR_ELEMENTS: Record<string, string> = {
     "爱弥斯": "热熔",
     "安可": "热熔",
@@ -45,11 +45,13 @@ export const CHAR_ELEMENTS: Record<string, string> = {
     "散华": "冷凝",
     "守岸人": "衍射",
     "穗穗": "冷凝",
+    "锁暝": "导电",
     "桃祈": "湮灭",
     "维里奈": "衍射",
     "西格莉卡": "气动",
     "夏空": "气动",
     "相里要": "导电",
+    "心": "导电",
     "秧秧": "气动",
     "秧秧·玄翎": "湮灭",
     "吟霖": "导电",
@@ -61,6 +63,35 @@ export const CHAR_ELEMENTS: Record<string, string> = {
     "折枝": "冷凝",
 }
 
-export function charElement(name: string): string {
-    return CHAR_ELEMENTS[name] ?? ''
+const CHAR_ELEMENTS_CACHE_KEY = 'wuwa-afyg:char-elements'
+let latestElementsPromise: Promise<Record<string, string>> | null = null
+
+async function getLatestElements(): Promise<Record<string, string>> {
+    if (typeof window === 'undefined') return CHAR_ELEMENTS
+    if (latestElementsPromise) return latestElementsPromise
+
+    latestElementsPromise = fetch('/api/char-elements', { cache: 'no-store' })
+        .then((response) => {
+            if (!response.ok) throw new Error('角色数据获取失败')
+            return response.json() as Promise<{ elements?: unknown }>
+        })
+        .then((data) => {
+            if (!data.elements || typeof data.elements !== 'object') throw new Error('角色数据格式错误')
+            const elements = data.elements as Record<string, string>
+            try { localStorage.setItem(CHAR_ELEMENTS_CACHE_KEY, JSON.stringify({ elements })) } catch {}
+            return elements
+        })
+        .catch(() => {
+            try {
+                const cached = JSON.parse(localStorage.getItem(CHAR_ELEMENTS_CACHE_KEY) ?? "") as { elements?: unknown }
+                if (cached.elements && typeof cached.elements === 'object') return cached.elements as Record<string, string>
+            } catch {}
+            return CHAR_ELEMENTS
+        })
+    return latestElementsPromise
+}
+
+export async function charElement(name: string): Promise<string> {
+    const elements = await getLatestElements()
+    return elements[name] ?? ''
 }

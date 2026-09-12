@@ -1,3 +1,6 @@
+'use client'
+
+import { useEffect, useState } from 'react'
 import { Icon } from '@iconify/react'
 import type { CharSlot, PhaseKey } from '@/lib/types/project'
 import { PHASE_LABELS } from '@/lib/types/project'
@@ -9,6 +12,21 @@ interface Props {
 }
 
 export default function TeamPreview({ slots, locked }: Props) {
+    const [elements, setElements] = useState<Record<string, string>>({})
+    const characterNames = slots.map((slot) => slot.character).filter((name): name is string => Boolean(name))
+    const characterNamesKey = characterNames.join('|')
+
+    useEffect(() => {
+        let active = true
+        const currentNames = characterNamesKey.split('|').filter(Boolean)
+        Promise.all(currentNames.map(async (name) => [name, await charElement(name)] as const)).then((entries) => {
+            if (active) setElements(Object.fromEntries(entries))
+        })
+        return () => {
+            active = false
+        }
+    }, [characterNamesKey])
+
     const lockedPhases = (Object.entries(locked) as [PhaseKey, boolean][])
         .filter(([, v]) => v)
         .map(([k]) => k)
@@ -34,8 +52,8 @@ export default function TeamPreview({ slots, locked }: Props) {
                                     <span
                                         className="font-medium"
                                         style={
-                                            charElement(slot.character)
-                                                ? { color: `var(--element-${charElement(slot.character)})` }
+                                            elements[slot.character]
+                                                ? { color: `var(--element-${elements[slot.character]})` }
                                                 : undefined
                                         }
                                     >
