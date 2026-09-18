@@ -81,6 +81,18 @@ export default async function Header() {
                         </AppLink>
                     )}
 
+                    {isAdmin && (
+                        <AppLink
+                            href="/admin/substat-sets"
+                            aria-label="标准词条集管理"
+                            title="标准词条集管理"
+                            className="inline-flex size-9 shrink-0 items-center justify-center gap-1.5 text-sm text-(--muted) transition-colors hover:bg-(--card-hover) hover:text-(--fg) lg:w-auto lg:px-2.5"
+                        >
+                            <Icon icon="mdi:format-list-checks" className="size-4" />
+                            <span className="hidden lg:inline">标准词条集</span>
+                        </AppLink>
+                    )}
+
                     {user ? (
                         <>
                             <AppLink

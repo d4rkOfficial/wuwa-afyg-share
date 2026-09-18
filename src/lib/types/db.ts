@@ -80,6 +80,35 @@ export interface BuffSetRow {
     buff_set: BuffZoneValue[]
 }
 
+// ── 标准词条集（0004_standard_substat_sets.sql）──
+// 单条词条（主词条 / 副主词条 / 副词条同构，对齐 wuwa-afyg-tool 的 EchoStat）
+export interface EchoStatValue {
+    type: string
+    value: number
+    unit: '' | '%'
+}
+
+// 单个声骸部位（对齐 wuwa-afyg-tool 的 EchoSlotConfig，去掉 name/set）
+export interface EchoPlanSlot {
+    cost: number
+    mainStat: EchoStatValue | null
+    secondMainStat: EchoStatValue | null
+    substats: EchoStatValue[]
+}
+
+// 整份标准方案：恰好 5 个部位、cost 多重集合 {4,3,3,1,1}、副词条合计恰好 14 条
+export interface EchoPlan {
+    slots: EchoPlanSlot[]
+}
+
+export interface StandardSubstatSetRow {
+    id: string
+    character_name: string
+    plan: EchoPlan
+    note: string | null
+    updated_at: string
+}
+
 export interface AnnouncementRow {
     id: string
     title: string
