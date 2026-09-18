@@ -10,7 +10,7 @@ import SubstatPlanJson from '@/components/admin/substat-plan-json'
 import SubstatSlotEditor from '@/components/admin/substat-slot-editor'
 import { toast } from '@/components/ui/toast'
 import { deleteSubstatSet, upsertSubstatSet } from '@/lib/actions/substat-sets'
-import { ECHO_COST_MULTISET, SUBSTAT_TOTAL_COUNT } from '@/lib/consts/echo-stats'
+import { ECHO_MAX_TOTAL_COST, SUBSTAT_TOTAL_COUNT } from '@/lib/consts/echo-stats'
 import { fetchEntityList } from '@/lib/upstream'
 import { cloneEchoPlan, countPlanSubstats, createEmptyEchoPlan, validateEchoPlan } from '@/lib/utils/echo-plan'
 import { formatDate, timeAgo } from '@/lib/utils/format'
@@ -60,6 +60,7 @@ export default function SubstatSetsAdmin({ rows }: Props) {
     const planCheck = useMemo(() => validateEchoPlan(plan), [plan])
     const substatTotal = countPlanSubstats(plan)
     const costCombo = plan.slots.map((s) => s.cost).join(' + ')
+    const totalCost = plan.slots.reduce((sum, s) => sum + s.cost, 0)
 
     // JSON 文本框实时校验（仅提示，不影响编辑器状态）
     const jsonStatus = useMemo(() => {
@@ -230,8 +231,9 @@ export default function SubstatSetsAdmin({ rows }: Props) {
                 <span className={substatTotal === SUBSTAT_TOTAL_COUNT ? 'text-(--success)' : 'text-(--danger)'}>
                     副词条合计 {substatTotal} / {SUBSTAT_TOTAL_COUNT}
                 </span>
-                <span className="text-(--muted)">cost：{costCombo || '—'}</span>
-                <span className="text-(--muted)">目标 cost：{ECHO_COST_MULTISET.join(' + ')}</span>
+                <span className={totalCost <= ECHO_MAX_TOTAL_COST ? 'text-(--muted)' : 'text-(--danger)'}>
+                    cost：{costCombo || '—'}（合计 {totalCost} / 上限 {ECHO_MAX_TOTAL_COST}）
+                </span>
                 {planCheck.ok ? (
                     <span className="text-(--success)">✓ plan 校验通过，可保存</span>
                 ) : (

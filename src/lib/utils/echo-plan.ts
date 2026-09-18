@@ -3,13 +3,14 @@
 // 校验失败一律以 { ok: false, error } 返回（调用方不要抛未捕获异常）。
 
 import {
+    defaultStatUnit,
     ECHO_COST_MULTISET,
     ECHO_COSTS,
+    ECHO_MAX_TOTAL_COST,
     ECHO_SLOT_COUNT,
-    ECHO_STAT_UNIT_SET,
-    MAIN_STAT_TYPE_SET,
-    SECOND_MAIN_STAT_DEFAULT,
-    SECOND_MAIN_STAT_TYPE_WHITELIST,
+    mainStatMaxValue,
+    secondMainStatFor,
+    snapSubstatValue,
     SUBSTAT_MAX_PER_SLOT,
     SUBSTAT_MIN_PER_SLOT,
     SUBSTAT_TOTAL_COUNT,
@@ -23,26 +24,30 @@ function isPlainObject(v: unknown): v is Record<string, unknown> {
     return typeof v === 'object' && v !== null && !Array.isArray(v)
 }
 
-/** 归一化单条词条：type 去空白 + 白名单校验，value 必须为有限数字，unit 仅 '%' | '' */
-function sanitizeStat(raw: unknown, allowedTypes: Set<string>, where: string): EchoStatValue | string {
+/**
+ * 主词条：type 必须属于该 cost 的池子；**数值固定取满级上限、单位固定 '%'**（不接受自定义数值）。
+ */
+function sanitizeMainStat(raw: unknown, cost: number, where: string): EchoStatValue | null | string {
+    if (raw === null || raw === undefined) return null
     if (!isPlainObject(raw)) return `${where} 必须是 { type, value, unit } 对象`
     const type = typeof raw.type === 'string' ? raw.type.trim() : ''
     if (!type) return `${where} 缺少 type`
-    if (!allowedTypes.has(type)) return `${where} 的 type「${type}」不在白名单内`
-    const value = raw.value
-    if (typeof value !== 'number' || !Number.isFinite(value)) return `${where} 的 value 必须是有限数字`
-    const unit = raw.unit ?? ''
-    if (typeof unit !== 'string' || !ECHO_STAT_UNIT_SET.has(unit)) return `${where} 的 unit 只能是 "%" 或 ""`
-    return { type, value, unit: unit as EchoStatValue['unit'] }
+    const max = mainStatMaxValue(cost, type)
+    if (max === null) return `${where} 的 type「${type}」不适用于 cost ${cost}`
+    return { type, value: max, unit: '%' }
 }
 
-function sanitizeStatOrNull(
-    raw: unknown,
-    allowedTypes: Set<string>,
-    where: string
-): EchoStatValue | null | string {
-    if (raw === null || raw === undefined) return null
-    return sanitizeStat(raw, allowedTypes, where)
+/**
+ * 副词条：type 必须在白名单内；**数值吸附到最近的合法档位**、单位按 type 自动（编辑页只允许选档位）。
+ */
+function sanitizeSubstat(raw: unknown, where: string): EchoStatValue | string {
+    if (!isPlainObject(raw)) return `${where} 必须是 { type, value, unit } 对象`
+    const type = typeof raw.type === 'string' ? raw.type.trim() : ''
+    if (!type) return `${where} 缺少 type`
+    if (!SUBSTAT_TYPE_SET.has(type)) return `${where} 的 type「${type}」不在白名单内`
+    const value = raw.value
+    if (typeof value !== 'number' || !Number.isFinite(value)) return `${where} 的 value 必须是有限数字`
+    return { type, value: snapSubstatValue(type, value), unit: defaultStatUnit(type) }
 }
 
 function sanitizeSlot(raw: unknown, index: number): EchoPlanSlot | string {
@@ -54,15 +59,11 @@ function sanitizeSlot(raw: unknown, index: number): EchoPlanSlot | string {
         return `${at} 的 cost 只能是 ${ECHO_COSTS.join(' / ')}`
     }
 
-    const mainStat = sanitizeStatOrNull(raw.mainStat, MAIN_STAT_TYPE_SET, `${at} 主词条`)
+    const mainStat = sanitizeMainStat(raw.mainStat, cost, `${at} 主词条`)
     if (typeof mainStat === 'string') return mainStat
 
-    const secondMainStat = sanitizeStatOrNull(
-        raw.secondMainStat,
-        SECOND_MAIN_STAT_TYPE_WHITELIST,
-        `${at} 副主词条`
-    )
-    if (typeof secondMainStat === 'string') return secondMainStat
+    // 副主词条完全由 cost 自动推导（4→攻击150 / 3→攻击100 / 1→生命2280）
+    const secondMainStat = secondMainStatFor(cost)
 
     if (!Array.isArray(raw.substats)) return `${at} 的 substats 必须是数组`
     if (raw.substats.length < SUBSTAT_MIN_PER_SLOT || raw.substats.length > SUBSTAT_MAX_PER_SLOT) {
@@ -71,7 +72,7 @@ function sanitizeSlot(raw: unknown, index: number): EchoPlanSlot | string {
     const substats: EchoStatValue[] = []
     const seen = new Set<string>()
     for (let i = 0; i < raw.substats.length; i++) {
-        const stat = sanitizeStat(raw.substats[i], SUBSTAT_TYPE_SET, `${at} 第 ${i + 1} 条副词条`)
+        const stat = sanitizeSubstat(raw.substats[i], `${at} 第 ${i + 1} 条副词条`)
         if (typeof stat === 'string') return stat
         if (seen.has(stat.type)) return `${at} 的副词条 type「${stat.type}」重复`
         seen.add(stat.type)
@@ -96,13 +97,13 @@ export function validateEchoPlan(raw: unknown): EchoPlanValidation {
         slots.push(slot)
     }
 
-    // cost 多重集合必须恰好是 {4,3,3,1,1}（顺序任意，合计 12）
-    const costs = slots
-        .map((s) => s.cost)
-        .sort((a, b) => a - b)
-        .join(',')
-    if (costs !== [...ECHO_COST_MULTISET].sort((a, b) => a - b).join(',')) {
-        return { ok: false, error: `5 个部位的 cost 必须恰好是 ${ECHO_COST_MULTISET.join(' + ')}（顺序任意）` }
+    // cost 组合不限（不强制 43311），只要 5 个部位合计不超过上限
+    const totalCost = slots.reduce((sum, s) => sum + s.cost, 0)
+    if (totalCost > ECHO_MAX_TOTAL_COST) {
+        return {
+            ok: false,
+            error: `5 个部位的 cost 合计不能超过 ${ECHO_MAX_TOTAL_COST}（当前 ${totalCost}）`
+        }
     }
 
     // 副词条总数必须恰好 14 条（工坊只保存标准 14 词条）
@@ -120,13 +121,13 @@ export function countPlanSubstats(plan: EchoPlan | null | undefined): number {
     return plan.slots.reduce((sum, slot) => sum + (Array.isArray(slot?.substats) ? slot.substats.length : 0), 0)
 }
 
-/** 新建空方案：cost 依次 4 / 3 / 3 / 1 / 1，副主词条按 cost 填工具箱默认固定值 */
+/** 新建空方案：cost 用默认布局 4 / 3 / 3 / 1 / 1（可自由调整），副主词条按 cost 自动推导 */
 export function createEmptyEchoPlan(): EchoPlan {
     const costs = [...ECHO_COST_MULTISET]
     const slots: EchoPlanSlot[] = costs.map((cost) => ({
         cost,
         mainStat: null,
-        secondMainStat: SECOND_MAIN_STAT_DEFAULT[cost] ? { ...SECOND_MAIN_STAT_DEFAULT[cost] } : null,
+        secondMainStat: secondMainStatFor(cost),
         substats: []
     }))
     return { slots }
