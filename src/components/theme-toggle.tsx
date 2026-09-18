@@ -5,6 +5,20 @@ import { Icon } from '@iconify/react'
 
 const KEY = 'share-theme'
 
+/**
+ * @desc 解析 URL hash 里的主题透传（工具箱 iframe 打开时带 `#theme=light|dark`）。
+ * 该值优先于本地保存与系统偏好：否则挂载时的 sync() 会把工具箱传来的主题覆盖回系统偏好。
+ */
+function hashTheme(): 'light' | 'dark' | null {
+    if (typeof window === 'undefined') return null
+    try {
+        const matched = /(?:^|&)theme=(light|dark)(?:&|$)/.exec(window.location.hash.replace(/^#/, ''))
+        return matched ? (matched[1] as 'light' | 'dark') : null
+    } catch {
+        return null
+    }
+}
+
 export default function ThemeToggle() {
     useEffect(() => {
         const media = window.matchMedia('(prefers-color-scheme: light)')
@@ -13,7 +27,8 @@ export default function ThemeToggle() {
             try {
                 saved = localStorage.getItem(KEY)
             } catch {}
-            const light = saved === 'light' || (saved !== 'dark' && media.matches)
+            const effective = hashTheme() ?? saved
+            const light = effective === 'light' || (effective !== 'dark' && media.matches)
             document.documentElement.classList.toggle('light', light)
             document.documentElement.style.colorScheme = light ? 'light' : 'dark'
         }
