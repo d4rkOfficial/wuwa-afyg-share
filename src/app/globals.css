@@ -495,3 +495,12 @@ html.light .theme-icon-light {
         color: var(--muted);
     }
 }
+
+/* 后台外壳（.buff-admin-shell）用未分层规则强制了「苹方/雅黑」字族，级联优先于 @layer components，
+   会把 .mg-title 的衬线字族吃掉（只剩重字重与收紧字距）。这里把标题字族拉回衬线；
+   表单控件仍保留外壳的无衬线字族（密集表单用衬线可读性差）。 */
+.buff-admin-shell .mg-title,
+.buff-admin-shell .mg-title-xl {
+    font-family: var(--font-serif);
+    font-weight: 900;
+}

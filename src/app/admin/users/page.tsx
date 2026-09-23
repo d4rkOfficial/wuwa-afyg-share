@@ -53,9 +53,9 @@ export default async function AdminUsersPage() {
 
     return (
         <div className="buff-admin-shell mx-auto max-w-3xl space-y-6">
-            <div>
-                <h1 className="text-2xl font-black tracking-tight">管理员管理</h1>
-                <p className="mt-1 text-sm text-(--muted)">
+            <div className="border-b pb-4 mg-hairline">
+                <h1 className="mg-title text-2xl md:text-3xl">管理员管理</h1>
+                <p className="mt-1.5 mg-note">
                     按用户名授权管理员；仅授出者可收回自己的授权。被撤销权限的管理员，其授出的权限一并收回（连坐）。
                 </p>
             </div>

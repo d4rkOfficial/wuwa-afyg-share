@@ -56,12 +56,14 @@ export default function SubstatSlotEditor({ index, slot, onChange }: Props) {
     }
 
     return (
-        <div className="flex flex-col gap-3 rounded-none border border-(--card-border) bg-(--card) p-3">
+        <div className="flex flex-col gap-3 mg-card p-3">
             {/* 部位头：序号 + cost 切换（不限组合，合计 ≤ 12 由页面统一校验） */}
             <div className="flex items-center justify-between gap-2">
-                <span className="text-sm font-black tracking-tight text-(--fg)">
-                    部位 {index + 1}
-                    <span className="ml-1 text-[10px] font-normal text-(--muted)">cost {slot.cost}</span>
+                <span className="mg-title text-sm">
+                    部位 <span className="mg-num">{index + 1}</span>
+                    <span className="ml-1 text-[10px] font-normal text-(--muted)">
+                        cost <span className="mg-num">{slot.cost}</span>
+                    </span>
                 </span>
                 <div className="flex items-center gap-1 rounded-none border border-(--card-border) bg-(--card-hover) p-0.5">
                     {ECHO_COSTS.map((c) => (
@@ -140,7 +142,8 @@ export default function SubstatSlotEditor({ index, slot, onChange }: Props) {
             <div className="flex flex-col gap-2 border-t border-(--card-border) pt-2">
                 <div className="flex items-center justify-between">
                     <span className="text-[11px] text-(--muted)">
-                        副词条 {slot.substats.length}/{SUBSTAT_MAX_PER_SLOT}
+                        副词条 <span className="mg-num">{slot.substats.length}</span>/
+                        <span className="mg-num">{SUBSTAT_MAX_PER_SLOT}</span>
                     </span>
                     <button
                         onClick={addSubstat}

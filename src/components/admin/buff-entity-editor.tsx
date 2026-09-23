@@ -693,17 +693,19 @@ export default function BuffEntityEditor({
     }
 
     return (
-        <div className="flex h-full flex-col rounded-none border border-(--card-border) bg-(--card)">
+        <div className="flex h-full flex-col mg-card">
             {/* 实体信息头 */}
             <div className="flex items-center justify-between border-b border-(--card-border) px-4 py-3">
                 <div className="flex items-center gap-2">
                     <span className="rounded bg-(--accent) px-2 py-0.5 text-xs font-medium text-(--accent-fg)">
                         {BUFF_ENTITY_LABELS[entityType]}
                     </span>
-                    <h2 className="truncate text-lg font-black tracking-tight text-(--fg)">{entityName}</h2>
+                    <h2 className="mg-title truncate text-lg">{entityName}</h2>
                 </div>
                 <div className="flex shrink-0 items-center gap-3">
-                    <span className="text-xs text-(--muted)">{buffs.length} 条 Buff</span>
+                    <span className="text-xs text-(--muted)">
+                        <span className="mg-num">{buffs.length}</span> 条 Buff
+                    </span>
                     {onclose && (
                         <button
                             onClick={onclose}
@@ -722,7 +724,11 @@ export default function BuffEntityEditor({
                 {/* ① 左：Buff 列表 */}
                 <div className="buff-editor-buff-list flex w-56 shrink-0 flex-col border-r border-(--card-border)">
                     <div className="flex shrink-0 items-center justify-between border-b border-(--card-border) px-3 py-2">
-                        <span className="text-xs font-medium text-(--muted)">Buff 条目（{buffs.length}）</span>
+                        <span className="flex items-center gap-1.5">
+                            <Icon icon="mdi:format-list-bulleted" className="size-3.5 shrink-0 text-(--accent-text)" />
+                            <span className="mg-title text-xs">Buff 条目</span>
+                            <span className="mg-num text-xs text-(--muted)">{buffs.length}</span>
+                        </span>
                         <button onClick={addBuff} className="toolbar-btn toolbar-btn-ghost px-1.5 py-0.5">
                             <Icon icon="mdi:plus" className="size-3.5" />
                             新增
@@ -1023,8 +1029,9 @@ export default function BuffEntityEditor({
 
                 {/* ③ 乘区勾选面板 */}
                 <div className="buff-editor-zones flex w-44 shrink-0 flex-col border-r border-(--card-border)">
-                    <div className="shrink-0 border-b border-(--card-border) px-3 py-2 text-xs font-medium text-(--muted)">
-                        乘区
+                    <div className="flex shrink-0 items-center gap-1.5 border-b border-(--card-border) px-3 py-2 text-xs text-(--muted)">
+                        <Icon icon="mdi:multiplication" className="size-3.5 shrink-0 text-(--accent-text)" />
+                        <span className="mg-title text-xs">乘区</span>
                     </div>
                     <div className="min-h-0 flex-1 space-y-0.5 overflow-y-auto p-1.5">
                         {BUFF_ZONES.map((def) => {
@@ -1054,7 +1061,7 @@ export default function BuffEntityEditor({
                 <div className="buff-editor-ai flex w-80 shrink-0 flex-col border-l border-(--card-border)">
                     {/* 头部 */}
                     <div className="flex shrink-0 flex-wrap items-center gap-1.5 border-b border-(--card-border) px-3 py-2">
-                        <span className="flex items-center gap-1 text-xs font-medium text-(--accent-text)">
+                        <span className="flex items-center gap-1 mg-title text-xs text-(--accent-text)">
                             <Icon icon="mdi:robot-outline" className="size-4" />
                             AI 辅助
                         </span>
@@ -1144,7 +1151,9 @@ export default function BuffEntityEditor({
                                                     <div className="min-w-0 flex-1 text-(--muted)">
                                                         <span className="text-(--fg)">{t.name}</span>
                                                         {t.resultLen !== undefined && (
-                                                            <span className="ml-1">→ {t.resultLen} 字符</span>
+                                                            <span className="ml-1">
+                                                                → <span className="mg-num">{t.resultLen}</span> 字符
+                                                            </span>
                                                         )}
                                                     </div>
                                                 </div>
@@ -1166,10 +1175,14 @@ export default function BuffEntityEditor({
                                     {!aiBusy && aiResult !== null && aiResult.length > 0 && (
                                         <div className="space-y-1.5">
                                             <div className="text-[10px] text-(--muted)">
-                                                共 {aiResult.length} 条，点击「应用」将整体替换当前 Buff 列表
+                                                共 <span className="mg-num text-(--fg)">{aiResult.length}</span> 条，点击「应用」将整体替换当前
+                                                Buff 列表
                                             </div>
                                             {aiResult.map((b) => (
-                                                <div key={b.buffName} className="flex items-center gap-2 rounded-none bg-(--card) px-2.5 py-2">
+                                                <div
+                                                    key={b.buffName}
+                                                    className="flex items-center gap-2 rounded-none border border-(--card-border) bg-(--card) px-2.5 py-2"
+                                                >
                                                     <span className="min-w-0 flex-1">
                                                         <span className="flex flex-wrap items-center gap-1.5">
                                                             <span className="truncate text-xs font-medium text-(--fg)">
@@ -1206,7 +1219,7 @@ export default function BuffEntityEditor({
                                                     title="整体替换当前 Buff 列表"
                                                 >
                                                     <Icon icon="mdi:content-save-outline" className="size-3.5" />
-                                                    应用（{aiResult.length} 条）
+                                                    应用（<span className="mg-num">{aiResult.length}</span> 条）
                                                 </button>
                                                 <button
                                                     onClick={mergeAiResult}
@@ -1214,7 +1227,7 @@ export default function BuffEntityEditor({
                                                     title="同名覆盖、无同名追加"
                                                 >
                                                     <Icon icon="mdi:plus-box-outline" className="size-3.5" />
-                                                    追加（{aiResult.length} 条）
+                                                    追加（<span className="mg-num">{aiResult.length}</span> 条）
                                                 </button>
                                             </div>
                                         </div>
@@ -1355,7 +1368,7 @@ export default function BuffEntityEditor({
                             <button
                                 onClick={onDeleteEntity}
                                 disabled={pending}
-                                className="rounded-none border border-(--danger) bg-(--danger) transition-colors hover:bg-(--card) hover:text-(--danger) px-3 py-1.5 text-xs text-white  disabled:opacity-50"
+                                className="rounded-none border border-(--danger) bg-(--danger) transition-colors hover:bg-(--card) hover:text-(--danger) px-3 py-1.5 text-xs text-(--danger-fg)  disabled:opacity-50"
                             >
                                 确认删除该实体全部 Buff
                             </button>

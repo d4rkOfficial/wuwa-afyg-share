@@ -175,8 +175,11 @@ export default function BuffSetsAdmin({ rows, isAdmin }: Props) {
     return (
         <div className="flex h-[calc(100vh-8rem)] flex-col gap-3">
             {/* 顶部工具栏 */}
-            <div className="flex shrink-0 items-center justify-between rounded-none border border-(--card-border) bg-(--card) px-4 py-2.5">
-                <span className="flex items-center gap-2 text-sm font-medium text-(--muted)">实体列表</span>
+            <div className="flex shrink-0 items-center justify-between mg-card px-4 py-2.5">
+                <span className="flex items-center gap-2">
+                    <Icon icon="mdi:view-grid-outline" className="size-4 shrink-0 text-(--accent-text)" />
+                    <span className="mg-title text-sm">实体列表</span>
+                </span>
                 <span className="flex items-center gap-2">
                     <BuffSnapshotPanel />
                     <button onClick={() => setShowConfig(true)} className="toolbar-btn toolbar-btn-ghost">
@@ -200,8 +203,8 @@ export default function BuffSetsAdmin({ rows, isAdmin }: Props) {
             {/* 编辑弹窗 */}
             {selected && initial && (
                 <div className="buff-editor-modal-shell fixed inset-0 z-50 flex items-center justify-center p-4">
-                    <div className="absolute inset-0 bg-black/60 " onClick={() => setSelected(null)} />
-                    <div className="buff-editor-modal relative flex h-[92vh] w-[min(98vw,1500px)] flex-col overflow-hidden rounded-none border border-(--card-border) bg-(--card) ">
+                    <div className="absolute inset-0 bg-(--overlay) " onClick={() => setSelected(null)} />
+                    <div className="buff-editor-modal relative flex h-[92vh] w-[min(98vw,1500px)] flex-col overflow-hidden mg-card ">
                         <BuffEntityEditor
                             key={editingKey ?? 'new'}
                             initial={initial}
@@ -231,10 +234,13 @@ export default function BuffSetsAdmin({ rows, isAdmin }: Props) {
             {/* 连接配置弹窗（整个弹窗随内容滚动） */}
             {showConfig && (
                 <div className="fixed inset-0 z-50 overflow-y-auto">
-                    <div className="fixed inset-0 bg-black/60 " onClick={() => setShowConfig(false)} />
-                        <div className="relative mx-auto my-8 w-[calc(100vw-2rem)] max-w-xl rounded-none border border-(--card-border) bg-(--card) p-4 ">
+                    <div className="fixed inset-0 bg-(--overlay) " onClick={() => setShowConfig(false)} />
+                        <div className="relative mx-auto my-8 w-[calc(100vw-2rem)] max-w-xl mg-card p-4 ">
                             <div className="mb-3 flex items-center justify-between">
-                                <span className="text-sm font-semibold text-(--fg)">连接配置</span>
+                                <span className="flex items-center gap-2 mg-title text-sm">
+                                    <Icon icon="mdi:cog-outline" className="size-4 shrink-0 text-(--accent-text)" />
+                                    连接配置
+                                </span>
                                 <button onClick={() => setShowConfig(false)} className="rounded p-1 text-(--muted) hover:text-(--fg)">
                                     <Icon icon="mdi:close" className="size-5" />
                                 </button>
@@ -384,12 +390,15 @@ export default function BuffSetsAdmin({ rows, isAdmin }: Props) {
                 {activePromptEditor && (
                     <div className="fixed inset-0 z-[60] flex items-center justify-center p-4">
                         <div
-                            className="absolute inset-0 bg-black/60 "
+                            className="absolute inset-0 bg-(--overlay) "
                             onClick={() => setEditingPrompt(null)}
                         />
-                        <div className="relative flex max-h-[85vh] w-[min(96vw,720px)] flex-col overflow-hidden rounded-none border border-(--card-border) bg-(--card) ">
+                        <div className="relative flex max-h-[85vh] w-[min(96vw,720px)] flex-col overflow-hidden mg-card ">
                             <div className="flex items-center justify-between border-b border-(--card-border) px-4 py-3">
-                                <span className="text-sm font-semibold text-(--fg)">{activePromptEditor.label}</span>
+                                <span className="flex items-center gap-2 mg-title text-sm">
+                                    <Icon icon="mdi:text-box-edit-outline" className="size-4 shrink-0 text-(--accent-text)" />
+                                    {activePromptEditor.label}
+                                </span>
                                 <button
                                     onClick={() => setEditingPrompt(null)}
                                     className="rounded p-1 text-(--muted) transition-colors hover:text-(--fg)"

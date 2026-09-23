@@ -52,7 +52,11 @@ export default function AdminUsers({ admins }: Props) {
     return (
         <div className="space-y-4">
             {/* 授权表单 */}
-            <div className="rounded-none border border-(--card-border) bg-(--card) p-4">
+            <div className="mg-card p-4">
+                <div className="mg-section">
+                    <Icon icon="mdi:account-star-outline" className="size-4 shrink-0 text-(--accent-text)" />
+                    <h2 className="mg-title text-sm">授权管理员</h2>
+                </div>
                 <div className="flex items-center gap-2">
                     <input
                         value={username}
@@ -70,14 +74,20 @@ export default function AdminUsers({ admins }: Props) {
                         授权
                     </button>
                 </div>
-                <p className="mt-2 text-xs text-(--muted)">
+                <p className="mt-2 mg-note">
                     该用户需已设置用户名（登录过一次）。授权后立即生效，无需重新登录。
                 </p>
             </div>
 
             {/* 管理员列表 */}
-            <div className="overflow-hidden rounded-none border border-(--card-border) bg-(--card)">
-                <div className="border-b border-(--card-border) px-4 py-2.5 text-xs text-(--muted)">共 {admins.length} 位管理员</div>
+            <div className="overflow-hidden mg-card">
+                <div className="flex items-center gap-2 border-b border-(--card-border) px-4 py-2.5">
+                    <Icon icon="mdi:account-multiple-outline" className="size-4 shrink-0 text-(--accent-text)" />
+                    <span className="mg-title text-sm">管理员</span>
+                    <span className="ml-auto text-[11px] text-(--muted)">
+                        共 <span className="mg-num text-(--fg)">{admins.length}</span> 位
+                    </span>
+                </div>
                 {admins.length === 0 && (
                     <p className="px-4 py-8 text-center text-sm text-(--muted)">暂无管理员（请通过 SQL 引导首位根管理员）</p>
                 )}
@@ -115,7 +125,7 @@ export default function AdminUsers({ admins }: Props) {
                                 <button
                                     onClick={() => onRevoke(a.username)}
                                     disabled={pending}
-                                    className="shrink-0 rounded-none border border-(--danger) bg-(--danger) transition-colors hover:bg-(--card) hover:text-(--danger) px-3 py-1.5 text-xs text-white  disabled:opacity-50"
+                                    className="shrink-0 rounded-none border border-(--danger) bg-(--danger) transition-colors hover:bg-(--card) hover:text-(--danger) px-3 py-1.5 text-xs text-(--danger-fg)  disabled:opacity-50"
                                 >
                                     确认撤销（连坐收回）
                                 </button>
@@ -124,7 +134,7 @@ export default function AdminUsers({ admins }: Props) {
                                     onClick={() => setConfirmRevoke(a.id)}
                                     onBlur={() => setTimeout(() => setConfirmRevoke(null), 2500)}
                                     disabled={pending}
-                                    className="shrink-0 rounded-none border border-(--danger) bg-(--card) px-3 py-1.5 text-xs text-(--danger) transition-colors hover:bg-(--danger) hover:text-white disabled:opacity-50"
+                                    className="shrink-0 rounded-none border border-(--danger) bg-(--card) px-3 py-1.5 text-xs text-(--danger) transition-colors hover:bg-(--danger) hover:text-(--danger-fg) disabled:opacity-50"
                                 >
                                     撤销
                                 </button>

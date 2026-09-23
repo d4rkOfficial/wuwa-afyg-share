@@ -98,22 +98,29 @@ export default function AdminProjects() {
                     <Icon icon={loading ? 'mdi:loading' : 'mdi:magnify'} className={loading ? 'size-3.5 animate-spin' : 'size-3.5'} />
                     搜索
                 </button>
-                <span className="text-xs text-(--muted)">共 {total} 个工程</span>
                 <div className="flex-1" />
                 <AdminUserCleaner />
             </div>
 
             {/* 列表 */}
-            <div className="overflow-x-auto rounded-none border border-(--card-border) bg-(--card)">
+            <div className="flex items-center gap-2 border-b pb-2.5 mg-hairline">
+                <Icon icon="mdi:folder-multiple-outline" className="size-4 shrink-0 text-(--accent-text)" />
+                <h2 className="mg-title text-base">工程列表</h2>
+                <span className="ml-auto text-[11px] text-(--muted)">
+                    共 <span className="mg-num text-(--fg)">{total}</span> 个工程
+                </span>
+            </div>
+
+            <div className="overflow-x-auto mg-card">
                 <table className="w-full min-w-[760px] text-left text-sm">
                     <thead>
                         <tr className="border-b border-(--card-border) text-xs text-(--muted)">
-                            <th className="px-3 py-2 font-semibold">标题</th>
-                            <th className="px-3 py-2 font-semibold">分享码</th>
-                            <th className="px-3 py-2 font-semibold">作者</th>
-                            <th className="px-3 py-2 font-semibold">过期</th>
-                            <th className="px-3 py-2 font-semibold">查看/克隆</th>
-                            <th className="px-3 py-2 font-semibold">操作</th>
+                            <th className="px-3 py-2 font-black tracking-tight">标题</th>
+                            <th className="px-3 py-2 font-black tracking-tight">分享码</th>
+                            <th className="px-3 py-2 font-black tracking-tight">作者</th>
+                            <th className="px-3 py-2 font-black tracking-tight">过期</th>
+                            <th className="px-3 py-2 font-black tracking-tight">查看/克隆</th>
+                            <th className="px-3 py-2 font-black tracking-tight">操作</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -178,7 +185,8 @@ export default function AdminProjects() {
                                     })()}
                                 </td>
                                 <td className="px-3 py-2 text-xs text-(--muted)">
-                                    {row.view_count} / {row.clone_count}
+                                    <span className="mg-num">{row.view_count}</span> /{' '}
+                                    <span className="mg-num">{row.clone_count}</span>
                                 </td>
                                 <td className="px-3 py-2">
                                     <div className="flex items-center gap-1">
@@ -254,7 +262,7 @@ export default function AdminProjects() {
                                                     <button
                                                         onClick={() => run(() => adminDeleteProject(row.id), '已删除工程')}
                                                         disabled={pending}
-                                                        className="rounded bg-(--danger) px-2 py-1 text-[10px] text-white  disabled:opacity-50"
+                                                        className="rounded bg-(--danger) px-2 py-1 text-[10px] text-(--danger-fg)  disabled:opacity-50"
                                                     >
                                                         确认删除
                                                     </button>
@@ -287,7 +295,9 @@ export default function AdminProjects() {
 
             {/* 分页 */}
             <div className="flex items-center justify-between text-xs text-(--muted)">
-                <span>第 {page} / {totalPages} 页</span>
+                <span>
+                    第 <span className="mg-num">{page}</span> / <span className="mg-num">{totalPages}</span> 页
+                </span>
                 <div className="flex items-center gap-2">
                     <button
                         onClick={() => setPage((p) => Math.max(1, p - 1))}

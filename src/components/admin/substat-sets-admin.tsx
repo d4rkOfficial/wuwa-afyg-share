@@ -170,7 +170,7 @@ export default function SubstatSetsAdmin({ rows }: Props) {
     return (
         <div className="space-y-4">
             {/* 工具栏：角色名 + 备注 + 操作 */}
-            <div className="flex flex-wrap items-end justify-between gap-3 rounded-none border border-(--card-border) bg-(--card) p-3">
+            <div className="flex flex-wrap items-end justify-between gap-3 mg-card p-3">
                 <div className="flex min-w-0 flex-1 flex-wrap items-end gap-3">
                     <label className="flex min-w-52 flex-1 flex-col gap-1 text-xs text-(--muted)">
                         角色名
@@ -217,7 +217,7 @@ export default function SubstatSetsAdmin({ rows }: Props) {
                         <button
                             onClick={() => onDelete(loadedName)}
                             disabled={pending}
-                            className="inline-flex items-center gap-1 rounded-none border border-(--danger) bg-(--card) px-2.5 py-1.5 text-xs font-medium text-(--danger) transition-colors hover:bg-(--danger) hover:text-white disabled:opacity-50"
+                            className="inline-flex items-center gap-1 rounded-none border border-(--danger) bg-(--card) px-2.5 py-1.5 text-xs font-medium text-(--danger) transition-colors hover:bg-(--danger) hover:text-(--danger-fg) disabled:opacity-50"
                         >
                             <Icon icon="mdi:trash-can-outline" className="size-3.5" />
                             删除当前
@@ -229,10 +229,13 @@ export default function SubstatSetsAdmin({ rows }: Props) {
             {/* 校验状态条 */}
             <div className="flex flex-wrap items-center gap-x-4 gap-y-1 rounded-none border border-(--card-border) bg-(--card-hover) px-3 py-2 text-[11px]">
                 <span className={substatTotal === SUBSTAT_TOTAL_COUNT ? 'text-(--success)' : 'text-(--danger)'}>
-                    副词条合计 {substatTotal} / {SUBSTAT_TOTAL_COUNT}
+                    副词条合计 <span className="mg-num">{substatTotal}</span> /{' '}
+                    <span className="mg-num">{SUBSTAT_TOTAL_COUNT}</span>
                 </span>
                 <span className={totalCost <= ECHO_MAX_TOTAL_COST ? 'text-(--muted)' : 'text-(--danger)'}>
-                    cost：{costCombo || '—'}（合计 {totalCost} / 上限 {ECHO_MAX_TOTAL_COST}）
+                    cost：<span className="mg-num">{costCombo || '—'}</span>（合计{' '}
+                    <span className="mg-num">{totalCost}</span> / 上限{' '}
+                    <span className="mg-num">{ECHO_MAX_TOTAL_COST}</span>）
                 </span>
                 {planCheck.ok ? (
                     <span className="text-(--success)">✓ plan 校验通过，可保存</span>
@@ -259,9 +262,15 @@ export default function SubstatSetsAdmin({ rows }: Props) {
             />
 
             {/* 已保存方案列表 */}
-            <div className="overflow-hidden rounded-none border border-(--card-border) bg-(--card)">
+            <div className="overflow-hidden mg-card">
                 <div className="flex items-center justify-between border-b border-(--card-border) px-4 py-2.5">
-                    <span className="text-xs text-(--muted)">已保存 {rows.length} 个角色的标准词条方案</span>
+                    <span className="flex items-center gap-2">
+                        <Icon icon="mdi:database-outline" className="size-4 shrink-0 text-(--accent-text)" />
+                        <span className="mg-title text-sm">已保存方案</span>
+                        <span className="text-[11px] text-(--muted)">
+                            共 <span className="mg-num text-(--fg)">{rows.length}</span> 个角色
+                        </span>
+                    </span>
                     <span className="text-xs text-(--muted)">工具箱通过 /api/substat-sets 拉取</span>
                 </div>
                 {rows.length === 0 && (
@@ -285,7 +294,7 @@ export default function SubstatSetsAdmin({ rows }: Props) {
                                                 : 'border border-(--danger) text-(--danger)'
                                         }`}
                                     >
-                                        副词条 {total}
+                                        副词条 <span className="mg-num">{total}</span>
                                     </span>
                                     {isLoaded && (
                                         <span className="rounded-none bg-(--card-hover) px-1.5 py-0.5 text-[10px] text-(--muted)">
@@ -294,7 +303,8 @@ export default function SubstatSetsAdmin({ rows }: Props) {
                                     )}
                                 </div>
                                 <p className="mt-0.5 truncate text-xs text-(--muted)" title={row.updated_at}>
-                                    更新于 {formatDate(row.updated_at)}（{timeAgo(row.updated_at)}）
+                                    更新于 <span className="mg-num">{formatDate(row.updated_at)}</span>（
+                                    <span className="mg-num">{timeAgo(row.updated_at)}</span>）
                                     {row.note ? ` · ${row.note}` : ''}
                                 </p>
                             </div>
@@ -311,7 +321,7 @@ export default function SubstatSetsAdmin({ rows }: Props) {
                                     <button
                                         onClick={() => onDelete(row.character_name)}
                                         disabled={pending}
-                                        className="rounded-none border border-(--danger) bg-(--danger) px-3 py-1.5 text-xs text-white transition-colors hover:bg-(--card) hover:text-(--danger) disabled:opacity-50"
+                                        className="rounded-none border border-(--danger) bg-(--danger) px-3 py-1.5 text-xs text-(--danger-fg) transition-colors hover:bg-(--card) hover:text-(--danger) disabled:opacity-50"
                                     >
                                         确认删除
                                     </button>
@@ -320,7 +330,7 @@ export default function SubstatSetsAdmin({ rows }: Props) {
                                         onClick={() => setConfirmDelete(row.id)}
                                         onBlur={() => setTimeout(() => setConfirmDelete(null), 2500)}
                                         disabled={pending}
-                                        className="rounded-none border border-(--danger) bg-(--card) px-3 py-1.5 text-xs text-(--danger) transition-colors hover:bg-(--danger) hover:text-white disabled:opacity-50"
+                                        className="rounded-none border border-(--danger) bg-(--card) px-3 py-1.5 text-xs text-(--danger) transition-colors hover:bg-(--danger) hover:text-(--danger-fg) disabled:opacity-50"
                                     >
                                         删除
                                     </button>

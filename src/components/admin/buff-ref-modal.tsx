@@ -102,10 +102,13 @@ export default function BuffRefModal({ open, entityType, zoneId, initialRef, onS
 
     return (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-            <div className="absolute inset-0 bg-black/60 " onClick={onClose} />
-            <div className="relative flex max-h-[88vh] w-full max-w-md flex-col overflow-hidden rounded-none border border-(--card-border) bg-(--card) p-4 ">
+            <div className="absolute inset-0 bg-(--overlay) " onClick={onClose} />
+            <div className="relative flex max-h-[88vh] w-full max-w-md flex-col overflow-hidden mg-card p-4 ">
                 <div className="mb-3 flex items-center justify-between">
-                    <span className="text-sm font-semibold text-(--fg)">引用配置</span>
+                    <span className="flex items-center gap-2 mg-title text-sm">
+                        <Icon icon="mdi:link-variant" className="size-4 shrink-0 text-(--accent-text)" />
+                        引用配置
+                    </span>
                     <button onClick={onClose} className="rounded p-1 text-(--muted) hover:text-(--fg)">
                         <Icon icon="mdi:close" className="size-5" />
                     </button>

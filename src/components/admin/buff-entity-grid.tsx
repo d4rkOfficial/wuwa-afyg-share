@@ -129,7 +129,7 @@ export default function BuffEntityGrid({ existingCountMap, onSelect }: Props) {
         .filter((e) => (filter === 'with' ? e.count > 0 : e.count === 0))
 
     return (
-        <div className="flex h-full flex-col rounded-none border border-(--card-border) bg-(--card) p-4">
+        <div className="flex h-full flex-col mg-card p-4">
             {/* 顶部：主类型 tab + 过滤 */}
             <div className="mb-3 flex shrink-0 flex-wrap items-center justify-between gap-2">
                 <div className="flex rounded-none border border-(--card-border) bg-(--card-hover) p-0.5">
@@ -240,7 +240,7 @@ export default function BuffEntityGrid({ existingCountMap, onSelect }: Props) {
 
             {/* 网格列表 / 骨架屏 */}
             <div className="min-h-0 flex-1 overflow-y-auto">
-                {error && <div className="rounded-none border border-(--danger) bg-(--danger) px-3 py-2 text-xs text-white">{error}</div>}
+                {error && <div className="rounded-none border border-(--danger) bg-(--danger) px-3 py-2 text-xs text-(--danger-fg)">{error}</div>}
                 {!error && catalog === null && (
                     <div className="grid grid-cols-2 gap-2 md:grid-cols-3 xl:grid-cols-4">
                         {Array.from({ length: SKELETON_COUNT }).map((_, i) => (
@@ -268,10 +268,10 @@ export default function BuffEntityGrid({ existingCountMap, onSelect }: Props) {
                                     className={`w-fit rounded-none px-2 py-0.5 text-[10px] ${
                                         e.count > 0
                                             ? 'bg-(--accent) text-(--accent-fg)'
-                                            : 'bg-(--card-bg) text-(--muted)'
+                                            : 'bg-(--card) text-(--muted)'
                                     }`}
                                 >
-                                    {e.count} 条
+                                    <span className="mg-num">{e.count}</span> 条
                                 </span>
                             </button>
                         ))}

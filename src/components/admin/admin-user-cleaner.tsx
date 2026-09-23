@@ -63,11 +63,11 @@ export default function AdminUserCleaner() {
 
             {open && (
                 <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-                    <div className="absolute inset-0 bg-black/60 " onClick={() => setOpen(false)} />
-                    <div className="relative w-full max-w-md rounded-none border border-(--card-border) bg-(--card) p-5 ">
-                        <div className="flex items-center gap-2">
-                            <Icon icon="mdi:alert-decagram-outline" className="size-5 text-(--danger)" />
-                            <h3 className="text-sm font-semibold">按用户删除全部内容</h3>
+                    <div className="absolute inset-0 bg-(--overlay) " onClick={() => setOpen(false)} />
+                    <div className="relative w-full max-w-md mg-card p-5 ">
+                        <div className="mg-section">
+                            <Icon icon="mdi:alert-decagram-outline" className="size-5 shrink-0 text-(--danger)" />
+                            <h3 className="mg-title text-sm">按用户删除全部内容</h3>
                         </div>
                         <p className="mt-2 text-sm text-(--muted)">
                             删除该用户发布的<strong className="text-(--fg)">全部工程</strong>，删除后无法恢复；
@@ -97,9 +97,9 @@ export default function AdminUserCleaner() {
                             <div className="mt-3 rounded-none border border-(--card-border) bg-(--input-bg) px-3 py-2 text-sm">
                                 <p>
                                     用户 <span className="font-medium text-(--fg)">{summary.username}</span>：
-                                    <span className="text-(--fg)">{summary.projectCount}</span> 个工程
+                                    <span className="mg-num text-(--fg)">{summary.projectCount}</span> 个工程
                                 </p>
-                                <p className="mt-1 text-xs text-(--muted)">
+                                <p className="mt-1 mg-note">
                                     请输入该用户名以确认删除：
                                 </p>
                                 <input
@@ -126,7 +126,7 @@ export default function AdminUserCleaner() {
                             <button
                                 onClick={onConfirm}
                                 disabled={pending || !summary || confirmText !== summary.username}
-                                className="inline-flex items-center gap-1 rounded-none border border-(--danger) bg-(--danger) transition-colors hover:bg-(--card) hover:text-(--danger) px-3 py-1.5 text-sm text-white  disabled:opacity-50"
+                                className="inline-flex items-center gap-1 rounded-none border border-(--danger) bg-(--danger) transition-colors hover:bg-(--card) hover:text-(--danger) px-3 py-1.5 text-sm text-(--danger-fg)  disabled:opacity-50"
                             >
                                 <Icon icon={pending ? 'mdi:loading' : 'mdi:account-remove-outline'} className={`size-4 ${pending ? 'animate-spin' : ''}`} />
                                 确认删除

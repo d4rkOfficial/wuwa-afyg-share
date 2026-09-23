@@ -26,7 +26,7 @@ export default async function AdminProjectsPage() {
     if (!profile?.is_admin) {
         return (
             <div className="mx-auto max-w-2xl space-y-4 py-12 text-center">
-                <h1 className="text-xl font-black tracking-tight">无权限</h1>
+                <h1 className="mg-title text-xl">无权限</h1>
                 <p className="text-(--muted)">仅管理员可访问工程管理。</p>
             </div>
         )
@@ -34,9 +34,9 @@ export default async function AdminProjectsPage() {
 
     return (
         <div className="buff-admin-shell mx-auto max-w-6xl space-y-6">
-            <div>
-                <h1 className="text-2xl font-black tracking-tight">工程管理</h1>
-                <p className="mt-1 text-sm text-(--muted)">
+            <div className="border-b pb-4 mg-hairline">
+                <h1 className="mg-title text-2xl md:text-3xl">工程管理</h1>
+                <p className="mt-1.5 mg-note">
                     管理员可改名、调整过期时间、删除任意用户的分享工程。
                 </p>
             </div>

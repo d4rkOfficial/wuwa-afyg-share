@@ -17,10 +17,13 @@ interface Props {
 
 export default function SubstatPlanJson({ value, onChange, status, onExport, onImport }: Props) {
     return (
-        <div className="flex flex-col gap-3 rounded-none border border-(--card-border) bg-(--card) p-3">
-            <div className="flex flex-wrap items-center justify-between gap-2">
+        <div className="flex flex-col gap-3 mg-card p-3">
+            <div className="flex flex-wrap items-center justify-between gap-2 mg-section">
                 <div className="min-w-0">
-                    <span className="text-sm font-black tracking-tight text-(--fg)">JSON 导入 / 导出</span>
+                    <span className="flex items-center gap-2 mg-title text-sm">
+                        <Icon icon="mdi:code-json" className="size-4 shrink-0 text-(--accent-text)" />
+                        JSON 导入 / 导出
+                    </span>
                     <p className="text-[11px] text-(--muted)">
                         {`形如 { "slots": [ { cost, mainStat, secondMainStat, substats } ] }：5 个部位、cost {4,3,3,1,1}、副词条合计 14 条`}
                     </p>
