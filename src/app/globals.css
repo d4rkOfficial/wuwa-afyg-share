@@ -51,7 +51,8 @@
     --code-bg-strong: #24242a;
     /* 弹层遮罩与危险色前景：柔和化后不再直接用 black/60 与 white */
     --overlay: rgba(6, 6, 8, 0.62);
-    --danger-fg: #fdfcfb;
+    /* 深色主题的 --danger 偏浅，前景用深墨色（近白在浅红上仅约 1.9:1） */
+    --danger-fg: #2b1416;
     --element-冷凝: #86b5cf;
     --element-热熔: #d9a07a;
     --element-导电: #ab8fc4;
