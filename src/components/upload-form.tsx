@@ -85,9 +85,12 @@ export default function UploadForm() {
 
     return (
         <div className="space-y-6">
-            <div className="rounded-none border border-(--card-border) bg-(--card) p-6">
-                <h2 className="mb-1 text-base font-semibold">1. 选择工程文件</h2>
-                <p className="mb-4 text-xs text-(--muted)">
+            <div className="mg-card p-6">
+                <div className="mg-section">
+                    <Icon icon="mdi:file-upload-outline" className="size-4 shrink-0 text-(--accent-text)" />
+                    <h2 className="mg-title text-base">1. 选择工程文件</h2>
+                </div>
+                <p className="mg-note mb-4">
                     在椰果工具箱中「导出」工程获得 .json 文件，或直接粘贴其内容。
                 </p>
 
@@ -111,16 +114,16 @@ export default function UploadForm() {
                 </div>
 
                 {parseError && (
-                    <div className="mt-3 rounded-none border border-(--danger) bg-(--danger) px-3 py-2 text-sm text-white">
+                    <div className="mt-3 rounded-none border border-(--danger) bg-(--danger) px-3 py-2 text-sm text-(--danger-fg)">
                         {parseError}
                     </div>
                 )}
 
                 {preview && (
-                    <div className="mt-4 space-y-3 rounded-none bg-(--card-hover) p-4">
+                    <div className="mt-4 space-y-3 rounded-none border border-(--card-border) bg-(--card-hover) p-4">
                         <div className="flex items-center justify-between">
-                            <span className="text-sm font-medium">{preview.name}</span>
-                            <span className="text-xs text-(--muted)">
+                            <span className="mg-title text-sm">{preview.name}</span>
+                            <span className="mg-num text-xs text-(--muted)">
                                 {(new TextEncoder().encode(fileText).length / 1024).toFixed(1)} KB
                             </span>
                         </div>
@@ -135,8 +138,11 @@ export default function UploadForm() {
                 )}
             </div>
 
-            <div className="rounded-none border border-(--card-border) bg-(--card) p-6">
-                <h2 className="mb-4 text-base font-semibold">2. 分享信息</h2>
+            <div className="mg-card p-6">
+                <div className="mg-section">
+                    <Icon icon="mdi:tag-multiple-outline" className="size-4 shrink-0 text-(--accent-text)" />
+                    <h2 className="mg-title text-base">2. 分享信息</h2>
+                </div>
 
                 <div className="space-y-4">
                     <div>
@@ -196,7 +202,7 @@ export default function UploadForm() {
             </div>
 
             {submitError && (
-                <div className="rounded-none border border-(--danger) bg-(--danger) px-3 py-2 text-sm text-white">
+                <div className="rounded-none border border-(--danger) bg-(--danger) px-3 py-2 text-sm text-(--danger-fg)">
                     {submitError}
                 </div>
             )}

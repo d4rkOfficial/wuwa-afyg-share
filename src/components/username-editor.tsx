@@ -34,9 +34,9 @@ export default function UsernameEditor({ initial }: Props) {
     }
 
     return (
-        <div className="flex items-center justify-between gap-3 rounded-none border border-(--card-border) bg-(--card) p-4">
+        <div className="mg-card flex items-center justify-between gap-3 p-4">
             <div className="flex min-w-0 items-center gap-3">
-                <span className="flex size-10 shrink-0 items-center justify-center rounded-none bg-(--card-hover) text-lg font-semibold">
+                <span className="mg-title flex size-10 shrink-0 items-center justify-center rounded-none border border-(--card-border) bg-(--card-hover) text-lg">
                     {username.charAt(0)}
                 </span>
                 {editing ? (
@@ -51,7 +51,7 @@ export default function UsernameEditor({ initial }: Props) {
                         <button
                             onClick={onSave}
                             disabled={pending || username.trim().length < 2}
-                            className="inline-flex items-center gap-1 rounded-none px-3 py-1.5 text-xs font-medium border border-(--card-border) bg-(--btn-bg) text-(--btn-text) transition-colors hover:bg-(--card) hover:text-(--fg) disabled:opacity-50"
+                            className="inline-flex items-center gap-1 rounded-none border border-(--card-border) bg-(--btn-bg) px-3 py-1.5 text-xs font-medium text-(--btn-text) transition-colors hover:bg-(--card) hover:text-(--fg) disabled:opacity-50"
                         >
                             保存
                         </button>
@@ -68,15 +68,15 @@ export default function UsernameEditor({ initial }: Props) {
                     </div>
                 ) : (
                     <div className="min-w-0">
-                        <p className="truncate text-sm font-semibold">{username}</p>
-                        <p className="text-xs text-(--muted)">用户名</p>
+                        <p className="mg-title truncate text-sm">{username}</p>
+                        <p className="mg-note">用户名</p>
                     </div>
                 )}
             </div>
             {!editing && (
                 <button
                     onClick={() => setEditing(true)}
-                    className="inline-flex items-center gap-1 rounded-none border border-(--card-border) px-3 py-1.5 text-xs text-(--muted) transition-colors hover:text-(--fg)"
+                    className="inline-flex items-center gap-1 rounded-none border border-(--card-border) px-3 py-1.5 text-xs text-(--muted) transition-colors hover:border-(--accent) hover:text-(--fg)"
                 >
                     <Icon icon="mdi:pencil-outline" className="size-4" />
                     修改用户名

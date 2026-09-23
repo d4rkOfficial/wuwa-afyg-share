@@ -117,13 +117,13 @@ export default function ManageProjectRow({ project }: Props) {
     }
 
     return (
-        <div className="rounded-none border border-(--card-border) bg-(--card) p-4">
+        <div className="mg-card p-4">
             <div className="flex flex-wrap items-start justify-between gap-3">
                 <div className="min-w-0 flex-1">
                     <div className="flex flex-wrap items-center gap-2">
                         <Link
                             href={`/share/${project.code}`}
-                            className="line-clamp-1 font-medium transition-colors hover:text-(--accent-text)"
+                            className="mg-title line-clamp-1 text-base transition-colors hover:text-(--accent-text)"
                         >
                             {project.title}
                         </Link>
@@ -153,7 +153,7 @@ export default function ManageProjectRow({ project }: Props) {
                             <button
                                 onClick={() => setConfirmDelete(true)}
                                 disabled={pending}
-                                className="inline-flex items-center gap-1 rounded-none border border-(--danger) bg-(--card) px-2 py-0.5 text-xs text-(--danger) transition-colors hover:bg-(--danger) hover:text-white disabled:opacity-50"
+                                className="inline-flex items-center gap-1 rounded-none border border-(--danger) bg-(--card) px-2 py-0.5 text-xs text-(--danger) transition-colors hover:bg-(--danger) hover:text-(--danger-fg) disabled:opacity-50"
                                 title="删除该工程"
                             >
                                 <Icon icon="mdi:trash-can-outline" className="size-3.5" />
@@ -164,11 +164,11 @@ export default function ManageProjectRow({ project }: Props) {
                     <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-(--muted)">
                         <span className="font-mono">/{project.code}</span>
                         <span>{formatDate(project.created_at)}</span>
-                        <span className="flex items-center gap-0.5">
+                        <span className="mg-num flex items-center gap-0.5">
                             <Icon icon="mdi:eye-outline" className="size-3.5" />
                             {formatCount(project.view_count)}
                         </span>
-                        <span className="flex items-center gap-0.5">
+                        <span className="mg-num flex items-center gap-0.5">
                             <Icon icon="mdi:content-copy" className="size-3.5" />
                             {formatCount(project.clone_count)}
                         </span>
@@ -217,7 +217,7 @@ export default function ManageProjectRow({ project }: Props) {
             </div>
 
             {editing && (
-                <div className="mt-4 space-y-3 border-t border-(--card-border) pt-4">
+                <div className="mt-4 space-y-3 border-t pt-4 mg-hairline">
                     <input
                         value={title}
                         onChange={(e) => setTitle(e.target.value)}
@@ -261,7 +261,7 @@ export default function ManageProjectRow({ project }: Props) {
                         </button>
                         <button
                             onClick={() => run(() => setExpiry(project.id, new Date().toISOString()), '已设为立即过期')}
-                            className="rounded-none border border-(--danger) bg-(--card) px-2.5 py-1 text-xs text-(--danger) transition-colors hover:bg-(--danger) hover:text-white"
+                            className="rounded-none border border-(--danger) bg-(--card) px-2.5 py-1 text-xs text-(--danger) transition-colors hover:bg-(--danger) hover:text-(--danger-fg)"
                         >
                             立即过期
                         </button>
@@ -286,11 +286,11 @@ export default function ManageProjectRow({ project }: Props) {
 
             {showReplace && (
                 <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-                    <div className="absolute inset-0 bg-black/60 " onClick={() => setShowReplace(false)} />
-                    <div className="relative flex max-h-[85vh] w-full max-w-lg flex-col overflow-hidden rounded-none border border-(--card-border) bg-(--card) p-5 ">
+                    <div className="absolute inset-0 bg-(--overlay)" onClick={() => setShowReplace(false)} />
+                    <div className="mg-card relative flex max-h-[85vh] w-full max-w-lg flex-col overflow-hidden p-5">
                         <div className="flex items-center gap-2">
                             <Icon icon="mdi:swap-horizontal" className="size-5 text-(--accent-text)" />
-                            <h3 className="text-sm font-semibold">换源工程</h3>
+                            <h3 className="mg-title text-sm">换源工程</h3>
                         </div>
                         <p className="mt-2 text-sm text-(--muted)">
                             「{project.title}」将替换为新的工程文件内容（保留分享码、简介、标签与有效期）。
@@ -350,11 +350,11 @@ export default function ManageProjectRow({ project }: Props) {
 
             {confirmDelete && (
                 <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-                    <div className="absolute inset-0 bg-black/60 " onClick={() => setConfirmDelete(false)} />
-                    <div className="relative w-full max-w-sm rounded-none border border-(--card-border) bg-(--card) p-5 ">
+                    <div className="absolute inset-0 bg-(--overlay)" onClick={() => setConfirmDelete(false)} />
+                    <div className="mg-card relative w-full max-w-sm p-5">
                         <div className="flex items-center gap-2">
                             <Icon icon="mdi:alert-decagram-outline" className="size-5 text-(--danger)" />
-                            <h3 className="text-sm font-semibold">确认删除工程？</h3>
+                            <h3 className="mg-title text-sm">确认删除工程？</h3>
                         </div>
                         <p className="mt-2 text-sm text-(--muted)">
                             「{project.title}」删除后无法恢复，分享链接将失效。
@@ -369,7 +369,7 @@ export default function ManageProjectRow({ project }: Props) {
                             <button
                                 onClick={() => run(() => deleteProject(project.id), '已删除')}
                                 disabled={pending}
-                                className="inline-flex items-center gap-1 rounded-none border border-(--danger) bg-(--danger) transition-colors hover:bg-(--card) hover:text-(--danger) px-3 py-1.5 text-sm text-white  disabled:opacity-50"
+                                className="inline-flex items-center gap-1 rounded-none border border-(--danger) bg-(--danger) transition-colors hover:bg-(--card) hover:text-(--danger) px-3 py-1.5 text-sm text-(--danger-fg) disabled:opacity-50"
                             >
                                 <Icon icon={pending ? 'mdi:loading' : 'mdi:trash-can-outline'} className={`size-4 ${pending ? 'animate-spin' : ''}`} />
                                 确认删除

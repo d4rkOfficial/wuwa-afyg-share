@@ -48,13 +48,15 @@ export default function LoginForm({ redirect, error }: Props) {
 
     if (sent) {
         return (
-            <div className="rounded-none border border-(--card-border) bg-(--card) p-8 text-center">
-                <Icon icon="mdi:email-check-outline" className="mx-auto mb-3 size-10 text-(--accent)" />
-                <p className="font-medium">验证邮件已发送</p>
-                <p className="mt-1 text-sm text-(--muted)">请前往 {email} 查收并点击链接完成登录，或输入邮件中的验证码：</p>
+            <div className="mg-card p-8 text-center">
+                <Icon icon="mdi:email-check-outline" className="mx-auto mb-3 size-10 text-(--accent-text)" />
+                <p className="mg-title text-base">验证邮件已发送</p>
+                <p className="mt-1 text-sm leading-relaxed text-(--muted)">
+                    请前往 {email} 查收并点击链接完成登录，或输入邮件中的验证码：
+                </p>
                 <form onSubmit={onVerifyCode} className="mt-4 flex flex-col gap-2">
                     {codeErr && (
-                        <div className="rounded-none border border-(--danger) bg-(--danger) px-3 py-2 text-sm text-white">
+                        <div className="rounded-none border border-(--danger) bg-(--danger) px-3 py-2 text-sm text-(--danger-fg)">
                             {codeErr}
                         </div>
                     )}
@@ -66,12 +68,12 @@ export default function LoginForm({ redirect, error }: Props) {
                             autoComplete="one-time-code"
                             autoFocus
                             required
-                            className="flex-1 rounded-none border border-(--card-border) bg-(--input-bg) px-3 py-2.5 text-center text-lg tracking-widest outline-none transition-colors placeholder:text-sm placeholder:tracking-normal focus:border-(--accent)"
+                            className="mg-num flex-1 rounded-none border border-(--card-border) bg-(--input-bg) px-3 py-2.5 text-center text-lg tracking-widest outline-none transition-colors placeholder:text-sm placeholder:tracking-normal focus:border-(--accent)"
                         />
                         <button
                             type="submit"
                             disabled={pending || !code.trim()}
-                            className="inline-flex items-center gap-1.5 rounded-none px-4 py-2.5 text-sm font-medium border border-(--card-border) bg-(--btn-bg) text-(--btn-text) transition-colors hover:bg-(--card) hover:text-(--fg) disabled:opacity-50"
+                            className="inline-flex items-center gap-1.5 rounded-none border border-(--card-border) bg-(--btn-bg) px-4 py-2.5 text-sm font-medium text-(--btn-text) transition-colors hover:bg-(--card) hover:text-(--fg) disabled:opacity-50"
                         >
                             <Icon icon="mdi:login" className="size-4" />
                             登录
@@ -85,7 +87,7 @@ export default function LoginForm({ redirect, error }: Props) {
     return (
         <div className="space-y-4">
             {err && (
-                <div className="rounded-none border border-(--danger) bg-(--danger) px-3 py-2 text-sm text-white">
+                <div className="rounded-none border border-(--danger) bg-(--danger) px-3 py-2 text-sm text-(--danger-fg)">
                     {err}
                 </div>
             )}
@@ -117,7 +119,7 @@ export default function LoginForm({ redirect, error }: Props) {
                 <button
                     type="submit"
                     disabled={pending || !email}
-                    className="inline-flex items-center gap-1.5 rounded-none px-4 py-2.5 text-sm font-medium border border-(--card-border) bg-(--btn-bg) text-(--btn-text) transition-colors hover:bg-(--card) hover:text-(--fg) disabled:opacity-50"
+                    className="inline-flex items-center gap-1.5 rounded-none border border-(--card-border) bg-(--btn-bg) px-4 py-2.5 text-sm font-medium text-(--btn-text) transition-colors hover:bg-(--card) hover:text-(--fg) disabled:opacity-50"
                 >
                     <Icon icon="mdi:send-outline" className="size-4" />
                     发送

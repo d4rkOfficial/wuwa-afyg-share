@@ -53,12 +53,11 @@ export default function TeamBanner({ names, size = 'sm' }: Props) {
                 return (
                     <span
                         key={i}
-                        className={`inline-flex items-center rounded-none border px-3 py-1.5 text-sm font-black tracking-tight ${
+                        className={`mg-title inline-flex items-center rounded-none border bg-(--card-hover) px-3 py-1.5 text-sm ${
                             size === 'lg' ? 'px-4 py-2 text-base' : ''
                         }`}
                         style={{
-                            background: elVar,
-                            color: '#000000',
+                            color: elVar,
                             borderColor: elVar
                         }}
                     >

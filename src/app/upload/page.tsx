@@ -26,9 +26,9 @@ export default async function UploadPage() {
 
     return (
         <div className="mx-auto max-w-2xl space-y-6">
-            <div>
-                <h1 className="text-3xl md:text-4xl font-black tracking-tight">上传工程</h1>
-                <p className="mt-1 text-sm text-(--muted)">
+            <div className="border-b pb-4 mg-hairline">
+                <h1 className="mg-title-xl text-3xl md:text-4xl">上传工程</h1>
+                <p className="mt-1 text-sm leading-relaxed text-(--muted)">
                     从椰果工具箱导出工程 JSON，分享给社区使用。
                 </p>
             </div>

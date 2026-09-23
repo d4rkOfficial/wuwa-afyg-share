@@ -29,9 +29,9 @@ export default function SetupUsernameForm({ redirectTo }: Props) {
     }
 
     return (
-        <form onSubmit={onSubmit} className="space-y-3 rounded-none border border-(--card-border) bg-(--card) p-6">
+        <form onSubmit={onSubmit} className="mg-card space-y-3 p-6">
             {err && (
-                <div className="rounded-none border border-(--danger) bg-(--danger) px-3 py-2 text-sm text-white">
+                <div className="rounded-none border border-(--danger) bg-(--danger) px-3 py-2 text-sm text-(--danger-fg)">
                     {err}
                 </div>
             )}
@@ -47,7 +47,7 @@ export default function SetupUsernameForm({ redirectTo }: Props) {
             <button
                 type="submit"
                 disabled={pending || username.trim().length < 2}
-                className="inline-flex w-full items-center justify-center gap-1.5 rounded-none px-4 py-2.5 text-sm font-medium border border-(--card-border) bg-(--btn-bg) text-(--btn-text) transition-colors hover:bg-(--card) hover:text-(--fg) disabled:opacity-50"
+                className="inline-flex w-full items-center justify-center gap-1.5 rounded-none border border-(--card-border) bg-(--btn-bg) px-4 py-2.5 text-sm font-medium text-(--btn-text) transition-colors hover:bg-(--card) hover:text-(--fg) disabled:opacity-50"
             >
                 <Icon icon="mdi:check" className="size-4" />
                 {pending ? '保存中...' : '确认'}

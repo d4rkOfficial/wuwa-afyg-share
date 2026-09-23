@@ -40,17 +40,14 @@ export default function TeamPreview({ slots, locked }: Props) {
                         .filter((n): n is string => Boolean(n))
                     const sets = slot.triggerSets.map((s) => `${s.name}×${s.pieces}`)
                     return (
-                        <div
-                            key={i}
-                            className="rounded-none border border-(--card-border) bg-(--card) p-4"
-                        >
-                            <div className="mb-3 flex items-center gap-2">
-                                <span className="flex size-7 items-center justify-center rounded-none bg-(--card-hover) text-xs font-semibold text-(--muted)">
+                        <div key={i} className="mg-card p-4">
+                            <div className="mg-section">
+                                <span className="mg-num flex size-7 shrink-0 items-center justify-center rounded-none border border-(--card-border) bg-(--card-hover) text-xs text-(--muted)">
                                     {i + 1}
                                 </span>
                                 {slot.character ? (
                                     <span
-                                        className="font-medium"
+                                        className="mg-title text-sm"
                                         style={
                                             elements[slot.character]
                                                 ? { color: `var(--element-${elements[slot.character]})` }
@@ -60,16 +57,14 @@ export default function TeamPreview({ slots, locked }: Props) {
                                         {slot.character}
                                     </span>
                                 ) : (
-                                    <span className="text-(--muted)">未选择</span>
+                                    <span className="mg-note">未选择</span>
                                 )}
                             </div>
 
                             <dl className="space-y-2 text-sm">
                                 <div className="flex items-start gap-2">
                                     <dt className="w-12 shrink-0 text-(--muted)">武器</dt>
-                                    <dd className={slot.weapon ? '' : 'text-(--muted)'}>
-                                        {slot.weapon ?? '未选择'}
-                                    </dd>
+                                    <dd className={slot.weapon ? '' : 'text-(--muted)'}>{slot.weapon ?? '未选择'}</dd>
                                 </div>
                                 {sets.length > 0 && (
                                     <div className="flex items-start gap-2">
@@ -78,7 +73,7 @@ export default function TeamPreview({ slots, locked }: Props) {
                                             {sets.map((s) => (
                                                 <span
                                                     key={s}
-                                                    className="rounded bg-(--card-hover) px-1.5 py-0.5 text-xs"
+                                                    className="mg-num rounded-none border border-(--card-border) bg-(--card-hover) px-1.5 py-0.5 text-xs"
                                                 >
                                                     {s}
                                                 </span>
@@ -93,7 +88,7 @@ export default function TeamPreview({ slots, locked }: Props) {
                                             {echoNames.map((name) => (
                                                 <span
                                                     key={name}
-                                                    className="rounded bg-(--card-hover) px-1.5 py-0.5 text-xs"
+                                                    className="rounded-none border border-(--card-border) bg-(--card-hover) px-1.5 py-0.5 text-xs"
                                                 >
                                                     {name}
                                                 </span>
@@ -107,12 +102,10 @@ export default function TeamPreview({ slots, locked }: Props) {
                 })}
             </div>
 
-            <div className="flex items-center gap-2 text-xs text-(--muted)">
-                <Icon icon="mdi:lock-outline" className="size-4" />
+            <div className="flex items-center gap-2 border-t pt-3 text-xs leading-relaxed text-(--muted) mg-hairline">
+                <Icon icon="mdi:lock-outline" className="size-4 shrink-0" />
                 已锁定阶段：
-                {lockedPhases.length > 0
-                    ? lockedPhases.map((k) => PHASE_LABELS[k]).join(' · ')
-                    : '无'}
+                {lockedPhases.length > 0 ? lockedPhases.map((k) => PHASE_LABELS[k]).join(' · ') : '无'}
             </div>
         </div>
     )

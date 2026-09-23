@@ -37,7 +37,7 @@ export default function ExpiryCountdown({ expiresAt }: Props) {
     return (
         <span className="inline-flex items-center gap-1 rounded-none border border-(--warning) px-2 py-0.5 text-xs text-(--warning)">
             <Icon icon="mdi:clock-outline" className="size-3.5" />
-            {formatRemain(remain)}
+            <span className="mg-num">{formatRemain(remain)}</span>
         </span>
     )
 }

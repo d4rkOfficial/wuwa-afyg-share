@@ -33,19 +33,17 @@ export default async function BuffSetsPage() {
 
     return (
         <div className="space-y-8 md:space-y-12">
-            <div>
-                <h1 className="text-2xl md:text-3xl font-black tracking-tight">Buff 集</h1>
-                <p className="text-sm text-(--muted)">
+            <div className="border-b pb-4 mg-hairline">
+                <h1 className="mg-title-xl text-3xl md:text-4xl">Buff 集</h1>
+                <p className="mt-1 text-sm leading-relaxed text-(--muted)">
                     游戏内角色 / 武器 / 首位声骸 / 套装的固定增益数值，供工具箱一键导入。左侧选实体，右侧看明细。
                 </p>
             </div>
 
             {error ? (
-                <div className="rounded-none border border-(--card-border) bg-(--card) p-8 text-center text-(--muted)">
-                    加载失败：{error.message}
-                </div>
+                <div className="mg-card p-8 text-center text-(--muted)">加载失败：{error.message}</div>
             ) : rows.length === 0 ? (
-                <div className="rounded-none border border-(--card-border) bg-(--card) p-12 text-center">
+                <div className="mg-card p-12 text-center">
                     <Icon icon="mdi:view-dashboard-outline" className="mx-auto mb-3 size-10 text-(--muted)" />
                     <p className="text-(--muted)">暂时还没有收录任何 Buff 集</p>
                 </div>
@@ -53,7 +51,7 @@ export default async function BuffSetsPage() {
                 <BuffSetsBrowser rows={rows} />
             )}
 
-            <div className="flex flex-wrap items-center justify-center gap-2 border-t border-(--card-border) pt-4">
+            <div className="flex flex-wrap items-center justify-center gap-2 border-t pt-4 mg-hairline">
                 <a
                     href="/api/buff-sets/export"
                     className="inline-flex items-center gap-1.5 rounded-none border border-(--card-border) bg-(--card) px-4 py-2 text-sm text-(--muted) transition-colors hover:text-(--fg)"

@@ -90,28 +90,40 @@ export default async function HomePage({
 
     return (
         <div className="space-y-8 md:space-y-10">
+            {/* 刊头：站名衬线刊头 + 下细线 */}
+            <div className="border-b mg-hairline pb-4">
+                <h1 className="mg-title-xl text-3xl md:text-4xl">椰果工坊</h1>
+            </div>
+
             <AnnouncementBar announcements={announcements} isAdmin={isAdmin} />
 
-            <ProjectFilters key={`${q}:${sort}:${character}`} q={q} sort={sort} character={character} />
+            {/* 分区：筛选（图标 + 筛选条 + 下细线） */}
+            <div className="mg-section">
+                <Icon icon="mdi:filter-variant" className="size-4 shrink-0 text-(--accent-text)" />
+                <div className="min-w-0 flex-1">
+                    <ProjectFilters key={`${q}:${sort}:${character}`} q={q} sort={sort} character={character} />
+                </div>
+            </div>
 
             {error ? (
-                <div className="rounded-none border border-(--card-border) bg-(--card) p-8 text-center text-(--muted)">
-                    加载失败：{error.message}
-                </div>
+                <div className="mg-card p-8 text-center text-(--muted)">加载失败：{error.message}</div>
             ) : items.length === 0 ? (
-                <div className="rounded-none border border-(--card-border) bg-(--card) p-12 text-center">
-                    <Icon icon={q || character ? 'mdi:account-search-outline' : 'mdi:package-variant-closed'} className="mx-auto mb-3 size-10 text-(--muted)" />
-                    <p className="font-medium">
+                <div className="mg-card p-12 text-center">
+                    <Icon
+                        icon={q || character ? 'mdi:account-search-outline' : 'mdi:package-variant-closed'}
+                        className="mx-auto mb-3 size-10 text-(--muted)"
+                    />
+                    <p className="mg-title text-base">
                         {q || character
                             ? `没有找到${q ? `包含「${q}」` : ''}${q && character ? '且' : ''}${character ? `队伍包含「${character}」` : ''}的工程`
                             : '这里还没有人分享工程'}
                     </p>
-                    <p className="mt-1 text-sm text-(--muted)">
+                    <p className="mt-1 text-sm leading-relaxed text-(--muted)">
                         {q || character ? '调整筛选条件试试，或发布你自己的工程' : '去工具箱导出你的拉表排轴工程，做第一个分享者'}
                     </p>
                     <Link
                         href="/upload"
-                        className="mt-4 inline-flex items-center gap-1.5 rounded-none px-4 py-2 text-sm font-medium border border-(--card-border) bg-(--btn-bg) text-(--btn-text) transition-colors hover:bg-(--card) hover:text-(--fg)"
+                        className="mt-4 inline-flex items-center gap-1.5 rounded-none border border-(--card-border) bg-(--btn-bg) px-4 py-2 text-sm font-medium text-(--btn-text) transition-colors hover:bg-(--card) hover:text-(--fg)"
                     >
                         <Icon icon="mdi:plus" className="size-4" />
                         上传工程
@@ -119,7 +131,7 @@ export default async function HomePage({
                 </div>
             ) : (
                 <>
-                    <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                    <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
                         {items.map((p) => (
                             <ProjectCard key={p.id} project={p} icons={charIcons} />
                         ))}

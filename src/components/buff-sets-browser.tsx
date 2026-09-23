@@ -73,7 +73,7 @@ export default function BuffSetsBrowser({ rows }: Props) {
             {/* 左侧：实体列表 */}
             <div className="w-full shrink-0 md:w-64">
                 {/* 类型 tabs */}
-                <div className="mb-2 flex flex-wrap gap-1">
+                <div className="mb-2 flex flex-wrap gap-1 border-b pb-2 mg-hairline">
                     {MAIN_TABS.map((t) => (
                         <button
                             key={t.type}
@@ -119,11 +119,11 @@ export default function BuffSetsBrowser({ rows }: Props) {
                             >
                                 <span className="min-w-0 flex-1 truncate">{e.entityName}</span>
                                 {e.pieces.length > 0 && (
-                                    <span className="shrink-0 text-[10px] text-(--muted)">
+                                    <span className="mg-num shrink-0 text-[10px] text-(--muted)">
                                         {e.pieces.join('/')}件
                                     </span>
                                 )}
-                                <span className="shrink-0 rounded-none bg-(--accent) px-1.5 py-0.5 text-[10px] text-(--accent-fg)">
+                                <span className="mg-num shrink-0 rounded-none bg-(--accent) px-1.5 py-0.5 text-[10px] text-(--accent-fg)">
                                     {e.buffs.length}
                                 </span>
                             </button>
@@ -135,34 +135,35 @@ export default function BuffSetsBrowser({ rows }: Props) {
             {/* 右侧：选中实体的 buff 明细 */}
             <div className="min-w-0 flex-1">
                 {selectedBuffs.length === 0 ? (
-                    <div className="rounded-none border border-(--card-border) bg-(--card) p-10 text-center text-sm text-(--muted)">
+                    <div className="mg-card p-10 text-center text-sm text-(--muted)">
                         <Icon icon="mdi:arrow-left" className="mx-auto mb-2 size-6" />
                         从左侧选择一个实体查看其 Buff
                     </div>
                 ) : (
                     <div className="space-y-3">
-                        <div className="flex items-center gap-2">
-                            <h2 className="text-lg font-black tracking-tight text-(--fg)">{selected!.entityName}</h2>
+                        <div className="mg-section">
+                            <Icon icon="mdi:view-dashboard-outline" className="size-4 shrink-0 text-(--accent-text)" />
+                            <h2 className="mg-title text-lg">{selected!.entityName}</h2>
                             {selectedBuffs[0].exclusive && (
-                                <span className="rounded border border-(--warning) px-1.5 py-0.5 text-[10px] text-(--warning)">
+                                <span className="rounded-none border border-(--warning) px-1.5 py-0.5 text-[10px] text-(--warning)">
                                     效应专属
                                 </span>
                             )}
-                            <span className="text-xs text-(--muted)">{selectedBuffs.length} 条</span>
+                            <span className="mg-num text-xs text-(--muted)">{selectedBuffs.length} 条</span>
                         </div>
-                        <div className="grid gap-3 sm:grid-cols-2">
+                        <div className="grid grid-cols-1 gap-3 xl:grid-cols-2">
                             {selectedBuffs.map((item) => (
                                 <div
                                     key={`${item.entity_type}/${item.entity_name}/${item.buff_name}`}
-                                    className="rounded-none border border-(--card-border) bg-(--card) p-4"
+                                    className="mg-card p-4"
                                 >
                                     <div className="mb-2 flex items-center gap-2">
-                                        <span className="truncate text-sm font-medium text-(--fg)">{item.buff_name}</span>
-                                        <span className="shrink-0 rounded bg-(--accent) px-1.5 py-0.5 text-[10px] text-(--accent-fg)">
+                                        <span className="mg-title truncate text-sm">{item.buff_name}</span>
+                                        <span className="mg-num shrink-0 rounded-none bg-(--accent) px-1.5 py-0.5 text-[10px] text-(--accent-fg)">
                                             {BUFF_SCOPE_LABELS[item.scope] ?? item.scope}
                                         </span>
                                         {isSet(item.entity_type) && (
-                                            <span className="shrink-0 text-[10px] text-(--muted)">
+                                            <span className="mg-num shrink-0 text-[10px] text-(--muted)">
                                                 {item.entity_type[0]}件
                                             </span>
                                         )}

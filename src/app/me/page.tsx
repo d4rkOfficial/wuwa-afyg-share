@@ -52,10 +52,12 @@ export default async function MePage() {
         <div className="mx-auto max-w-3xl space-y-8 md:space-y-12">
             {profile?.username && <UsernameEditor initial={profile.username} />}
 
-            <div className="flex items-center justify-between">
+            <div className="flex flex-wrap items-end justify-between gap-3 border-b pb-4 mg-hairline">
                 <div>
-                    <h1 className="text-3xl md:text-4xl font-black tracking-tight">我的工程</h1>
-                    <p className="mt-1 text-sm text-(--muted)">共 {projects.length} 个</p>
+                    <h1 className="mg-title-xl text-3xl md:text-4xl">我的工程</h1>
+                    <p className="mt-1 text-sm leading-relaxed text-(--muted)">
+                        共 <span className="mg-num">{projects.length}</span> 个
+                    </p>
                 </div>
                 <div className="flex gap-2">
                     <ClearMyContent />
@@ -80,27 +82,27 @@ export default async function MePage() {
 
             {projects.length > 0 && (
                 <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-                    <div className="rounded-none border border-(--card-border) bg-(--card) p-3 text-center">
-                        <div className="text-lg font-black tracking-tight tabular-nums">{projects.length}</div>
+                    <div className="mg-card p-3 text-center">
+                        <div className="mg-num text-lg">{projects.length}</div>
                         <div className="text-xs text-(--muted)">工程</div>
                     </div>
-                    <div className="rounded-none border border-(--card-border) bg-(--card) p-3 text-center">
-                        <div className="text-lg font-black tracking-tight tabular-nums text-(--danger)">{expiredCount}</div>
+                    <div className="mg-card p-3 text-center">
+                        <div className="mg-num text-lg text-(--danger)">{expiredCount}</div>
                         <div className="text-xs text-(--muted)">已过期</div>
                     </div>
-                    <div className="rounded-none border border-(--card-border) bg-(--card) p-3 text-center">
-                        <div className="text-lg font-black tracking-tight tabular-nums">{totalViews.toLocaleString()}</div>
+                    <div className="mg-card p-3 text-center">
+                        <div className="mg-num text-lg">{totalViews.toLocaleString()}</div>
                         <div className="text-xs text-(--muted)">总浏览</div>
                     </div>
-                    <div className="rounded-none border border-(--card-border) bg-(--card) p-3 text-center">
-                        <div className="text-lg font-black tracking-tight tabular-nums">{totalClones.toLocaleString()}</div>
+                    <div className="mg-card p-3 text-center">
+                        <div className="mg-num text-lg">{totalClones.toLocaleString()}</div>
                         <div className="text-xs text-(--muted)">总克隆</div>
                     </div>
                 </div>
             )}
 
             {projects.length === 0 ? (
-                <div className="rounded-none border border-(--card-border) bg-(--card) p-12 text-center text-(--muted)">
+                <div className="mg-card p-12 text-center text-(--muted)">
                     还没有上传过工程，去分享第一个吧
                 </div>
             ) : (
