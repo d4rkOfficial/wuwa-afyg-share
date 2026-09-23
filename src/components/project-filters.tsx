@@ -3,8 +3,7 @@
 import { useEffect, useState, useTransition } from 'react'
 import { useRouter } from 'next/navigation'
 import { Icon } from '@iconify/react'
-import { CHAR_ELEMENTS } from '@/lib/data/char-elements'
-import type { LatestCharElements } from '@/lib/data/char-elements-latest'
+import { readCachedCharElements, loadCharElements } from '@/lib/data/char-elements'
 import { ELEMENTS, ELEMENT_COLORS } from '@/lib/types/project'
 import { elementIcon } from '@/lib/consts/element-icons'
 import SelectMenu from '@/components/ui/select-menu'
@@ -13,18 +12,8 @@ interface Props {
     q: string
     sort: 'hot' | 'latest'
     character: string
-}
-
-const CHAR_ELEMENTS_CACHE_KEY = 'wuwa-afyg:char-elements'
-
-function readCachedCharElements(): Record<string, string> {
-    if (typeof window === 'undefined') return CHAR_ELEMENTS
-    try {
-        const cached = JSON.parse(localStorage.getItem(CHAR_ELEMENTS_CACHE_KEY) ?? '') as Partial<LatestCharElements>
-        return cached.elements && typeof cached.elements === 'object' ? cached.elements : CHAR_ELEMENTS
-    } catch {
-        return CHAR_ELEMENTS
-    }
+    /** 服务端已取到的角色属性表，用于首屏直接上色 */
+    elements?: Record<string, string>
 }
 
 function groupCharacters(elements: Record<string, string>) {
@@ -34,37 +23,19 @@ function groupCharacters(elements: Record<string, string>) {
     })).filter((group) => group.names.length > 0)
 }
 
-export default function ProjectFilters({ q, sort, character }: Props) {
+export default function ProjectFilters({ q, sort, character, elements }: Props) {
     const router = useRouter()
     const [isPending, startTransition] = useTransition()
     const [query, setQuery] = useState(q)
     const [selectedSort, setSelectedSort] = useState(sort)
     const [selectedCharacter, setSelectedCharacter] = useState(character)
-    const [charElements, setCharElements] = useState(CHAR_ELEMENTS)
+    const [charElements, setCharElements] = useState<Record<string, string>>(() => elements ?? readCachedCharElements())
 
     useEffect(() => {
         let active = true
-        Promise.resolve().then(() => {
-            if (active) setCharElements(readCachedCharElements())
+        loadCharElements().then((latest) => {
+            if (active) setCharElements(latest)
         })
-
-        fetch('/api/char-elements', { cache: 'no-store' })
-            .then((response) => {
-                if (!response.ok) throw new Error('角色数据获取失败')
-                return response.json() as Promise<LatestCharElements>
-            })
-            .then((latest) => {
-                if (!latest.elements || typeof latest.elements !== 'object') return
-                try {
-                    localStorage.setItem(CHAR_ELEMENTS_CACHE_KEY, JSON.stringify(latest))
-                } catch {
-                    // 本地存储不可用时仍使用本次请求的数据
-                }
-                if (active) setCharElements(latest.elements)
-            })
-            .catch(() => {
-                // 使用生成文件或本地缓存作为离线兜底
-            })
 
         return () => {
             active = false

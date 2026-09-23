@@ -101,7 +101,13 @@ export default async function HomePage({
             <div className="mg-section">
                 <Icon icon="mdi:filter-variant" className="size-4 shrink-0 text-(--accent-text)" />
                 <div className="min-w-0 flex-1">
-                    <ProjectFilters key={`${q}:${sort}:${character}`} q={q} sort={sort} character={character} />
+                    <ProjectFilters
+                        key={`${q}:${sort}:${character}`}
+                        q={q}
+                        sort={sort}
+                        character={character}
+                        elements={characterElements}
+                    />
                 </div>
             </div>
 

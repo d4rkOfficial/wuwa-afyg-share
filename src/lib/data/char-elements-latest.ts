@@ -1,4 +1,4 @@
-import { CHAR_ELEMENTS } from './char-elements'
+import { CHAR_ELEMENTS } from './char-elements.generated'
 
 const MANIFEST_URL = 'https://static.nanoka.cc/manifest.json'
 const ELEMENT_BY_ID = ['', '冷凝', '热熔', '导电', '气动', '衍射', '湮灭']
