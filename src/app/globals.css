@@ -1,9 +1,9 @@
 @import 'tailwindcss';
 
 /* ──────────────────────────────────────────────────────────────
-   Minimalist Flat 设计系统 · Token 层
-   纯色背景 / 纯黑纯白文字 / 单一强调色 / 零阴影零渐变 / 一致锐角
-   圆角统一为 0（rounded-none）；阴影全局置零；仅保留「刻意弱化」的灰阶文字
+   杂志衬线设计系统 · Token 层
+   柔和配色（非纯黑纯白）/ 衬线重音标题 / 单一强调色 / 零阴影零渐变 / 一致锐角
+   圆角统一为 0（rounded-none）；阴影全局置零；层次靠细边框与弱化文字
    ────────────────────────────────────────────────────────────── */
 
 @theme {
@@ -16,77 +16,79 @@
     --radius-xl: 0px;
     --radius-2xl: 0px;
     --radius-3xl: 0px;
+
+    /* 杂志衬线：中文优先宋/仿宋体系，西文回落到 Georgia/Times */
+    --font-sans:
+        'Songti SC', 'Noto Serif SC', 'Source Han Serif SC', SimSun, Georgia, 'Times New Roman', serif;
+    --font-serif:
+        'Songti SC', 'Noto Serif SC', 'Source Han Serif SC', SimSun, Georgia, 'Times New Roman', serif;
 }
 
-/* 默认深色：纯黑底 / 纯白字 / 强调色反白 */
+/* 默认深色：柔和墨底 / 米白文字（不再纯黑纯白，降低对比） */
 :root {
     color-scheme: dark;
-    --bg: #000000;
-    --fg: #ffffff;
-    --muted: #a3a3a3; /* 刻意弱化的次要文字，对比度满足 AA */
-    --card: #000000;
-    --card-hover: #171717; /* 实色表面，不使用低透明度 */
-    --card-border: #3f3f3f; /* 深色边框：暗灰，不刺眼，仍与纯黑背景区分 */
-    --btn-bg: #ffffff;
-    --btn-text: #000000;
-    --accent: #ff3366;
-    --accent-fg: #ffffff;
-    --accent-text: #ff5c7f;
-    --input-bg: #000000;
-    --danger: #f87171;
-    --danger-text: #f87171;
-    --success: #34d399;
-    --success-text: #34d399;
-    --warning: #fbbf24;
-    --warning-text: #fbbf24;
-    --info: #38bdf8;
-    --info-text: #38bdf8;
-    --code-bg: #171717;
-    --code-bg-strong: #262626;
-    --element-冷凝: #38bdf8;
-    --element-热熔: #fb923c;
-    --element-导电: #a855f7;
-    --element-气动: #34d399;
-    --element-衍射: #facc15;
-    --element-湮灭: #f472b6;
+    --bg: #0f0f12;
+    --fg: #e6e3de;
+    --muted: #9a958c; /* 刻意弱化的次要文字，柔和不刺眼 */
+    --card: #16161a;
+    --card-hover: #1d1d22; /* 实色表面，不使用低透明度 */
+    --card-border: #2c2c32; /* 细边框：低对比，仅作层次提示 */
+    --btn-bg: #e6e3de;
+    --btn-text: #16161a;
+    --accent: #d9646f; /* 柔和绛红，替代高饱和霓虹粉 */
+    --accent-fg: #fdfcfb;
+    --accent-text: #e08b93;
+    --input-bg: #131317;
+    --danger: #e08585;
+    --danger-text: #e08585;
+    --success: #7fbf9a;
+    --success-text: #7fbf9a;
+    --warning: #d9b26a;
+    --warning-text: #d9b26a;
+    --info: #86b5cf;
+    --info-text: #86b5cf;
+    --code-bg: #1a1a1f;
+    --code-bg-strong: #24242a;
+    --element-冷凝: #86b5cf;
+    --element-热熔: #d9a07a;
+    --element-导电: #ab8fc4;
+    --element-气动: #86c0a4;
+    --element-衍射: #d6c07a;
+    --element-湮灭: #cf8fa6;
 }
 
-/* 浅色：纯白底 / 纯黑字 / 强调色反白 */
+/* 浅色：暖白纸底 / 墨色文字（同样降低对比） */
 html.light {
     color-scheme: light;
-    --bg: #ffffff;
-    --fg: #000000;
-    --muted: #525252;
-    --card: #ffffff;
-    --card-hover: #f2f2f2;
-    --card-border: #000000;
-    --btn-bg: #000000;
-    --btn-text: #ffffff;
-    --accent: #ff3366;
-    --accent-fg: #ffffff;
-    --accent-text: #d11e4a;
-    --input-bg: #ffffff;
-    --danger: #dc2626;
-    --danger-text: #dc2626;
-    --success: #059669;
-    --success-text: #059669;
-    --warning: #d97706;
-    --warning-text: #d97706;
-    --info: #0284c7;
-    --info-text: #0284c7;
-    --code-bg: #f2f2f2;
-    --code-bg-strong: #e5e5e5;
+    --bg: #f7f5f1;
+    --fg: #23211e;
+    --muted: #6d675f;
+    --card: #fdfcfa;
+    --card-hover: #f1ede7;
+    --card-border: #ddd7cd;
+    --btn-bg: #2a2724;
+    --btn-text: #faf8f5;
+    --accent: #b8505c;
+    --accent-fg: #fdfcfb;
+    --accent-text: #9d4450;
+    --input-bg: #fdfcfa;
+    --danger: #a8443f;
+    --danger-text: #a8443f;
+    --success: #3f7a5c;
+    --success-text: #3f7a5c;
+    --warning: #8a6a2f;
+    --warning-text: #8a6a2f;
+    --info: #3c6a86;
+    --info-text: #3c6a86;
+    --code-bg: #f1ede7;
+    --code-bg-strong: #e6e0d7;
 }
 
 body {
-    font-family:
-        var(--font-geist-sans),
-        ui-sans-serif,
-        system-ui,
-        -apple-system,
-        'PingFang SC',
-        'Microsoft YaHei',
-        sans-serif;
+    font-family: var(--font-sans);
+    /* 杂志感：正文略收字距、行高放松 */
+    letter-spacing: 0.01em;
+    line-height: 1.7;
 }
 
 @layer base {
@@ -434,5 +436,56 @@ html.light .theme-icon-light {
         width: 100%;
         opacity: 0.55;
         transform: none;
+    }
+}
+
+/* ──────────────────────────────────────────────────────────────
+   杂志衬线风格助手（全站统一）：
+   标题=衬线重音（字重+收紧字距）；分区=细分割线；卡片=直角+细边框；无英文小标（一律用图标）
+   ────────────────────────────────────────────────────────────── */
+@layer components {
+    /* 衬线重音标题：不要在标题上再用 font-semibold，统一用 font-black + 收紧字距 */
+    .mg-title {
+        font-family: var(--font-serif);
+        font-weight: 900;
+        letter-spacing: -0.01em;
+        line-height: 1.2;
+        color: var(--fg);
+    }
+    .mg-title-xl {
+        font-family: var(--font-serif);
+        font-weight: 900;
+        letter-spacing: -0.015em;
+        line-height: 1.05;
+    }
+    /* 分区标题：图标 + 衬线粗标题 + 下细线 */
+    .mg-section {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        border-bottom: 1px solid var(--card-border);
+        padding-bottom: 0.625rem;
+        margin-bottom: 0.875rem;
+    }
+    /* 细分割线（杂志感层次，替代阴影） */
+    .mg-hairline {
+        border-color: var(--card-border);
+    }
+    /* 直角卡片：细边框 + 实色底，不使用阴影 */
+    .mg-card {
+        background: var(--card);
+        border: 1px solid var(--card-border);
+        border-radius: 0;
+    }
+    /* 关键数字：等宽数字 + 衬线重音 */
+    .mg-num {
+        font-variant-numeric: tabular-nums;
+        font-weight: 900;
+    }
+    /* 弱化说明文字 */
+    .mg-note {
+        font-size: 0.6875rem;
+        line-height: 1.6;
+        color: var(--muted);
     }
 }
