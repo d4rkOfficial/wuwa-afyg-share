@@ -49,6 +49,9 @@
     --info-text: #86b5cf;
     --code-bg: #1a1a1f;
     --code-bg-strong: #24242a;
+    /* 弹层遮罩与危险色前景：柔和化后不再直接用 black/60 与 white */
+    --overlay: rgba(6, 6, 8, 0.62);
+    --danger-fg: #fdfcfb;
     --element-冷凝: #86b5cf;
     --element-热熔: #d9a07a;
     --element-导电: #ab8fc4;
@@ -82,6 +85,9 @@ html.light {
     --info-text: #3c6a86;
     --code-bg: #f1ede7;
     --code-bg-strong: #e6e0d7;
+    /* 浅色遮罩更柔（暖灰而非纯黑），危险色前景用纸币白 */
+    --overlay: rgba(52, 46, 40, 0.38);
+    --danger-fg: #fdfcfb;
 }
 
 body {
