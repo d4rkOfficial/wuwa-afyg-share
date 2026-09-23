@@ -57,6 +57,17 @@ export default async function Header() {
                         <span className="hidden lg:inline">Buff 集</span>
                     </AppLink>
 
+                    {/* 标准词条集：只读浏览页，任何人（含非管理员）都可查看；编辑仍在 /admin/substat-sets */}
+                    <AppLink
+                        href="/substat-sets"
+                        aria-label="标准词条集"
+                        title="标准词条集"
+                        className="inline-flex size-9 shrink-0 items-center justify-center gap-1.5 text-sm text-(--muted) transition-colors hover:bg-(--card-hover) hover:text-(--fg) lg:w-auto lg:px-2.5"
+                    >
+                        <Icon icon="mdi:format-list-checks" className="size-4" />
+                        <span className="hidden lg:inline">标准词条集</span>
+                    </AppLink>
+
                     {isAdmin && (
                         <AppLink
                             href="/admin/projects"
