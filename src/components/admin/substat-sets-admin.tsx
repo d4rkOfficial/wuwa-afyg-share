@@ -271,7 +271,7 @@ export default function SubstatSetsAdmin({ rows }: Props) {
                             共 <span className="mg-num text-(--fg)">{rows.length}</span> 个角色
                         </span>
                     </span>
-                    <span className="text-xs text-(--muted)">工具箱通过 /api/substat-sets 拉取</span>
+                    <span className="mg-note">工具箱通过 /api/substat-sets 拉取</span>
                 </div>
                 {rows.length === 0 && (
                     <p className="px-4 py-8 text-center text-sm text-(--muted)">暂无已保存方案</p>

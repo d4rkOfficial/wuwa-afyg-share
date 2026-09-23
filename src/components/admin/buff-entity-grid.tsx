@@ -160,7 +160,7 @@ export default function BuffEntityGrid({ existingCountMap, onSelect }: Props) {
                             <button
                                 key={f.key}
                                 onClick={() => setFilter(f.key)}
-                                className={`rounded px-2.5 py-1 text-[11px] font-medium transition-colors ${
+                                className={`rounded-none px-2.5 py-1 text-[11px] font-medium transition-colors ${
                                     filter === f.key ? 'bg-(--accent) text-(--accent-fg)' : 'text-(--muted) hover:text-(--fg)'
                                 }`}
                             >
@@ -197,7 +197,7 @@ export default function BuffEntityGrid({ existingCountMap, onSelect }: Props) {
                     <div className="flex items-center gap-1 rounded-none border border-(--card-border) bg-(--card-hover) p-0.5">
                         <button
                             onClick={() => (mainTab === 'echo' ? setCostFilter(null) : setStarFilter(null))}
-                            className={`rounded px-2 py-1 text-[11px] transition-colors ${
+                            className={`rounded-none px-2 py-1 text-[11px] transition-colors ${
                                 (mainTab === 'echo' ? costFilter === null : starFilter === null)
                                     ? 'bg-(--accent) text-(--accent-fg)'
                                     : 'text-(--muted) hover:text-(--fg)'
@@ -209,7 +209,7 @@ export default function BuffEntityGrid({ existingCountMap, onSelect }: Props) {
                             <button
                                 key={v}
                                 onClick={() => (mainTab === 'echo' ? setCostFilter(v) : setStarFilter(v))}
-                                className={`rounded px-2 py-1 text-[11px] transition-colors ${
+                                className={`rounded-none px-2 py-1 text-[11px] transition-colors ${
                                     (mainTab === 'echo' ? costFilter === v : starFilter === v)
                                         ? 'bg-(--accent) text-(--accent-fg)'
                                         : 'text-(--muted) hover:text-(--fg)'
@@ -232,7 +232,7 @@ export default function BuffEntityGrid({ existingCountMap, onSelect }: Props) {
                     className="min-w-0 flex-1 bg-transparent text-sm outline-none placeholder:text-(--muted)"
                 />
                 {search && (
-                    <button onClick={() => setSearch('')} className="rounded p-0.5 text-(--muted) hover:text-(--fg)">
+                    <button onClick={() => setSearch('')} className="rounded-none p-0.5 text-(--muted) hover:text-(--fg)">
                         <Icon icon="mdi:close" className="size-4" />
                     </button>
                 )}

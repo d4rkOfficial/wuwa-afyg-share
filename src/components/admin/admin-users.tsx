@@ -112,7 +112,7 @@ export default function AdminUsers({ admins }: Props) {
                                     </span>
                                 )}
                             </div>
-                            <p className="mt-0.5 truncate text-xs text-(--muted)">
+                            <p className="mt-0.5 truncate mg-note">
                                 {a.grantedBy === null
                                     ? '根管理员不可通过本页撤销（需 SQL 操作）'
                                     : a.grantedByMe

@@ -29,7 +29,7 @@ interface Props {
 const SELECT_CLASS =
     'min-w-0 flex-1 rounded-none border border-(--card-border) bg-(--input-bg) px-2 py-1 text-xs outline-none transition-colors focus:border-(--accent)'
 const READONLY_CLASS =
-    'w-24 shrink-0 rounded-none border border-(--card-border) bg-(--card-hover) px-2 py-1 text-right text-xs tabular-nums text-(--muted)'
+    'w-24 shrink-0 rounded-none border border-(--card-border) bg-(--card-hover) px-2 py-1 text-right text-xs mg-num text-(--muted)'
 
 export default function SubstatSlotEditor({ index, slot, onChange }: Props) {
     const pool = MAIN_STAT_POOL[slot.cost] ?? []
@@ -156,7 +156,7 @@ export default function SubstatSlotEditor({ index, slot, onChange }: Props) {
                 </div>
 
                 {slot.substats.length === 0 && (
-                    <p className="text-[11px] text-(--muted)">该部位暂无副词条（每部位 1-5 条）</p>
+                    <p className="mg-note">该部位暂无副词条（每部位 1-5 条）</p>
                 )}
 
                 {slot.substats.map((stat, i) => {
@@ -187,7 +187,7 @@ export default function SubstatSlotEditor({ index, slot, onChange }: Props) {
                                 onChange={(e) =>
                                     updateSubstat(i, { ...stat, value: Number(e.target.value) })
                                 }
-                                className="w-24 shrink-0 rounded-none border border-(--card-border) bg-(--input-bg) px-2 py-1 text-right text-xs tabular-nums outline-none transition-colors focus:border-(--accent)"
+                                className="w-24 shrink-0 rounded-none border border-(--card-border) bg-(--input-bg) px-2 py-1 text-right text-xs mg-num outline-none transition-colors focus:border-(--accent)"
                                 aria-label={`副词条 ${i + 1} 档位`}
                             >
                                 {tiers.map((t) => (

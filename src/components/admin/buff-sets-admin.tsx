@@ -187,7 +187,7 @@ export default function BuffSetsAdmin({ rows, isAdmin }: Props) {
                             <Icon icon="mdi:cog-outline" className="size-4" />
                             连接配置
                             {false && (
-                                <span className="ml-1 rounded border border-(--warning) px-1 py-0.5 text-[9px] text-(--warning)">未配置</span>
+                                <span className="ml-1 rounded-none border border-(--warning) px-1 py-0.5 text-[9px] text-(--warning)">未配置</span>
                             )}
                         </span>
                         <Icon icon="mdi:cog" className="size-4" />
@@ -241,7 +241,7 @@ export default function BuffSetsAdmin({ rows, isAdmin }: Props) {
                                     <Icon icon="mdi:cog-outline" className="size-4 shrink-0 text-(--accent-text)" />
                                     连接配置
                                 </span>
-                                <button onClick={() => setShowConfig(false)} className="rounded p-1 text-(--muted) hover:text-(--fg)">
+                                <button onClick={() => setShowConfig(false)} className="rounded-none p-1 text-(--muted) hover:text-(--fg)">
                                     <Icon icon="mdi:close" className="size-5" />
                                 </button>
                             </div>
@@ -401,7 +401,7 @@ export default function BuffSetsAdmin({ rows, isAdmin }: Props) {
                                 </span>
                                 <button
                                     onClick={() => setEditingPrompt(null)}
-                                    className="rounded p-1 text-(--muted) transition-colors hover:text-(--fg)"
+                                    className="rounded-none p-1 text-(--muted) transition-colors hover:text-(--fg)"
                                 >
                                     <Icon icon="mdi:close" className="size-5" />
                                 </button>

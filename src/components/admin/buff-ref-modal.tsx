@@ -109,14 +109,14 @@ export default function BuffRefModal({ open, entityType, zoneId, initialRef, onS
                         <Icon icon="mdi:link-variant" className="size-4 shrink-0 text-(--accent-text)" />
                         引用配置
                     </span>
-                    <button onClick={onClose} className="rounded p-1 text-(--muted) hover:text-(--fg)">
+                    <button onClick={onClose} className="rounded-none p-1 text-(--muted) hover:text-(--fg)">
                         <Icon icon="mdi:close" className="size-5" />
                     </button>
                 </div>
 
                 <div className="min-h-0 flex-1 space-y-4 overflow-y-auto">
                     {/* refOwner 说明（由实体类型决定） */}
-                    <div className="rounded-none border border-(--card-border) bg-(--input-bg) px-3 py-2 text-[11px] text-(--muted)">
+                    <div className="rounded-none border border-(--card-border) bg-(--input-bg) px-3 py-2 mg-note">
                         <Icon icon="mdi:information-outline" className="mr-1 inline size-3.5 text-(--muted)" />
                         {entityType === 'character'
                             ? '角色只能引用自身面板属性'
@@ -156,7 +156,7 @@ export default function BuffRefModal({ open, entityType, zoneId, initialRef, onS
                                 onChange={(e) => set({ threshold: e.target.value })}
                                 disabled={!hasThreshold}
                                 placeholder="0"
-                                className="min-w-0 flex-1 border-x border-(--card-border) bg-(--input-bg) px-2 py-1.5 text-center text-xs outline-none disabled:text-(--muted) tabular-nums"
+                                className="min-w-0 flex-1 border-x border-(--card-border) bg-(--input-bg) px-2 py-1.5 text-center text-xs outline-none disabled:text-(--muted) mg-num"
                             />
                             <span className="px-2.5 text-[11px] text-(--muted)">
                                 {targetDef?.unit === '%' ? '%' : '点'}
@@ -189,7 +189,7 @@ export default function BuffRefModal({ open, entityType, zoneId, initialRef, onS
                                 type="number"
                                 value={divisor}
                                 onChange={(e) => set({ divisor: e.target.value })}
-                                className="min-w-0 flex-1 border-x border-(--card-border) bg-(--input-bg) px-2 py-1.5 text-center text-xs outline-none tabular-nums"
+                                className="min-w-0 flex-1 border-x border-(--card-border) bg-(--input-bg) px-2 py-1.5 text-center text-xs outline-none mg-num"
                             />
                             <span className="px-2.5 py-1.5 text-[11px] text-(--muted)">
                                 {targetDef?.unit === '%' ? '%' : '点'}
@@ -199,7 +199,7 @@ export default function BuffRefModal({ open, entityType, zoneId, initialRef, onS
                                 type="number"
                                 value={multiplier}
                                 onChange={(e) => set({ multiplier: e.target.value })}
-                                className="min-w-0 flex-1 bg-(--input-bg) px-2 py-1.5 text-center text-xs outline-none tabular-nums"
+                                className="min-w-0 flex-1 bg-(--input-bg) px-2 py-1.5 text-center text-xs outline-none mg-num"
                             />
                             <span className="px-2.5 py-1.5 text-[11px] text-(--muted)">{zoneUnit}</span>
                         </div>
@@ -224,7 +224,7 @@ export default function BuffRefModal({ open, entityType, zoneId, initialRef, onS
                                 value={draft.lower ?? ''}
                                 onChange={(e) => set({ lower: e.target.value })}
                                 disabled={!hasLower}
-                                className="min-w-0 flex-1 border-x border-(--card-border) bg-(--input-bg) px-2 py-1.5 text-center text-xs outline-none disabled:text-(--muted) tabular-nums"
+                                className="min-w-0 flex-1 border-x border-(--card-border) bg-(--input-bg) px-2 py-1.5 text-center text-xs outline-none disabled:text-(--muted) mg-num"
                             />
                             <span className="px-2.5 py-1.5 text-[11px] text-(--muted)">{zoneUnit}</span>
                         </div>
@@ -242,7 +242,7 @@ export default function BuffRefModal({ open, entityType, zoneId, initialRef, onS
                                 value={draft.upper ?? ''}
                                 onChange={(e) => set({ upper: e.target.value })}
                                 disabled={!hasUpper}
-                                className="min-w-0 flex-1 border-x border-(--card-border) bg-(--input-bg) px-2 py-1.5 text-center text-xs outline-none disabled:text-(--muted) tabular-nums"
+                                className="min-w-0 flex-1 border-x border-(--card-border) bg-(--input-bg) px-2 py-1.5 text-center text-xs outline-none disabled:text-(--muted) mg-num"
                             />
                             <span className="px-2.5 text-[11px] text-(--muted)">{zoneUnit}</span>
                         </div>

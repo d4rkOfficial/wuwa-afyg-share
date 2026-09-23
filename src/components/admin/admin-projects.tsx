@@ -131,7 +131,7 @@ export default function AdminProjects() {
                                         <input
                                             value={editTitle}
                                             onChange={(e) => setEditTitle(e.target.value)}
-                                            className="w-full rounded border border-(--card-border) bg-(--input-bg) px-1.5 py-1 text-sm outline-none focus:border-(--accent)"
+                                            className="w-full rounded-none border border-(--card-border) bg-(--input-bg) px-1.5 py-1 text-sm outline-none focus:border-(--accent)"
                                         />
                                     ) : (
                                         <span className="flex items-center gap-1">
@@ -155,7 +155,7 @@ export default function AdminProjects() {
                                         <input
                                             value={editAuthor}
                                             onChange={(e) => setEditAuthor(e.target.value)}
-                                            className="w-28 rounded border border-(--card-border) bg-(--input-bg) px-1.5 py-1 text-sm outline-none focus:border-(--accent)"
+                                            className="w-28 rounded-none border border-(--card-border) bg-(--input-bg) px-1.5 py-1 text-sm outline-none focus:border-(--accent)"
                                         />
                                     ) : (
                                         <span className="text-(--fg)">{row.author_name}</span>
@@ -167,19 +167,25 @@ export default function AdminProjects() {
                                         const grace = isGracePeriod(row.expires_at, row.author_name)
                                         if (expired)
                                             return (
-                                                <span className="rounded border border-(--danger) px-1.5 py-0.5 text-[10px] text-(--danger)">
+                                                <span className="rounded-none border border-(--danger) px-1.5 py-0.5 text-[10px] text-(--danger)">
                                                     已过期
                                                 </span>
                                             )
                                         if (grace)
                                             return (
-                                                <span className="rounded border border-(--warning) px-1.5 py-0.5 text-[10px] text-(--warning)">
+                                                <span className="rounded-none border border-(--warning) px-1.5 py-0.5 text-[10px] text-(--warning)">
                                                     宽限中
                                                 </span>
                                             )
                                         return (
                                             <span className="text-xs text-(--muted)">
-                                                {row.expires_at ? new Date(row.expires_at).toLocaleDateString('zh-CN') : '永久'}
+                                                {row.expires_at ? (
+                                                    <span className="mg-num">
+                                                        {new Date(row.expires_at).toLocaleDateString('zh-CN')}
+                                                    </span>
+                                                ) : (
+                                                    '永久'
+                                                )}
                                             </span>
                                         )
                                     })()}
@@ -204,13 +210,13 @@ export default function AdminProjects() {
                                                         )
                                                     }
                                                     disabled={pending}
-                                                    className="rounded border border-(--accent) px-2 py-1 text-[10px] text-(--accent-text) hover:bg-(--accent) hover:text-(--accent-fg) disabled:opacity-50"
+                                                    className="rounded-none border border-(--accent) px-2 py-1 text-[10px] text-(--accent-text) hover:bg-(--accent) hover:text-(--accent-fg) disabled:opacity-50"
                                                 >
                                                     保存
                                                 </button>
                                                 <button
                                                     onClick={() => setEditingId(null)}
-                                                    className="rounded px-2 py-1 text-[10px] text-(--muted) hover:bg-(--card-hover)"
+                                                    className="rounded-none px-2 py-1 text-[10px] text-(--muted) hover:bg-(--card-hover)"
                                                 >
                                                     取消
                                                 </button>
@@ -219,7 +225,7 @@ export default function AdminProjects() {
                                             <>
                                                 <button
                                                     onClick={() => openEdit(row)}
-                                                    className="rounded p-1 text-(--muted) hover:text-(--accent-text)"
+                                                    className="rounded-none p-1 text-(--muted) hover:text-(--accent-text)"
                                                     title="改名"
                                                 >
                                                     <Icon icon="mdi:pencil-outline" className="size-4" />
@@ -237,7 +243,7 @@ export default function AdminProjects() {
                                                         }
                                                         run(() => adminSetProjectExpiry(row.id, expiresAt), '已更新过期时间')
                                                     }}
-                                                    className="rounded p-1 text-(--muted) hover:text-(--info)"
+                                                    className="rounded-none p-1 text-(--muted) hover:text-(--info)"
                                                     title="改过期时间"
                                                 >
                                                     <Icon icon="mdi:clock-outline" className="size-4" />
@@ -250,7 +256,7 @@ export default function AdminProjects() {
                                                         )
                                                     }
                                                     disabled={pending}
-                                                    className="rounded p-1 text-(--muted) hover:text-(--accent-text)"
+                                                    className="rounded-none p-1 text-(--muted) hover:text-(--accent-text)"
                                                     title={row.protected ? '解除保护' : '开启保护（豁免批量/单条删除与过期清理）'}
                                                 >
                                                     <Icon
@@ -262,7 +268,7 @@ export default function AdminProjects() {
                                                     <button
                                                         onClick={() => run(() => adminDeleteProject(row.id), '已删除工程')}
                                                         disabled={pending}
-                                                        className="rounded bg-(--danger) px-2 py-1 text-[10px] text-(--danger-fg)  disabled:opacity-50"
+                                                        className="rounded-none bg-(--danger) px-2 py-1 text-[10px] text-(--danger-fg)  disabled:opacity-50"
                                                     >
                                                         确认删除
                                                     </button>
@@ -270,7 +276,7 @@ export default function AdminProjects() {
                                                     <button
                                                         onClick={() => setConfirmDeleteId(row.id)}
                                                         onBlur={() => setTimeout(() => setConfirmDeleteId(null), 2000)}
-                                                        className="rounded p-1 text-(--muted) hover:text-(--danger)"
+                                                        className="rounded-none p-1 text-(--muted) hover:text-(--danger)"
                                                         title="删除"
                                                     >
                                                         <Icon icon="mdi:trash-can-outline" className="size-4" />
@@ -302,14 +308,14 @@ export default function AdminProjects() {
                     <button
                         onClick={() => setPage((p) => Math.max(1, p - 1))}
                         disabled={page <= 1 || pending}
-                        className="rounded border border-(--card-border) px-2 py-1 disabled:opacity-50"
+                        className="rounded-none border border-(--card-border) px-2 py-1 disabled:opacity-50"
                     >
                         上一页
                     </button>
                     <button
                         onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
                         disabled={page >= totalPages || pending}
-                        className="rounded border border-(--card-border) px-2 py-1 disabled:opacity-50"
+                        className="rounded-none border border-(--card-border) px-2 py-1 disabled:opacity-50"
                     >
                         下一页
                     </button>

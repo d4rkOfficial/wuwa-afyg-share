@@ -24,7 +24,7 @@ export default function SubstatPlanJson({ value, onChange, status, onExport, onI
                         <Icon icon="mdi:code-json" className="size-4 shrink-0 text-(--accent-text)" />
                         JSON 导入 / 导出
                     </span>
-                    <p className="text-[11px] text-(--muted)">
+                    <p className="mg-note">
                         {`形如 { "slots": [ { cost, mainStat, secondMainStat, substats } ] }：5 个部位、cost {4,3,3,1,1}、副词条合计 14 条`}
                     </p>
                 </div>
