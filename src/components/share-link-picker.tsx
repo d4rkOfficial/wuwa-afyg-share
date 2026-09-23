@@ -78,7 +78,7 @@ export default function ShareLinkPicker({ code, label = '复制链接' }: Props)
             {open && (
                 <div className="fixed inset-0 z-50 flex items-end justify-center sm:items-center sm:p-4">
                     <div
-                        className="absolute inset-0 bg-black/60 "
+                        className="absolute inset-0 bg-(--overlay) "
                         onClick={() => setOpen(false)}
                         aria-hidden="true"
                     />
