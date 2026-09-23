@@ -67,7 +67,7 @@ export default function ShareLinkPicker({ code, label = '复制链接' }: Props)
         <>
             <button
                 onClick={() => setOpen(true)}
-                className="inline-flex items-center gap-1 rounded-none border-2 border-(--card-border) bg-(--card) px-3 py-1.5 text-sm text-(--muted) transition-colors hover:text-(--fg)"
+                className="inline-flex items-center gap-1 rounded-none border border-(--card-border) bg-(--card) px-3 py-1.5 text-sm text-(--muted) transition-colors hover:text-(--fg)"
                 aria-haspopup="dialog"
                 aria-expanded={open}
             >
@@ -89,7 +89,7 @@ export default function ShareLinkPicker({ code, label = '复制链接' }: Props)
                         aria-labelledby={titleId}
                         aria-describedby={descriptionId}
                         tabIndex={-1}
-                        className="relative flex max-h-[calc(100dvh-1rem)] w-full select-none flex-col overflow-hidden rounded-none border-2 border-(--card-border) bg-(--card) p-4 pb-[max(1rem,env(safe-area-inset-bottom))]  outline-none sm:max-w-md rounded-none sm:p-5"
+                        className="relative flex max-h-[calc(100dvh-1rem)] w-full select-none flex-col overflow-hidden rounded-none border border-(--card-border) bg-(--card) p-4 pb-[max(1rem,env(safe-area-inset-bottom))]  outline-none sm:max-w-md rounded-none sm:p-5"
                     >
                         <div className="flex items-start gap-3">
                             <div className="min-w-0 flex-1">
@@ -122,7 +122,7 @@ export default function ShareLinkPicker({ code, label = '复制链接' }: Props)
                                 value={toolUrl}
                                 onChange={(e) => setToolUrl(e.target.value)}
                                 placeholder="https://wuwa-afyg-tool.200503.xyz"
-                                className="min-h-11 w-full select-text rounded-none border-2 border-(--card-border) bg-(--input-bg) px-3 py-2 font-mono text-base outline-none transition-colors focus:border-(--accent) sm:min-h-0 sm:text-sm"
+                                className="min-h-11 w-full select-text rounded-none border border-(--card-border) bg-(--input-bg) px-3 py-2 font-mono text-base outline-none transition-colors focus:border-(--accent) sm:min-h-0 sm:text-sm"
                             />
                             <div className="mt-2 grid grid-cols-3 gap-1.5 sm:flex sm:flex-wrap">
                                 {INSTANCES.map((inst) => (
@@ -133,7 +133,7 @@ export default function ShareLinkPicker({ code, label = '复制链接' }: Props)
                                         className={`min-h-10 rounded-none px-2.5 py-1 text-xs transition-colors sm:min-h-0 ${
                                             toolUrl === inst.url
                                                 ? 'bg-(--accent) text-(--accent-fg)'
-                                                : 'border-2 border-(--card-border) bg-(--card-hover) text-(--muted) hover:text-(--fg)'
+                                                : 'border border-(--card-border) bg-(--card-hover) text-(--muted) hover:text-(--fg)'
                                         }`}
                                     >
                                         {inst.name}
@@ -145,7 +145,7 @@ export default function ShareLinkPicker({ code, label = '复制链接' }: Props)
                         <div className="mt-4 min-h-0">
                             <span className="mb-1.5 block text-xs font-medium text-(--muted)">生成链接</span>
                             <output
-                                className="block max-h-28 select-text overflow-y-auto rounded-none border-2 border-(--card-border) bg-(--card-hover) px-3 py-2.5 font-mono text-[11px] leading-5 break-all text-(--muted)"
+                                className="block max-h-28 select-text overflow-y-auto rounded-none border border-(--card-border) bg-(--card-hover) px-3 py-2.5 font-mono text-[11px] leading-5 break-all text-(--muted)"
                                 title={link}
                             >
                                 {link}
@@ -155,13 +155,13 @@ export default function ShareLinkPicker({ code, label = '复制链接' }: Props)
                         <div className="mt-4 grid grid-cols-[minmax(0,1fr)_minmax(0,1.4fr)] gap-2 sm:flex sm:justify-end">
                             <button
                                 onClick={() => setOpen(false)}
-                                className="min-h-11 rounded-none border-2 border-(--card-border) bg-(--card) px-3 py-2 text-sm text-(--muted) transition-colors hover:bg-(--card-hover) hover:text-(--fg) sm:min-h-0 sm:py-1.5"
+                                className="min-h-11 rounded-none border border-(--card-border) bg-(--card) px-3 py-2 text-sm text-(--muted) transition-colors hover:bg-(--card-hover) hover:text-(--fg) sm:min-h-0 sm:py-1.5"
                             >
                                 取消
                             </button>
                             <button
                                 onClick={copy}
-                                className="inline-flex min-h-11 items-center justify-center gap-1.5 rounded-none px-4 py-2 text-sm font-medium border-2 border-(--card-border) bg-(--btn-bg) text-(--btn-text) transition-colors hover:bg-(--card) hover:text-(--fg) transition-all   sm:min-h-0 sm:py-1.5"
+                                className="inline-flex min-h-11 items-center justify-center gap-1.5 rounded-none px-4 py-2 text-sm font-medium border border-(--card-border) bg-(--btn-bg) text-(--btn-text) transition-colors hover:bg-(--card) hover:text-(--fg) transition-all   sm:min-h-0 sm:py-1.5"
                             >
                                 <Icon icon="mdi:content-copy" className="size-4" />
                                 复制链接

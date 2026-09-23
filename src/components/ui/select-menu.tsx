@@ -104,7 +104,7 @@ export default function SelectMenu({
         <div
             ref={panelRef}
             role="listbox"
-            className="overflow-y-auto rounded-none border-2 p-1"
+            className="overflow-y-auto rounded-none border p-1"
             style={{
                 position: 'fixed',
                 left: pos?.left ?? 0,
@@ -121,7 +121,7 @@ export default function SelectMenu({
             )}
             {groups?.map((group) => (
                 <div key={group.label}>
-                    <div className="flex items-center gap-1.5 px-2.5 py-1 text-[10px] font-bold uppercase tracking-widest" style={group.accentColor ? { color: group.accentColor } : undefined}>
+                    <div className="flex items-center gap-1.5 px-2.5 py-1 text-[10px] font-black tracking-tight uppercase tracking-widest" style={group.accentColor ? { color: group.accentColor } : undefined}>
                         {group.icon && (
                             // eslint-disable-next-line @next/next/no-img-element
                             <img src={group.icon} alt="" className="size-3.5 shrink-0 object-contain" />
@@ -149,7 +149,7 @@ export default function SelectMenu({
                 aria-haspopup="listbox"
                 aria-expanded={open}
                 aria-label={ariaLabel}
-                className="flex h-full w-full min-w-0 items-center gap-1.5 rounded-none border-2 border-(--card-border) bg-(--input-bg) px-2.5 text-sm font-medium text-(--fg) outline-none transition-[border-color,box-shadow] duration-200 focus:border-(--accent) "
+                className="flex h-full w-full min-w-0 items-center gap-1.5 rounded-none border border-(--card-border) bg-(--input-bg) px-2.5 text-sm font-medium text-(--fg) outline-none transition-[border-color,box-shadow] duration-200 focus:border-(--accent) "
             >
                 {icon && <Icon icon={icon} className="size-4 shrink-0 text-(--muted)" />}
                 <span className={`min-w-0 flex-1 truncate text-left ${current ? '' : 'text-(--muted)'}`}>

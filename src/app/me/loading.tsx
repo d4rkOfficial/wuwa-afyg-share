@@ -1,7 +1,7 @@
 export default function Loading() {
     return (
         <div className="mx-auto max-w-3xl space-y-6">
-            <div className="h-14 animate-pulse rounded-none border-2 border-(--card-border) bg-(--card)" />
+            <div className="h-14 animate-pulse rounded-none border border-(--card-border) bg-(--card)" />
             <div className="flex items-center justify-between">
                 <div className="h-8 w-40 animate-pulse rounded-none bg-(--card-hover)" />
                 <div className="h-9 w-28 animate-pulse rounded-none bg-(--card-hover)" />
@@ -10,7 +10,7 @@ export default function Loading() {
                 {Array.from({ length: 3 }, (_, i) => (
                     <div
                         key={i}
-                        className="h-24 animate-pulse rounded-none border-2 border-(--card-border) bg-(--card)"
+                        className="h-24 animate-pulse rounded-none border border-(--card-border) bg-(--card)"
                     />
                 ))}
             </div>

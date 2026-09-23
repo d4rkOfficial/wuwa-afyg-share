@@ -89,7 +89,7 @@ export default function ProjectFilters({ q, sort, character }: Props) {
 
     return (
         <section
-            className="project-filter-shell rounded-none border-2 border-(--card-border) bg-(--card) p-2"
+            className="project-filter-shell rounded-none border border-(--card-border) bg-(--card) p-2"
             data-pending={isPending}
             aria-label="工程筛选"
         >
@@ -111,19 +111,19 @@ export default function ProjectFilters({ q, sort, character }: Props) {
                         value={query}
                         onChange={(event) => setQuery(event.target.value)}
                         placeholder="搜索工程名称..."
-                        className="h-10 w-full rounded-none border-2 border-(--card-border) bg-(--input-bg) pl-9 pr-3 text-sm outline-none transition-[border-color,box-shadow] duration-200 placeholder:text-(--muted) focus:border-(--accent) "
+                        className="h-10 w-full rounded-none border border-(--card-border) bg-(--input-bg) pl-9 pr-3 text-sm outline-none transition-[border-color,box-shadow] duration-200 placeholder:text-(--muted) focus:border-(--accent) "
                     />
                 </label>
                 <button
                     type="submit"
-                    className="inline-flex h-10 shrink-0 items-center justify-center gap-1.5 whitespace-nowrap rounded-none px-3.5 text-sm font-medium border-2 border-(--card-border) bg-(--btn-bg) text-(--btn-text) transition-colors hover:bg-(--card) hover:text-(--fg) transition-[filter,transform] duration-200 ease-out  "
+                    className="inline-flex h-10 shrink-0 items-center justify-center gap-1.5 whitespace-nowrap rounded-none px-3.5 text-sm font-medium border border-(--card-border) bg-(--btn-bg) text-(--btn-text) transition-colors hover:bg-(--card) hover:text-(--fg) transition-[filter,transform] duration-200 ease-out  "
                 >
                     <Icon icon={isPending ? 'mdi:loading' : 'mdi:arrow-right'} className={isPending ? 'size-4 animate-spin' : 'size-4'} />
                     搜索
                 </button>
             </form>
 
-            <div className="project-filter-sort flex h-10 shrink-0 items-center rounded-none border-2 border-(--card-border) bg-(--input-bg) p-0.5">
+            <div className="project-filter-sort flex h-10 shrink-0 items-center rounded-none border border-(--card-border) bg-(--input-bg) p-0.5">
                 {(
                     [
                         { key: 'latest', label: '最新', icon: 'mdi:clock-outline' },
@@ -153,7 +153,7 @@ export default function ProjectFilters({ q, sort, character }: Props) {
                 })}
             </div>
 
-            <div className="project-filter-character group flex h-10 min-w-40 shrink-0 items-center rounded-none border-2 border-(--card-border) bg-(--input-bg) transition-[border-color,box-shadow] duration-200 focus-within:border-(--accent) ">
+            <div className="project-filter-character group flex h-10 min-w-40 shrink-0 items-center rounded-none border border-(--card-border) bg-(--input-bg) transition-[border-color,box-shadow] duration-200 focus-within:border-(--accent) ">
                 <SelectMenu
                     value={selectedCharacter}
                     onChange={(nextCharacter) => {

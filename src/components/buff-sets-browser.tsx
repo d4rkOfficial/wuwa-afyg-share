@@ -99,7 +99,7 @@ export default function BuffSetsBrowser({ rows }: Props) {
                         setSelected(null)
                     }}
                     placeholder="搜索实体名"
-                    className="mb-2 w-full rounded-none border-2 border-(--card-border) bg-(--input-bg) px-2 py-1.5 text-sm outline-none focus:border-(--accent)"
+                    className="mb-2 w-full rounded-none border border-(--card-border) bg-(--input-bg) px-2 py-1.5 text-sm outline-none focus:border-(--accent)"
                 />
 
                 <div className="max-h-[60vh] space-y-0.5 overflow-y-auto pr-0.5 md:max-h-[70vh]">
@@ -135,16 +135,16 @@ export default function BuffSetsBrowser({ rows }: Props) {
             {/* 右侧：选中实体的 buff 明细 */}
             <div className="min-w-0 flex-1">
                 {selectedBuffs.length === 0 ? (
-                    <div className="rounded-none border-2 border-(--card-border) bg-(--card) p-10 text-center text-sm text-(--muted)">
+                    <div className="rounded-none border border-(--card-border) bg-(--card) p-10 text-center text-sm text-(--muted)">
                         <Icon icon="mdi:arrow-left" className="mx-auto mb-2 size-6" />
                         从左侧选择一个实体查看其 Buff
                     </div>
                 ) : (
                     <div className="space-y-3">
                         <div className="flex items-center gap-2">
-                            <h2 className="text-lg font-bold text-(--fg)">{selected!.entityName}</h2>
+                            <h2 className="text-lg font-black tracking-tight text-(--fg)">{selected!.entityName}</h2>
                             {selectedBuffs[0].exclusive && (
-                                <span className="rounded border-2 border-(--warning) px-1.5 py-0.5 text-[10px] text-(--warning)">
+                                <span className="rounded border border-(--warning) px-1.5 py-0.5 text-[10px] text-(--warning)">
                                     效应专属
                                 </span>
                             )}
@@ -154,7 +154,7 @@ export default function BuffSetsBrowser({ rows }: Props) {
                             {selectedBuffs.map((item) => (
                                 <div
                                     key={`${item.entity_type}/${item.entity_name}/${item.buff_name}`}
-                                    className="rounded-none border-2 border-(--card-border) bg-(--card) p-4"
+                                    className="rounded-none border border-(--card-border) bg-(--card) p-4"
                                 >
                                     <div className="mb-2 flex items-center gap-2">
                                         <span className="truncate text-sm font-medium text-(--fg)">{item.buff_name}</span>

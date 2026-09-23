@@ -129,10 +129,10 @@ export default function BuffEntityGrid({ existingCountMap, onSelect }: Props) {
         .filter((e) => (filter === 'with' ? e.count > 0 : e.count === 0))
 
     return (
-        <div className="flex h-full flex-col rounded-none border-2 border-(--card-border) bg-(--card) p-4">
+        <div className="flex h-full flex-col rounded-none border border-(--card-border) bg-(--card) p-4">
             {/* 顶部：主类型 tab + 过滤 */}
             <div className="mb-3 flex shrink-0 flex-wrap items-center justify-between gap-2">
-                <div className="flex rounded-none border-2 border-(--card-border) bg-(--card-hover) p-0.5">
+                <div className="flex rounded-none border border-(--card-border) bg-(--card-hover) p-0.5">
                     {MAIN_TABS.map((t) => (
                         <button
                             key={t.type}
@@ -149,13 +149,13 @@ export default function BuffEntityGrid({ existingCountMap, onSelect }: Props) {
                     <button
                         onClick={handleRefresh}
                         disabled={refreshing}
-                        className="inline-flex items-center gap-1 rounded-none border-2 border-(--card-border) bg-(--card-hover) px-2.5 py-1.5 text-[11px] text-(--muted) transition-colors hover:text-(--fg) disabled:opacity-50"
+                        className="inline-flex items-center gap-1 rounded-none border border-(--card-border) bg-(--card-hover) px-2.5 py-1.5 text-[11px] text-(--muted) transition-colors hover:text-(--fg) disabled:opacity-50"
                         title="刷新目录与条目数"
                     >
                         <Icon icon={refreshing ? 'mdi:loading' : 'mdi:refresh'} className="size-3.5" />
                         刷新
                     </button>
-                    <div className="flex items-center gap-1 rounded-none border-2 border-(--card-border) bg-(--card-hover) p-0.5">
+                    <div className="flex items-center gap-1 rounded-none border border-(--card-border) bg-(--card-hover) p-0.5">
                         {FILTERS.map((f) => (
                             <button
                                 key={f.key}
@@ -194,7 +194,7 @@ export default function BuffEntityGrid({ existingCountMap, onSelect }: Props) {
                     <span className="text-[11px] text-(--muted)">
                         {mainTab === 'echo' ? 'Cost' : '星级'}
                     </span>
-                    <div className="flex items-center gap-1 rounded-none border-2 border-(--card-border) bg-(--card-hover) p-0.5">
+                    <div className="flex items-center gap-1 rounded-none border border-(--card-border) bg-(--card-hover) p-0.5">
                         <button
                             onClick={() => (mainTab === 'echo' ? setCostFilter(null) : setStarFilter(null))}
                             className={`rounded px-2 py-1 text-[11px] transition-colors ${
@@ -223,7 +223,7 @@ export default function BuffEntityGrid({ existingCountMap, onSelect }: Props) {
             )}
 
             {/* 搜索 */}
-            <div className="mb-3 flex shrink-0 items-center gap-2 rounded-none border-2 border-(--card-border) bg-(--input-bg) px-3 py-1.5">
+            <div className="mb-3 flex shrink-0 items-center gap-2 rounded-none border border-(--card-border) bg-(--input-bg) px-3 py-1.5">
                 <Icon icon="mdi:magnify" className="size-4 shrink-0 text-(--muted)" />
                 <input
                     value={search}
@@ -240,7 +240,7 @@ export default function BuffEntityGrid({ existingCountMap, onSelect }: Props) {
 
             {/* 网格列表 / 骨架屏 */}
             <div className="min-h-0 flex-1 overflow-y-auto">
-                {error && <div className="rounded-none border-2 border-(--danger) bg-(--danger) px-3 py-2 text-xs text-white">{error}</div>}
+                {error && <div className="rounded-none border border-(--danger) bg-(--danger) px-3 py-2 text-xs text-white">{error}</div>}
                 {!error && catalog === null && (
                     <div className="grid grid-cols-2 gap-2 md:grid-cols-3 xl:grid-cols-4">
                         {Array.from({ length: SKELETON_COUNT }).map((_, i) => (
@@ -259,7 +259,7 @@ export default function BuffEntityGrid({ existingCountMap, onSelect }: Props) {
                             <button
                                 key={e.name}
                                 onClick={() => onSelect({ entityType: activeType, entityName: e.name })}
-                                className="group flex flex-col gap-1 rounded-none border-2 border-(--card-border) bg-(--card-hover) px-3 py-2.5 text-left transition-colors hover:border-(--accent)"
+                                className="group flex flex-col gap-1 rounded-none border border-(--card-border) bg-(--card-hover) px-3 py-2.5 text-left transition-colors hover:border-(--accent)"
                             >
                                 <span className="truncate text-sm font-medium text-(--fg) group-hover:text-(--accent-text)">
                                     {e.name}

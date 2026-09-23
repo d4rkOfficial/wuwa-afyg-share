@@ -33,13 +33,13 @@ export default async function Header() {
         '') as string
 
     return (
-        <header className="site-header sticky top-0 z-20 border-b-2 border-(--card-border)">
+        <header className="site-header sticky top-0 z-20 border-b border-(--card-border)">
             <div className="mx-auto flex h-14 w-full max-w-6xl items-center gap-1 px-2 sm:px-4">
                 <AppLink
                     href="/"
                     aria-label="椰果工坊首页"
                     title="椰果工坊首页"
-                    className="inline-flex size-9 shrink-0 items-center justify-center gap-2 text-sm font-bold transition-colors hover:bg-(--card-hover) lg:w-auto lg:px-2"
+                    className="inline-flex size-9 shrink-0 items-center justify-center gap-2 text-sm font-black tracking-tight transition-colors hover:bg-(--card-hover) lg:w-auto lg:px-2"
                 >
                     {/* eslint-disable-next-line @next/next/no-img-element */}
                     <img src="/favicon.svg" alt="" className="size-7 shrink-0 rounded-none" />
@@ -110,7 +110,7 @@ export default async function Header() {
                                 href="/upload"
                                 aria-label="上传工程"
                                 title="上传工程"
-                                className="inline-flex size-9 shrink-0 items-center justify-center gap-1.5 whitespace-nowrap border-2 border-(--card-border) bg-(--btn-bg) text-sm font-bold border-2 border-(--card-border) bg-(--btn-bg) text-(--btn-text) transition-colors hover:bg-(--card) hover:text-(--fg) transition-colors hover:bg-(--card) hover:text-(--fg) md:w-auto md:px-3"
+                                className="inline-flex size-9 shrink-0 items-center justify-center gap-1.5 whitespace-nowrap border border-(--card-border) bg-(--btn-bg) text-sm font-black tracking-tight border border-(--card-border) bg-(--btn-bg) text-(--btn-text) transition-colors hover:bg-(--card) hover:text-(--fg) transition-colors hover:bg-(--card) hover:text-(--fg) md:w-auto md:px-3"
                             >
                                 <Icon icon="mdi:plus" className="size-4 shrink-0" />
                                 <span className="hidden md:inline">上传工程</span>
@@ -119,12 +119,12 @@ export default async function Header() {
                                 href="/me"
                                 aria-label={displayName || '我的工程'}
                                 title={displayName || '我的工程'}
-                                className="inline-flex size-9 min-w-0 shrink-0 items-center justify-center gap-2 whitespace-nowrap border-2 border-(--card-border) bg-(--card) text-sm transition-colors hover:bg-(--fg) hover:text-(--bg) xl:w-auto xl:max-w-52 xl:px-3"
+                                className="inline-flex size-9 min-w-0 shrink-0 items-center justify-center gap-2 whitespace-nowrap border border-(--card-border) bg-(--card) text-sm transition-colors hover:bg-(--fg) hover:text-(--bg) xl:w-auto xl:max-w-52 xl:px-3"
                             >
                                 <Icon icon="mdi:account-circle-outline" className="size-4 shrink-0 text-(--muted)" />
                                 <span className="hidden min-w-0 truncate xl:inline">{displayName || '我的工程'}</span>
                                 {isAdmin && (
-                                    <span className="hidden shrink-0 border-2 border-(--accent) bg-(--accent) px-1.5 py-0.5 text-[10px] font-bold leading-none text-(--accent-fg) 2xl:inline">
+                                    <span className="hidden shrink-0 border border-(--accent) bg-(--accent) px-1.5 py-0.5 text-[10px] font-black tracking-tight leading-none text-(--accent-fg) 2xl:inline">
                                         管理员
                                     </span>
                                 )}

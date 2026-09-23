@@ -14,7 +14,7 @@ export default function ProjectCard({ project, icons }: { project: ProjectListIt
         .filter((src): src is string => !!src)
 
     return (
-        <div className="relative overflow-hidden rounded-none border-2 border-(--card-border) bg-(--card) p-4 transition-colors hover:border-(--accent) hover:bg-(--card-hover)">
+        <div className="relative overflow-hidden rounded-none border border-(--card-border) bg-(--card) p-4 transition-colors hover:border-(--accent) hover:bg-(--card-hover)">
             {/* ── 角色头像叠底（右下；1 号大→3 号小，重叠约 1/3） ── */}
             {/* 整组半透明；DOM 顺序左→右，右边后渲染压在左边上面；被遮挡部分实色覆盖 */}
             {/* 边缘用 mask 渐变淡化（alpha 蒙版，非可见颜色渐变）：3/2 号右边界+上边界淡出，1 号上边界淡出 */}
@@ -69,7 +69,7 @@ export default function ProjectCard({ project, icons }: { project: ProjectListIt
             {/* ── 内容（z-10，浮于头像之上） ── */}
             <div className="relative z-10 flex flex-col gap-3">
                 <div className="flex items-start justify-between gap-3">
-                    <h3 className="line-clamp-1 text-base font-bold tracking-tight">{project.title}</h3>
+                    <h3 className="line-clamp-1 text-base font-black tracking-tight">{project.title}</h3>
                     {project.game_version && (
                         <span className="shrink-0 rounded-none bg-(--card-hover) px-2 py-0.5 text-xs text-(--muted)">
                             {project.game_version}

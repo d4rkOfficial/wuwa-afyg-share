@@ -52,19 +52,19 @@ export default function AdminUsers({ admins }: Props) {
     return (
         <div className="space-y-4">
             {/* 授权表单 */}
-            <div className="rounded-none border-2 border-(--card-border) bg-(--card) p-4">
+            <div className="rounded-none border border-(--card-border) bg-(--card) p-4">
                 <div className="flex items-center gap-2">
                     <input
                         value={username}
                         onChange={(e) => setUsername(e.target.value)}
                         onKeyDown={(e) => e.key === 'Enter' && onGrant()}
                         placeholder="输入用户名授予管理员权限"
-                        className="w-full rounded-none border-2 border-(--card-border) bg-(--input-bg) px-3 py-2 text-sm outline-none transition-colors focus:border-(--accent)"
+                        className="w-full rounded-none border border-(--card-border) bg-(--input-bg) px-3 py-2 text-sm outline-none transition-colors focus:border-(--accent)"
                     />
                     <button
                         onClick={onGrant}
                         disabled={pending || !username.trim()}
-                        className="inline-flex shrink-0 items-center gap-1.5 rounded-none px-4 py-2 text-sm font-medium border-2 border-(--card-border) bg-(--btn-bg) text-(--btn-text) transition-colors hover:bg-(--card) hover:text-(--fg) transition-all  disabled:opacity-50"
+                        className="inline-flex shrink-0 items-center gap-1.5 rounded-none px-4 py-2 text-sm font-medium border border-(--card-border) bg-(--btn-bg) text-(--btn-text) transition-colors hover:bg-(--card) hover:text-(--fg) transition-all  disabled:opacity-50"
                     >
                         <Icon icon={pending ? 'mdi:loading' : 'mdi:shield-plus-outline'} className={`size-4 ${pending ? 'animate-spin' : ''}`} />
                         授权
@@ -76,13 +76,13 @@ export default function AdminUsers({ admins }: Props) {
             </div>
 
             {/* 管理员列表 */}
-            <div className="overflow-hidden rounded-none border-2 border-(--card-border) bg-(--card)">
-                <div className="border-b-2 border-(--card-border) px-4 py-2.5 text-xs text-(--muted)">共 {admins.length} 位管理员</div>
+            <div className="overflow-hidden rounded-none border border-(--card-border) bg-(--card)">
+                <div className="border-b border-(--card-border) px-4 py-2.5 text-xs text-(--muted)">共 {admins.length} 位管理员</div>
                 {admins.length === 0 && (
                     <p className="px-4 py-8 text-center text-sm text-(--muted)">暂无管理员（请通过 SQL 引导首位根管理员）</p>
                 )}
                 {admins.map((a) => (
-                    <div key={a.id} className="flex items-center justify-between gap-3 border-b-2 border-(--card-border) px-4 py-3 last:border-0">
+                    <div key={a.id} className="flex items-center justify-between gap-3 border-b border-(--card-border) px-4 py-3 last:border-0">
                         <div className="min-w-0">
                             <div className="flex flex-wrap items-center gap-2">
                                 <span className="font-medium text-(--fg)">{a.username}</span>
@@ -97,7 +97,7 @@ export default function AdminUsers({ admins }: Props) {
                                     </span>
                                 )}
                                 {a.grantedByMe && (
-                                    <span className="rounded-none border-2 border-(--success) px-1.5 py-0.5 text-[10px] text-(--success)">
+                                    <span className="rounded-none border border-(--success) px-1.5 py-0.5 text-[10px] text-(--success)">
                                         我授权的
                                     </span>
                                 )}
@@ -115,7 +115,7 @@ export default function AdminUsers({ admins }: Props) {
                                 <button
                                     onClick={() => onRevoke(a.username)}
                                     disabled={pending}
-                                    className="shrink-0 rounded-none border-2 border-(--danger) bg-(--danger) transition-colors hover:bg-(--card) hover:text-(--danger) px-3 py-1.5 text-xs text-white  disabled:opacity-50"
+                                    className="shrink-0 rounded-none border border-(--danger) bg-(--danger) transition-colors hover:bg-(--card) hover:text-(--danger) px-3 py-1.5 text-xs text-white  disabled:opacity-50"
                                 >
                                     确认撤销（连坐收回）
                                 </button>
@@ -124,7 +124,7 @@ export default function AdminUsers({ admins }: Props) {
                                     onClick={() => setConfirmRevoke(a.id)}
                                     onBlur={() => setTimeout(() => setConfirmRevoke(null), 2500)}
                                     disabled={pending}
-                                    className="shrink-0 rounded-none border-2 border-(--danger) bg-(--card) px-3 py-1.5 text-xs text-(--danger) transition-colors hover:bg-(--danger) hover:text-white disabled:opacity-50"
+                                    className="shrink-0 rounded-none border border-(--danger) bg-(--card) px-3 py-1.5 text-xs text-(--danger) transition-colors hover:bg-(--danger) hover:text-white disabled:opacity-50"
                                 >
                                     撤销
                                 </button>

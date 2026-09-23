@@ -32,7 +32,7 @@ export default function TeamBanner({ names, size = 'sm' }: Props) {
                     return (
                         <span
                             key={i}
-                            className="rounded-none border-2 border-(--card-border) bg-(--card) px-3 py-1.5 text-sm text-(--muted)"
+                            className="rounded-none border border-(--card-border) bg-(--card) px-3 py-1.5 text-sm text-(--muted)"
                         >
                             空位
                         </span>
@@ -43,7 +43,7 @@ export default function TeamBanner({ names, size = 'sm' }: Props) {
                     return (
                         <span
                             key={i}
-                            className="inline-flex items-center rounded-none border-2 border-(--card-border) bg-(--card) px-3 py-1.5 text-sm text-(--fg)"
+                            className="inline-flex items-center rounded-none border border-(--card-border) bg-(--card) px-3 py-1.5 text-sm text-(--fg)"
                         >
                             {name}
                         </span>
@@ -53,7 +53,7 @@ export default function TeamBanner({ names, size = 'sm' }: Props) {
                 return (
                     <span
                         key={i}
-                        className={`inline-flex items-center rounded-none border-2 px-3 py-1.5 text-sm font-bold ${
+                        className={`inline-flex items-center rounded-none border px-3 py-1.5 text-sm font-black tracking-tight ${
                             size === 'lg' ? 'px-4 py-2 text-base' : ''
                         }`}
                         style={{

@@ -54,7 +54,7 @@ export function Toaster() {
                 return (
                     <div
                         key={t.id}
-                        className={`pointer-events-auto flex items-start gap-2 rounded-none border-2 bg-(--card) px-3 py-2.5 text-sm text-(--fg) ${style.ring}`}
+                        className={`pointer-events-auto flex items-start gap-2 rounded-none border bg-(--card) px-3 py-2.5 text-sm text-(--fg) ${style.ring}`}
                         style={{ animation: 'toast-in 0.1s ease-out' }}
                     >
                         <Icon icon={style.icon} className="mt-0.5 size-4 shrink-0" />

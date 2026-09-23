@@ -27,7 +27,7 @@ export default function ToyHeaderAuth() {
                     href="/upload"
                     aria-label="上传工程"
                     title="上传工程（需登录工坊）"
-                    className="inline-flex size-9 shrink-0 items-center justify-center gap-1.5 whitespace-nowrap border-2 border-(--card-border) bg-(--btn-bg) text-sm font-bold border-2 border-(--card-border) bg-(--btn-bg) text-(--btn-text) transition-colors hover:bg-(--card) hover:text-(--fg) transition-colors hover:bg-(--card) hover:text-(--fg) md:w-auto md:px-3"
+                    className="inline-flex size-9 shrink-0 items-center justify-center gap-1.5 whitespace-nowrap border border-(--card-border) bg-(--btn-bg) text-sm font-black tracking-tight border border-(--card-border) bg-(--btn-bg) text-(--btn-text) transition-colors hover:bg-(--card) hover:text-(--fg) transition-colors hover:bg-(--card) hover:text-(--fg) md:w-auto md:px-3"
                 >
                     <Icon icon="mdi:plus" className="size-4 shrink-0" />
                     <span className="hidden md:inline">上传工程</span>
@@ -50,7 +50,7 @@ export default function ToyHeaderAuth() {
     return (
         <Link
             href="/login"
-            className="inline-flex h-9 shrink-0 items-center justify-center gap-1.5 whitespace-nowrap border-2 border-(--card-border) bg-(--btn-bg) px-3 text-sm font-bold border-2 border-(--card-border) bg-(--btn-bg) text-(--btn-text) transition-colors hover:bg-(--card) hover:text-(--fg) transition-colors hover:bg-(--card) hover:text-(--fg)"
+            className="inline-flex h-9 shrink-0 items-center justify-center gap-1.5 whitespace-nowrap border border-(--card-border) bg-(--btn-bg) px-3 text-sm font-black tracking-tight border border-(--card-border) bg-(--btn-bg) text-(--btn-text) transition-colors hover:bg-(--card) hover:text-(--fg) transition-colors hover:bg-(--card) hover:text-(--fg)"
         >
             登录
         </Link>

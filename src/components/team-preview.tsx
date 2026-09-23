@@ -42,7 +42,7 @@ export default function TeamPreview({ slots, locked }: Props) {
                     return (
                         <div
                             key={i}
-                            className="rounded-none border-2 border-(--card-border) bg-(--card) p-4"
+                            className="rounded-none border border-(--card-border) bg-(--card) p-4"
                         >
                             <div className="mb-3 flex items-center gap-2">
                                 <span className="flex size-7 items-center justify-center rounded-none bg-(--card-hover) text-xs font-semibold text-(--muted)">

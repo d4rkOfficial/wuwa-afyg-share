@@ -52,7 +52,7 @@ export default function RootLayout({
             <body className="flex min-h-dvh flex-col bg-(--bg) text-(--fg)">
                 <Header />
                 <main className="mx-auto w-full max-w-6xl flex-1 px-4 py-8 md:px-8 md:py-12">{children}</main>
-                <footer className="border-t-2 border-(--card-border) py-8 text-center text-xs text-(--muted)">
+                <footer className="border-t border-(--card-border) py-8 text-center text-xs text-(--muted)">
                     椰果工坊 · 配合 椰果工具箱 使用
                 </footer>
                 <Toaster />

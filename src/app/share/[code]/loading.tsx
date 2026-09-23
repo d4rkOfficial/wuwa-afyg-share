@@ -2,7 +2,7 @@ export default function Loading() {
     return (
         <div className="mx-auto max-w-4xl space-y-6">
             <div className="h-4 w-24 animate-pulse rounded bg-(--card-hover)" />
-            <div className="space-y-4 rounded-none border-2 border-(--card-border) bg-(--card) p-6">
+            <div className="space-y-4 rounded-none border border-(--card-border) bg-(--card) p-6">
                 <div className="h-8 w-2/3 animate-pulse rounded-none bg-(--card-hover)" />
                 <div className="flex gap-2">
                     <div className="h-8 w-24 animate-pulse rounded-none bg-(--card-hover)" />

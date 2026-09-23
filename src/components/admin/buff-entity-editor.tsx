@@ -693,14 +693,14 @@ export default function BuffEntityEditor({
     }
 
     return (
-        <div className="flex h-full flex-col rounded-none border-2 border-(--card-border) bg-(--card)">
+        <div className="flex h-full flex-col rounded-none border border-(--card-border) bg-(--card)">
             {/* 实体信息头 */}
-            <div className="flex items-center justify-between border-b-2 border-(--card-border) px-4 py-3">
+            <div className="flex items-center justify-between border-b border-(--card-border) px-4 py-3">
                 <div className="flex items-center gap-2">
                     <span className="rounded bg-(--accent) px-2 py-0.5 text-xs font-medium text-(--accent-fg)">
                         {BUFF_ENTITY_LABELS[entityType]}
                     </span>
-                    <h2 className="truncate text-lg font-bold text-(--fg)">{entityName}</h2>
+                    <h2 className="truncate text-lg font-black tracking-tight text-(--fg)">{entityName}</h2>
                 </div>
                 <div className="flex shrink-0 items-center gap-3">
                     <span className="text-xs text-(--muted)">{buffs.length} 条 Buff</span>
@@ -721,7 +721,7 @@ export default function BuffEntityEditor({
 
                 {/* ① 左：Buff 列表 */}
                 <div className="buff-editor-buff-list flex w-56 shrink-0 flex-col border-r border-(--card-border)">
-                    <div className="flex shrink-0 items-center justify-between border-b-2 border-(--card-border) px-3 py-2">
+                    <div className="flex shrink-0 items-center justify-between border-b border-(--card-border) px-3 py-2">
                         <span className="text-xs font-medium text-(--muted)">Buff 条目（{buffs.length}）</span>
                         <button onClick={addBuff} className="toolbar-btn toolbar-btn-ghost px-1.5 py-0.5">
                             <Icon icon="mdi:plus" className="size-3.5" />
@@ -765,14 +765,14 @@ export default function BuffEntityEditor({
                 <div className="buff-editor-main flex min-w-0 flex-1 flex-col">
                     {activeBuff ? (
                         <>
-                            <div className="flex shrink-0 flex-wrap items-center gap-2 border-b-2 border-(--card-border) px-3 py-2">
+                            <div className="flex shrink-0 flex-wrap items-center gap-2 border-b border-(--card-border) px-3 py-2">
                                 <input
                                     value={activeBuff.buffName}
                                     onChange={(e) => updateActiveBuff({ buffName: e.target.value })}
                                     placeholder="Buff 名"
-                                    className="min-w-0 flex-1 rounded-none border-2 border-(--card-border) bg-(--input-bg) px-2 py-1 text-sm outline-none focus:border-(--accent)"
+                                    className="min-w-0 flex-1 rounded-none border border-(--card-border) bg-(--input-bg) px-2 py-1 text-sm outline-none focus:border-(--accent)"
                                 />
-                                <div className="flex shrink-0 overflow-hidden rounded-none border-2 border-(--card-border)">
+                                <div className="flex shrink-0 overflow-hidden rounded-none border border-(--card-border)">
                                     {SCOPE_TABS.map((t) => (
                                         <button
                                             key={t.value}
@@ -798,7 +798,7 @@ export default function BuffEntityEditor({
                             </div>
 
                             {/* 生效条件（折叠面板：整行摘要 + 展开四段） */}
-                            <div className="shrink-0 border-b-2 border-(--card-border)">
+                            <div className="shrink-0 border-b border-(--card-border)">
                                 <button
                                     onClick={() => setCondPanelOpen((v) => !v)}
                                     className={`flex w-full items-center gap-1.5 px-3 py-2 text-left text-[11px] transition-colors hover:bg-(--card-hover) ${
@@ -817,9 +817,9 @@ export default function BuffEntityEditor({
                                 </button>
                                 {condPanelOpen && (
                                     <div className="flex flex-wrap items-center gap-2 px-3 pb-2.5">
-                                        <div className="flex items-center gap-2 rounded-none border-2 border-(--card-border) bg-(--input-bg) px-2 py-1">
+                                        <div className="flex items-center gap-2 rounded-none border border-(--card-border) bg-(--input-bg) px-2 py-1">
                                             <span className="text-[11px] text-(--fg)">共鸣链</span>
-                                            <div className="flex overflow-hidden rounded border-2 border-(--card-border)">
+                                            <div className="flex overflow-hidden rounded border border-(--card-border)">
                                                 {Array.from({ length: CHAIN_MAX + 1 }, (_, k) => k).map((n) => (
                                                     <button
                                                         key={n}
@@ -840,9 +840,9 @@ export default function BuffEntityEditor({
                                                 </span>
                                             )}
                                         </div>
-                                        <div className="flex items-center gap-2 rounded-none border-2 border-(--card-border) bg-(--input-bg) px-2 py-1">
+                                        <div className="flex items-center gap-2 rounded-none border border-(--card-border) bg-(--input-bg) px-2 py-1">
                                             <span className="text-[11px] text-(--fg)">精炼</span>
-                                            <div className="flex overflow-hidden rounded border-2 border-(--card-border)">
+                                            <div className="flex overflow-hidden rounded border border-(--card-border)">
                                                 {Array.from({ length: REFINE_MAX }, (_, k) => k + 1).map((n) => (
                                                     <button
                                                         key={n}
@@ -863,7 +863,7 @@ export default function BuffEntityEditor({
                                                 </span>
                                             )}
                                         </div>
-                                        <div className="flex flex-wrap items-center gap-1 rounded-none border-2 border-(--card-border) bg-(--input-bg) px-2 py-1">
+                                        <div className="flex flex-wrap items-center gap-1 rounded-none border border-(--card-border) bg-(--input-bg) px-2 py-1">
                                             <span className="text-[11px] text-(--fg)">伤害属性</span>
                                             {BUFF_ELEMENTS.map((el) => (
                                                 <button
@@ -879,7 +879,7 @@ export default function BuffEntityEditor({
                                                 </button>
                                             ))}
                                         </div>
-                                        <div className="flex flex-wrap items-center gap-1 rounded-none border-2 border-(--card-border) bg-(--input-bg) px-2 py-1">
+                                        <div className="flex flex-wrap items-center gap-1 rounded-none border border-(--card-border) bg-(--input-bg) px-2 py-1">
                                             <span className="text-[11px] text-(--fg)">伤害类型</span>
                                             {BUFF_DAMAGE_TYPES.map((dt) => (
                                                 <button
@@ -901,7 +901,7 @@ export default function BuffEntityEditor({
                                                 updateActiveBuff({ condition: null })
                                                 setCondPanelOpen(false)
                                             }}
-                                            className="flex h-6 items-center gap-1 rounded-none border-2 border-(--card-border) px-2 text-[10px] text-(--muted) transition-colors hover:border-(--danger) hover:text-(--danger)"
+                                            className="flex h-6 items-center gap-1 rounded-none border border-(--card-border) px-2 text-[10px] text-(--muted) transition-colors hover:border-(--danger) hover:text-(--danger)"
                                         >
                                             <Icon icon="mdi:close-circle-outline" className="size-3" />
                                             清除
@@ -961,7 +961,7 @@ export default function BuffEntityEditor({
                                                             type="number"
                                                             value={z.value}
                                                             onChange={(e) => setZoneValue(z.zoneId, e.target.value)}
-                                                            className="w-16 rounded border-2 border-(--card-border) bg-(--input-bg) px-1.5 py-1 text-xs text-right outline-none focus:border-(--accent) tabular-nums"
+                                                            className="w-16 rounded border border-(--card-border) bg-(--input-bg) px-1.5 py-1 text-xs text-right outline-none focus:border-(--accent) tabular-nums"
                                                         />
                                                         <span className="w-3 text-[10px] text-(--muted)">
                                                             {def?.unit === '%' ? '%' : ''}
@@ -1023,7 +1023,7 @@ export default function BuffEntityEditor({
 
                 {/* ③ 乘区勾选面板 */}
                 <div className="buff-editor-zones flex w-44 shrink-0 flex-col border-r border-(--card-border)">
-                    <div className="shrink-0 border-b-2 border-(--card-border) px-3 py-2 text-xs font-medium text-(--muted)">
+                    <div className="shrink-0 border-b border-(--card-border) px-3 py-2 text-xs font-medium text-(--muted)">
                         乘区
                     </div>
                     <div className="min-h-0 flex-1 space-y-0.5 overflow-y-auto p-1.5">
@@ -1053,7 +1053,7 @@ export default function BuffEntityEditor({
                 {/* ④ AI 协作区（DeepSeek 聊天式） */}
                 <div className="buff-editor-ai flex w-80 shrink-0 flex-col border-l border-(--card-border)">
                     {/* 头部 */}
-                    <div className="flex shrink-0 flex-wrap items-center gap-1.5 border-b-2 border-(--card-border) px-3 py-2">
+                    <div className="flex shrink-0 flex-wrap items-center gap-1.5 border-b border-(--card-border) px-3 py-2">
                         <span className="flex items-center gap-1 text-xs font-medium text-(--accent-text)">
                             <Icon icon="mdi:robot-outline" className="size-4" />
                             AI 辅助
@@ -1179,7 +1179,7 @@ export default function BuffEntityEditor({
                                                                 {BUFF_SCOPE_LABELS[b.scope ?? 'team']}
                                                             </span>
                                                             {b.exclusive && (
-                                                                <span className="rounded border-2 border-(--warning) px-1 py-0.5 text-[9px] text-(--warning)">
+                                                                <span className="rounded border border-(--warning) px-1 py-0.5 text-[9px] text-(--warning)">
                                                                     效应专属
                                                                 </span>
                                                             )}
@@ -1311,7 +1311,7 @@ export default function BuffEntityEditor({
             </div>
 
                     {/* 底部输入行（常驻） */}
-                    <div className="flex shrink-0 items-center gap-1.5 border-t-2 border-(--card-border) p-2">
+                    <div className="flex shrink-0 items-center gap-1.5 border-t border-(--card-border) p-2">
                         <input
                             value={followUp}
                             onChange={(e) => setFollowUp(e.target.value)}
@@ -1323,12 +1323,12 @@ export default function BuffEntityEditor({
                             }}
                             disabled={aiBusy}
                             placeholder="追问，或直接提需求…"
-                            className="min-w-0 flex-1 rounded-none border-2 border-(--card-border) bg-(--input-bg) px-2 py-1.5 text-xs outline-none focus:border-(--accent) disabled:opacity-50"
+                            className="min-w-0 flex-1 rounded-none border border-(--card-border) bg-(--input-bg) px-2 py-1.5 text-xs outline-none focus:border-(--accent) disabled:opacity-50"
                         />
                         <button
                             onClick={onFollowUp}
                             disabled={aiBusy || !followUp.trim()}
-                            className="shrink-0 rounded-none px-3 py-1.5 text-xs font-medium border-2 border-(--card-border) bg-(--btn-bg) text-(--btn-text) transition-colors hover:bg-(--card) hover:text-(--fg) transition-all  disabled:opacity-50"
+                            className="shrink-0 rounded-none px-3 py-1.5 text-xs font-medium border border-(--card-border) bg-(--btn-bg) text-(--btn-text) transition-colors hover:bg-(--card) hover:text-(--fg) transition-all  disabled:opacity-50"
                         >
                             <Icon icon={aiBusy ? 'mdi:loading' : 'mdi:send'} className={aiBusy ? 'size-3.5 animate-spin' : 'size-3.5'} />
                         </button>
@@ -1348,14 +1348,14 @@ export default function BuffEntityEditor({
             )}
 
             {/* 底部固定操作条 */}
-            <div className="shrink-0 border-t-2 border-(--card-border) px-4 py-3">
+            <div className="shrink-0 border-t border-(--card-border) px-4 py-3">
                 <div className="flex flex-wrap items-center gap-2">
                     {isAdmin ? (
                         confirmDeleteEntity ? (
                             <button
                                 onClick={onDeleteEntity}
                                 disabled={pending}
-                                className="rounded-none border-2 border-(--danger) bg-(--danger) transition-colors hover:bg-(--card) hover:text-(--danger) px-3 py-1.5 text-xs text-white  disabled:opacity-50"
+                                className="rounded-none border border-(--danger) bg-(--danger) transition-colors hover:bg-(--card) hover:text-(--danger) px-3 py-1.5 text-xs text-white  disabled:opacity-50"
                             >
                                 确认删除该实体全部 Buff
                             </button>

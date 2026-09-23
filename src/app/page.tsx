@@ -95,11 +95,11 @@ export default async function HomePage({
             <ProjectFilters key={`${q}:${sort}:${character}`} q={q} sort={sort} character={character} />
 
             {error ? (
-                <div className="rounded-none border-2 border-(--card-border) bg-(--card) p-8 text-center text-(--muted)">
+                <div className="rounded-none border border-(--card-border) bg-(--card) p-8 text-center text-(--muted)">
                     加载失败：{error.message}
                 </div>
             ) : items.length === 0 ? (
-                <div className="rounded-none border-2 border-(--card-border) bg-(--card) p-12 text-center">
+                <div className="rounded-none border border-(--card-border) bg-(--card) p-12 text-center">
                     <Icon icon={q || character ? 'mdi:account-search-outline' : 'mdi:package-variant-closed'} className="mx-auto mb-3 size-10 text-(--muted)" />
                     <p className="font-medium">
                         {q || character
@@ -111,7 +111,7 @@ export default async function HomePage({
                     </p>
                     <Link
                         href="/upload"
-                        className="mt-4 inline-flex items-center gap-1.5 rounded-none px-4 py-2 text-sm font-medium border-2 border-(--card-border) bg-(--btn-bg) text-(--btn-text) transition-colors hover:bg-(--card) hover:text-(--fg)"
+                        className="mt-4 inline-flex items-center gap-1.5 rounded-none px-4 py-2 text-sm font-medium border border-(--card-border) bg-(--btn-bg) text-(--btn-text) transition-colors hover:bg-(--card) hover:text-(--fg)"
                     >
                         <Icon icon="mdi:plus" className="size-4" />
                         上传工程

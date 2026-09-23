@@ -175,7 +175,7 @@ export default function BuffSetsAdmin({ rows, isAdmin }: Props) {
     return (
         <div className="flex h-[calc(100vh-8rem)] flex-col gap-3">
             {/* 顶部工具栏 */}
-            <div className="flex shrink-0 items-center justify-between rounded-none border-2 border-(--card-border) bg-(--card) px-4 py-2.5">
+            <div className="flex shrink-0 items-center justify-between rounded-none border border-(--card-border) bg-(--card) px-4 py-2.5">
                 <span className="flex items-center gap-2 text-sm font-medium text-(--muted)">实体列表</span>
                 <span className="flex items-center gap-2">
                     <BuffSnapshotPanel />
@@ -184,7 +184,7 @@ export default function BuffSetsAdmin({ rows, isAdmin }: Props) {
                             <Icon icon="mdi:cog-outline" className="size-4" />
                             连接配置
                             {false && (
-                                <span className="ml-1 rounded border-2 border-(--warning) px-1 py-0.5 text-[9px] text-(--warning)">未配置</span>
+                                <span className="ml-1 rounded border border-(--warning) px-1 py-0.5 text-[9px] text-(--warning)">未配置</span>
                             )}
                         </span>
                         <Icon icon="mdi:cog" className="size-4" />
@@ -201,7 +201,7 @@ export default function BuffSetsAdmin({ rows, isAdmin }: Props) {
             {selected && initial && (
                 <div className="buff-editor-modal-shell fixed inset-0 z-50 flex items-center justify-center p-4">
                     <div className="absolute inset-0 bg-black/60 " onClick={() => setSelected(null)} />
-                    <div className="buff-editor-modal relative flex h-[92vh] w-[min(98vw,1500px)] flex-col overflow-hidden rounded-none border-2 border-(--card-border) bg-(--card) ">
+                    <div className="buff-editor-modal relative flex h-[92vh] w-[min(98vw,1500px)] flex-col overflow-hidden rounded-none border border-(--card-border) bg-(--card) ">
                         <BuffEntityEditor
                             key={editingKey ?? 'new'}
                             initial={initial}
@@ -232,7 +232,7 @@ export default function BuffSetsAdmin({ rows, isAdmin }: Props) {
             {showConfig && (
                 <div className="fixed inset-0 z-50 overflow-y-auto">
                     <div className="fixed inset-0 bg-black/60 " onClick={() => setShowConfig(false)} />
-                        <div className="relative mx-auto my-8 w-[calc(100vw-2rem)] max-w-xl rounded-none border-2 border-(--card-border) bg-(--card) p-4 ">
+                        <div className="relative mx-auto my-8 w-[calc(100vw-2rem)] max-w-xl rounded-none border border-(--card-border) bg-(--card) p-4 ">
                             <div className="mb-3 flex items-center justify-between">
                                 <span className="text-sm font-semibold text-(--fg)">连接配置</span>
                                 <button onClick={() => setShowConfig(false)} className="rounded p-1 text-(--muted) hover:text-(--fg)">
@@ -250,7 +250,7 @@ export default function BuffSetsAdmin({ rows, isAdmin }: Props) {
                                         value={aiDraft.baseUrl}
                                         onChange={(e) => setAiDraft((d) => ({ ...d, baseUrl: e.target.value }))}
                                         placeholder="https://api.deepseek.com"
-                                        className="w-full rounded-none border-2 border-(--card-border) bg-(--input-bg) px-2 py-1.5 text-sm outline-none focus:border-(--accent)"
+                                        className="w-full rounded-none border border-(--card-border) bg-(--input-bg) px-2 py-1.5 text-sm outline-none focus:border-(--accent)"
                                     />
                                     <p className="text-[10px] text-(--muted)">支持任意 OpenAI 兼容端点（需支持 POST /chat/completions）</p>
                                 </label>
@@ -263,7 +263,7 @@ export default function BuffSetsAdmin({ rows, isAdmin }: Props) {
                                         value={aiDraft.model}
                                         onChange={(e) => setAiDraft((d) => ({ ...d, model: e.target.value }))}
                                         placeholder="deepseek-v4-flash"
-                                        className="w-full rounded-none border-2 border-(--card-border) bg-(--input-bg) px-2 py-1.5 text-sm outline-none focus:border-(--accent)"
+                                        className="w-full rounded-none border border-(--card-border) bg-(--input-bg) px-2 py-1.5 text-sm outline-none focus:border-(--accent)"
                                     />
                                 </label>
                                 <label className="flex flex-col gap-1 text-xs text-(--muted)">
@@ -273,7 +273,7 @@ export default function BuffSetsAdmin({ rows, isAdmin }: Props) {
                                         value={aiDraft.apiKey}
                                         onChange={(e) => setAiDraft((d) => ({ ...d, apiKey: e.target.value }))}
                                         placeholder="sk-..."
-                                        className="w-full rounded-none border-2 border-(--card-border) bg-(--input-bg) px-2 py-1.5 text-sm outline-none focus:border-(--accent)"
+                                        className="w-full rounded-none border border-(--card-border) bg-(--input-bg) px-2 py-1.5 text-sm outline-none focus:border-(--accent)"
                                     />
                                     <p className="text-[10px] text-(--muted)">
                                         填所选提供商的 API Key（格式 / 获取方式按其官方文档）
@@ -304,7 +304,7 @@ export default function BuffSetsAdmin({ rows, isAdmin }: Props) {
                                     <button
                                         onClick={handleSaveAi}
                                         disabled={aiSaving}
-                                        className="inline-flex items-center gap-1.5 rounded-none px-4 py-1.5 text-xs font-medium border-2 border-(--card-border) bg-(--btn-bg) text-(--btn-text) transition-colors hover:bg-(--card) hover:text-(--fg) transition-all  disabled:opacity-50"
+                                        className="inline-flex items-center gap-1.5 rounded-none px-4 py-1.5 text-xs font-medium border border-(--card-border) bg-(--btn-bg) text-(--btn-text) transition-colors hover:bg-(--card) hover:text-(--fg) transition-all  disabled:opacity-50"
                                     >
                                         <Icon icon="mdi:content-save-outline" className="size-3.5" />
                                         {aiSaving ? '保存中…' : '保存 AI 配置'}
@@ -315,7 +315,7 @@ export default function BuffSetsAdmin({ rows, isAdmin }: Props) {
                                     return (
                                         <div
                                             key={editor.key}
-                                            className="flex items-center gap-2 rounded-none border-2 border-(--card-border) bg-(--input-bg) px-2.5 py-2"
+                                            className="flex items-center gap-2 rounded-none border border-(--card-border) bg-(--input-bg) px-2.5 py-2"
                                         >
                                             <div className="min-w-0 flex-1">
                                                 <div className="flex items-center justify-between gap-2">
@@ -333,7 +333,7 @@ export default function BuffSetsAdmin({ rows, isAdmin }: Props) {
                                             </div>
                                             <button
                                                 onClick={() => openPromptEditor(editor.key)}
-                                                className="inline-flex shrink-0 items-center gap-1 rounded-none px-2.5 py-1 text-xs font-medium border-2 border-(--card-border) bg-(--btn-bg) text-(--btn-text) transition-colors hover:bg-(--card) hover:text-(--fg) transition-all "
+                                                className="inline-flex shrink-0 items-center gap-1 rounded-none px-2.5 py-1 text-xs font-medium border border-(--card-border) bg-(--btn-bg) text-(--btn-text) transition-colors hover:bg-(--card) hover:text-(--fg) transition-all "
                                             >
                                                 <Icon icon="mdi:pencil-outline" className="size-3.5" />
                                                 编辑
@@ -368,10 +368,10 @@ export default function BuffSetsAdmin({ rows, isAdmin }: Props) {
                                 </p>
                             </div>
 
-                             <div className="mt-3 flex justify-end border-t-2 border-(--card-border) pt-3">
+                             <div className="mt-3 flex justify-end border-t border-(--card-border) pt-3">
                                 <button
                                     onClick={() => setShowConfig(false)}
-                                    className="rounded-none px-4 py-1.5 text-sm font-medium border-2 border-(--card-border) bg-(--btn-bg) text-(--btn-text) transition-colors hover:bg-(--card) hover:text-(--fg) transition-all "
+                                    className="rounded-none px-4 py-1.5 text-sm font-medium border border-(--card-border) bg-(--btn-bg) text-(--btn-text) transition-colors hover:bg-(--card) hover:text-(--fg) transition-all "
                                 >
                                     完成
                                 </button>
@@ -387,8 +387,8 @@ export default function BuffSetsAdmin({ rows, isAdmin }: Props) {
                             className="absolute inset-0 bg-black/60 "
                             onClick={() => setEditingPrompt(null)}
                         />
-                        <div className="relative flex max-h-[85vh] w-[min(96vw,720px)] flex-col overflow-hidden rounded-none border-2 border-(--card-border) bg-(--card) ">
-                            <div className="flex items-center justify-between border-b-2 border-(--card-border) px-4 py-3">
+                        <div className="relative flex max-h-[85vh] w-[min(96vw,720px)] flex-col overflow-hidden rounded-none border border-(--card-border) bg-(--card) ">
+                            <div className="flex items-center justify-between border-b border-(--card-border) px-4 py-3">
                                 <span className="text-sm font-semibold text-(--fg)">{activePromptEditor.label}</span>
                                 <button
                                     onClick={() => setEditingPrompt(null)}
@@ -404,11 +404,11 @@ export default function BuffSetsAdmin({ rows, isAdmin }: Props) {
                                     onChange={(e) => setDraftText(e.target.value)}
                                     autoFocus
                                     placeholder={activePromptEditor.hint}
-                                    className="w-full rounded-none border-2 border-(--card-border) bg-(--input-bg) px-2.5 py-2 font-mono text-[11px] leading-relaxed outline-none focus:border-(--accent)"
+                                    className="w-full rounded-none border border-(--card-border) bg-(--input-bg) px-2.5 py-2 font-mono text-[11px] leading-relaxed outline-none focus:border-(--accent)"
                                     style={{ minHeight: `${activePromptEditor.minHeight}px` }}
                                 />
                             </div>
-                            <div className="flex items-center justify-between border-t-2 border-(--card-border) px-4 py-3">
+                            <div className="flex items-center justify-between border-t border-(--card-border) px-4 py-3">
                                 <button
                                     onClick={() => {
                                         setDraftText(activePromptEditor.reset)
@@ -427,7 +427,7 @@ export default function BuffSetsAdmin({ rows, isAdmin }: Props) {
                                     </button>
                                     <button
                                         onClick={savePromptEditor}
-                                        className="rounded-none px-4 py-1.5 text-sm font-medium border-2 border-(--card-border) bg-(--btn-bg) text-(--btn-text) transition-colors hover:bg-(--card) hover:text-(--fg) transition-all "
+                                        className="rounded-none px-4 py-1.5 text-sm font-medium border border-(--card-border) bg-(--btn-bg) text-(--btn-text) transition-colors hover:bg-(--card) hover:text-(--fg) transition-all "
                                     >
                                         保存
                                     </button>
