@@ -25,10 +25,6 @@ import { timeAgo } from '@/lib/utils/format'
 import type { BuffSetRow } from '@/lib/types/db'
 import { getProvider } from '@/lib/upstream/provider/registry'
 
-interface Props {
-    
-}
-
 interface ZoneChange {
     zoneId: string
     kind: 'add' | 'remove' | 'change'
