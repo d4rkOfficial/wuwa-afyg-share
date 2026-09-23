@@ -8,6 +8,7 @@ import ShareLinkPicker from '@/components/share-link-picker'
 import ExpiryCountdown from '@/components/expiry-countdown'
 import SetupNotice from '@/components/setup-notice'
 import { createClient, hasEnv } from '@/lib/supabase/server'
+import { getProvider } from '@/lib/upstream/provider/registry'
 import { DETAIL_COLUMNS } from '@/lib/project/query'
 import { teamDisplayNames } from '@/lib/project/extract'
 import { formatDate, formatCount } from '@/lib/utils/format'
@@ -60,16 +61,17 @@ export default async function SharePage({ params }: { params: Promise<{ code: st
     const grace = isGracePeriod(project.expires_at, project.author_name)
     const isOwner = user && user.id === project.author_id
 
+    // 角色头像（与首页 ProjectCard 同源）：用于配队大卡片的右下角头像叠底
+    let charIcons: Record<string, string> = {}
+    try {
+        charIcons = await getProvider().getCharacterIcons()
+    } catch {
+        // 上游不可用时静默降级：卡片保持无叠底
+    }
+
     if (expired) {
         return (
             <div className="mx-auto max-w-4xl space-y-8 md:space-y-12">
-                <Link
-                    href="/"
-                    className="inline-flex items-center gap-1 text-sm text-(--muted) transition-colors hover:text-(--fg)"
-                >
-                    <Icon icon="mdi:arrow-left" className="size-4" />
-                    返回广场
-                </Link>
                 <div className="mg-card p-12 text-center">
                     <Icon icon="mdi:clock-alert-outline" className="mx-auto mb-3 size-10 text-(--muted)" />
                     <p className="mg-title text-base">该工程分享已过期</p>
@@ -81,14 +83,6 @@ export default async function SharePage({ params }: { params: Promise<{ code: st
 
     return (
         <div className="mx-auto max-w-4xl space-y-6">
-            <Link
-                href="/"
-                className="inline-flex items-center gap-1 text-sm text-(--muted) transition-colors hover:text-(--fg)"
-            >
-                <Icon icon="mdi:arrow-left" className="size-4" />
-                返回广场
-            </Link>
-
             <div className="mg-card space-y-4 p-6">
                 <div className="flex flex-wrap items-start justify-between gap-3">
                     <div className="min-w-0">
@@ -112,9 +106,8 @@ export default async function SharePage({ params }: { params: Promise<{ code: st
                     </div>
                 </div>
 
-                {/* 分区：配队（图标 + 角色名 + 下细线） */}
+                {/* 分区：配队（角色名徽标 + 下细线；不再用 mdi 图标前缀） */}
                 <div className="mg-section">
-                    <Icon icon="mdi:account-group-outline" className="size-4 shrink-0 text-(--accent-text)" />
                     <TeamBanner names={names} size="lg" />
                 </div>
 
@@ -170,6 +163,7 @@ export default async function SharePage({ params }: { params: Promise<{ code: st
             <TeamPreview
                 slots={project.team_preview?.slots ?? []}
                 locked={project.team_preview?.locked ?? { team: false, timeline: false, calculation: false, config: false }}
+                icons={charIcons}
             />
         </div>
     )
