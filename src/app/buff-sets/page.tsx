@@ -16,8 +16,8 @@ export default async function BuffSetsPage() {
         .from('buff_sets')
         .select('entity_type, entity_name, buff_name, scope, exclusive, condition, buff_set')
 
-    // 读取边界兜底：库内可能还残留 v1 行（迁移未跑 / 刚还原了旧快照），这里按 v2 规则就地升级后再渲染。
-    // 这是纯函数、不写库，页面永远按 v2 显示；正式落库升级在管理页「Buff 集结构迁移」。
+    // 读取边界归一化：v1 形状仍可能出现在这里（刚用旧快照还原过），按 v2 规则就地归一化后再渲染。
+    // 纯函数、不写库，页面永远按 v2 展示。
     const rows = ((data ?? []) as BuffSetRow[]).map((r) => upgradeBuffSetRowV2(r).row)
 
     // 底部管理入口：仅管理员可见

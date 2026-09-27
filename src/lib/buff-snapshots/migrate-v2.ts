@@ -1,11 +1,15 @@
 /**
- * @desc Buff 集 v2 迁移纯函数层（与 `supabase/migrations/0005_buff_set_v2.sql` 同一套口径）。
+ * @desc Buff 集 v2 结构归一化（与 `supabase/migrations/0005_buff_set_v2.sql` 同一套口径）。
  *
- * 为什么 TS 侧还要有一份：迁移正式执行在数据库里（单事务、幂等），但管理员需要**先看报告再决定**。
- * 用 `previewBuffSetMigration()` 在服务端对现有行做 dry-run，既能给出与 SQL 完全一致的预期结果，
- * 又不会在预览阶段写库。两侧任何一侧改了规则，另一侧的 `buffSetMigrateCase` 测试会暴露漂移。
+ * 库内数据已于 0005 迁移一次性升到 v2，管理端的「迁移」入口连同预演/报告界面已经下线。
+ * 这里保留一个纯函数，是因为**读取边界仍可能出现 v1 形状**：
+ *   · 版本快照存的是 diff（按设计保持 v1 形状不动），`rebuildSnapshotState` 重建出来的行是 v1；
+ *   · 用 0005 之前的旧快照还原时，写回的行也会带 v1 形状。
+ * 这些行在进入渲染 / diff / 导出之前必须归一化，否则：
+ *   · 公开浏览页会漏掉乘区级条件下的显示；
+ *   · 快照 diff 会把「结构升级本身」误报成大量内容差异。
  *
- * v1 → v2 的差异（迁移原因见 migration 文件头）：
+ * v1 → v2 的差异：
  *   · buff_set[]：每条只有 { zoneId, value, ref?, override? }，一个乘区只能出现一次
  *                → 乘区贡献条目列表（同乘区可多条、带乘区级 condition、覆盖唯一）
  *   · condition：实例级单值 { chain? , refinement? } + 混挂的 elements/damageTypes
@@ -15,46 +19,16 @@
 import type { BuffCondition, BuffSetRow, BuffZoneRef, BuffZoneValue } from '@/lib/types/db'
 import { sanitizeCondition, resolveBuffZoneId, BUFF_ZONE_MAP, ZONE_NO_REF_IDS, ZONE_NO_OVERRIDE_IDS } from '@/lib/consts/buff-zones'
 
-/** @desc 当前 Buff 集结构版本（v2 = 乘区贡献条目列表 + 条件分层挂载） */
-export const BUFF_SET_STRUCT_VERSION = 2
-export const BUFF_SET_MIGRATION_NAME = 'buff_set_v2：乘区贡献条目列表 + 条件分层挂载'
-
-/** @desc 改动项文案（报告与界面共用；顺序即统计顺序） */
-export const BUFF_SET_CHANGE_LABELS = {
-    'buff_set[].zoneId(未知乘区已剔除)': '剔除未知乘区',
-    'buff_set[].zoneId(旧 id 重映射)': '旧乘区 id 重映射',
-    'buff_set[].condition(实例级条件下放)': '实例级条件下放到乘区',
-    'buff_set[].override(覆盖唯一/该乘区不支持)': '覆盖标记规范化',
-    'buff_set[].ref(层数类乘区不支持引用)': '剔除层数类乘区的引用',
-    'buff_set[].ref(非法引用已剔除)': '剔除非法引用',
-    condition: '实例级条件升级为数组',
-    'scope(非法值兜底 team)': 'scope 非法值兜底',
-    exclusive: 'exclusive 归一化'
-} as const
-
-export type BuffSetChangeKey = keyof typeof BUFF_SET_CHANGE_LABELS
-
 export interface BuffSetMigrateResult {
     /** @desc 该行已是 v2，无需改动（幂等：对已是 v2 的行返回 already=true） */
     already: boolean
     row: BuffSetRow
-    changes: BuffSetChangeKey[]
+    /** @desc 改动过的结构路径（诊断用；正式迁移报告由数据库侧出） */
+    changes: string[]
 }
 
 const asRecord = (v: unknown): Record<string, unknown> =>
     v && typeof v === 'object' && !Array.isArray(v) ? (v as Record<string, unknown>) : {}
-
-/**
- * @desc 实例级条件是否还是 v1 形态：存在旧单值 chain/refinement，或把属性/类型挂在了实例级。
- * 用"形态判断"而不是 JSON 字符串比较，避免把 `condition: null` 与 `{}`、键序差异误报成改动。
- */
-const isLegacyInstanceCondition = (raw: unknown): boolean => {
-    const c = asRecord(raw)
-    if (typeof c.chain === 'number' || typeof c.refinement === 'number') return true
-    if (Array.isArray(c.elements) && c.elements.length > 0) return true
-    if (Array.isArray(c.damageTypes) && c.damageTypes.length > 0) return true
-    return false
-}
 
 /** @desc 实例级条件里的属性/类型被下放后，清理成空对象 */
 const compactCondition = (cond: BuffCondition): BuffCondition | null => {
@@ -100,7 +74,7 @@ function sanitizeRefV2(raw: unknown, zoneId: string): BuffZoneRef | undefined {
  */
 export function upgradeBuffSetRowV2(input: BuffSetRow): BuffSetMigrateResult {
     const raw = asRecord(input as unknown)
-    const changes = new Set<BuffSetChangeKey>()
+    const changes = new Set<string>()
 
     const zoneInput = Array.isArray(raw.buff_set) ? (raw.buff_set as unknown[]) : []
     const instanceCondition = sanitizeCondition(raw.condition, 'buff') ?? {}
@@ -146,7 +120,6 @@ export function upgradeBuffSetRowV2(input: BuffSetRow): BuffSetMigrateResult {
 
     // ── 实例级条件：链/阶升级为数组 + 链阶互斥（属性/类型保留，仅作兼容读取）──
     const condition = compactCondition(instanceCondition)
-    if (isLegacyInstanceCondition(raw.condition)) changes.add('condition')
 
     // ── scope / exclusive 兜底 ──
     const allowedScopes = ['self', 'self_except', 'team', 'effect_only']
@@ -168,45 +141,4 @@ export function upgradeBuffSetRowV2(input: BuffSetRow): BuffSetMigrateResult {
     }
 
     return { already: changes.size === 0, row, changes: [...changes].slice(0, 3) }
-}
-
-export interface BuffSetMigrationReport {
-    version: number
-    total: number
-    changed: number
-    alreadyV2: number
-    emptyZoneRows: number
-    changeCounts: Partial<Record<BuffSetChangeKey, number>>
-    sample: { entity: string; changes: BuffSetChangeKey[] }[]
-}
-
-/**
- * @desc 对现有 Buff 集做 dry-run：逐行升级、统计改动，不写库。
- * 返回结构与 `public.migrate_buff_sets_v2(true)` 的报告一致，便于界面直接复用同一套展示。
- */
-export function previewBuffSetMigration(rows: BuffSetRow[], sampleLimit = 20): BuffSetMigrationReport {
-    const changeCounts: Partial<Record<BuffSetChangeKey, number>> = {}
-    const sample: { entity: string; changes: BuffSetChangeKey[] }[] = []
-    let changed = 0
-    let alreadyV2 = 0
-    let emptyZoneRows = 0
-
-    for (const row of rows) {
-        const res = upgradeBuffSetRowV2(row)
-        if (res.already) {
-            alreadyV2++
-            continue
-        }
-        changed++
-        if (res.row.buff_set.length === 0) emptyZoneRows++
-        for (const key of res.changes) changeCounts[key] = (changeCounts[key] ?? 0) + 1
-        if (sample.length < sampleLimit) {
-            sample.push({
-                entity: `${row.entity_type}/${row.entity_name}/${row.buff_name}`,
-                changes: res.changes
-            })
-        }
-    }
-
-    return { version: BUFF_SET_STRUCT_VERSION, total: rows.length, changed, alreadyV2, emptyZoneRows, changeCounts, sample }
 }

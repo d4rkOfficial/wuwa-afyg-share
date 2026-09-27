@@ -5,7 +5,6 @@ import { Icon } from '@iconify/react'
 import BuffEntityGrid from '@/components/admin/buff-entity-grid'
 import BuffEntityEditor from '@/components/admin/buff-entity-editor'
 import BuffSnapshotPanel from '@/components/admin/buff-snapshot-panel'
-import BuffMigrationPanel from '@/components/admin/buff-migration-panel'
 import { DEFAULT_SYSTEM_PROMPT, DEFAULT_INITIAL_TASK_PROMPT, DEFAULT_SLANG_DICT } from '@/lib/ai/prompts'
 import {
     loadAiConfig,
@@ -194,11 +193,6 @@ export default function BuffSetsAdmin({ rows, isAdmin }: Props) {
                         <Icon icon="mdi:cog" className="size-4" />
                     </button>
                 </span>
-            </div>
-
-            {/* Buff 集结构迁移（v1 → v2） */}
-            <div className="shrink-0">
-                <BuffMigrationPanel isAdmin={isAdmin} />
             </div>
 
             {/* 实体网格 */}

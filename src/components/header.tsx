@@ -56,7 +56,8 @@ export default async function Header() {
                         <span className="hidden lg:inline">Buff 集</span>
                     </AppLink>
 
-                    {/* 标准词条集：只读浏览页，任何人（含非管理员）都可查看；编辑仍在 /admin/substat-sets */}
+                    {/* 标准词条集：只读浏览页（任何人可看）。管理员入口**不在这里**——浏览页底部的
+                        「标准词条集管理」直达 /admin/substat-sets，避免顶栏出现两个同名按钮。 */}
                     <AppLink href="/substat-sets" aria-label="标准词条集" title="标准词条集" className={navItemClass}>
                         <Icon icon="mdi:format-list-checks" className="size-4" />
                         <span className="hidden lg:inline">标准词条集</span>
@@ -73,18 +74,6 @@ export default async function Header() {
                         <AppLink href="/admin/users" aria-label="管理员管理" title="管理员管理" className={navItemClass}>
                             <Icon icon="mdi:account-group-outline" className="size-4" />
                             <span className="hidden lg:inline">管理员管理</span>
-                        </AppLink>
-                    )}
-
-                    {isAdmin && (
-                        <AppLink
-                            href="/admin/substat-sets"
-                            aria-label="标准词条集管理"
-                            title="标准词条集管理"
-                            className={navItemClass}
-                        >
-                            <Icon icon="mdi:format-list-checks" className="size-4" />
-                            <span className="hidden lg:inline">标准词条集</span>
                         </AppLink>
                     )}
 
