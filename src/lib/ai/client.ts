@@ -1,4 +1,5 @@
-// AI 流式客户端（浏览器直连；无 CORS 的提供商自动走站点 /api/ai/stream 转发代理）
+// AI 流式客户端（OpenAI 兼容的 chat/completions；浏览器直连，无 CORS 的端点自动走站点 /api/ai/stream 转发代理）
+// 不绑定服务商：baseUrl / model 由「连接配置」决定，这里只提供默认值。
 import type { GeneratedBuff, GeneratedZone, GeneratedZoneRef } from '@/lib/ai/types'
 import {
     BUFF_ZONE_MAP,
@@ -12,8 +13,9 @@ import {
 } from '@/lib/consts/buff-zones'
 import type { BuffScope } from '@/lib/types/db'
 
-const DEEPSEEK_BASE = 'https://api.deepseek.com'
-const MODEL = 'deepseek-v4-flash'
+/** @desc 默认服务地址 / 模型（可在「连接配置」改成任意 OpenAI 兼容端点与模型） */
+const DEFAULT_BASE = 'https://api.deepseek.com'
+const DEFAULT_MODEL = 'deepseek-v4-flash'
 const TIMEOUT_MS = 240000
 const MAX_TOKENS = 65536
 // 支持浏览器直连（已配置 CORS）的 host 白名单；其余走站点代理
@@ -73,12 +75,13 @@ interface StreamChunk {
     error?: { message?: string }
 }
 
-export class DeepSeekError extends Error {
+/** @desc AI 客户端错误（原名 AiClientError；现已支持任意 OpenAI 兼容服务商，不再绑定服务商） */
+export class AiClientError extends Error {
     debug: string
 
     constructor(message: string, debug: string) {
         super(message)
-        this.name = 'DeepSeekError'
+        this.name = 'AiClientError'
         this.debug = debug
     }
 }
@@ -109,7 +112,7 @@ export async function chatCompletionStream(
 
     const maxTokens = options.maxTokens ?? MAX_TOKENS
     const body: Record<string, unknown> = {
-        model: options.model?.trim() || MODEL,
+        model: options.model?.trim() || DEFAULT_MODEL,
         messages,
         stream: true,
         stream_options: { include_usage: true },
@@ -124,7 +127,7 @@ export async function chatCompletionStream(
         body.tool_choice = 'auto'
     }
 
-    const base = (options.baseUrl ?? DEEPSEEK_BASE).trim().replace(/\/+$/, '')
+    const base = (options.baseUrl ?? DEFAULT_BASE).trim().replace(/\/+$/, '')
 
     let res: Response
     try {
@@ -150,9 +153,9 @@ export async function chatCompletionStream(
     } catch (e) {
         const err = e instanceof Error ? e.message : String(e)
         if (err.includes('AbortError') || err.includes('TimeoutError')) {
-            throw new DeepSeekError('AI 请求超时', '请求超时，请重试或换模型')
+            throw new AiClientError('AI 请求超时', '请求超时，请重试或换模型')
         }
-        throw new DeepSeekError(`无法连接 AI 服务（${base}）：${err}`, err)
+        throw new AiClientError(`无法连接 AI 服务（${base}）：${err}`, err)
     }
 
     if (!res.ok) {
@@ -163,10 +166,10 @@ export async function chatCompletionStream(
         } catch {
             /* ignore */
         }
-        throw new DeepSeekError(`AI 接口错误（HTTP ${res.status}）：${detail || res.statusText}`, `HTTP ${res.status}`)
+        throw new AiClientError(`AI 接口错误（HTTP ${res.status}）：${detail || res.statusText}`, `HTTP ${res.status}`)
     }
 
-    if (!res.body) throw new DeepSeekError('AI 响应无 body', '响应无 body')
+    if (!res.body) throw new AiClientError('AI 响应无 body', '响应无 body')
 
     const reader = res.body.getReader()
     const decoder = new TextDecoder()
@@ -196,7 +199,7 @@ export async function chatCompletionStream(
                 } catch {
                     continue
                 }
-                if (chunk.error?.message) throw new DeepSeekError(`AI 流错误：${chunk.error.message}`, payload)
+                if (chunk.error?.message) throw new AiClientError(`AI 流错误：${chunk.error.message}`, payload)
                 const delta = chunk.choices?.[0]?.delta
                 if (delta?.content) {
                     content += delta.content
@@ -221,9 +224,9 @@ export async function chatCompletionStream(
             }
         }
     } catch (e) {
-        if (e instanceof DeepSeekError) throw e
+        if (e instanceof AiClientError) throw e
         const err = e instanceof Error ? e.message : String(e)
-        throw new DeepSeekError(`读取流失败：${err}`, err)
+        throw new AiClientError(`读取流失败：${err}`, err)
     }
 
     const calls: ChatToolCall[] = [...toolCalls.entries()]

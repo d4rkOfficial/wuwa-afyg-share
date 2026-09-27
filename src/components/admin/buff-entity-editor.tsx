@@ -28,7 +28,7 @@ import {
 import type { BuffEntityType, BuffScope, BuffSetRow, BuffCondition } from '@/lib/types/db'
 import type { GeneratedBuff } from '@/lib/ai/types'
 import { generateBuffSet, type GenerateEvent } from '@/lib/ai/generate'
-import { DeepSeekError, type ChatMessage } from '@/lib/ai/deepseek'
+import { AiClientError, type ChatMessage } from '@/lib/ai/client'
 import { createClient } from '@/lib/supabase/client'
 import BuffRefModal from '@/components/admin/buff-ref-modal'
 
@@ -222,7 +222,7 @@ export default function BuffEntityEditor({
 
     const canSave = entityName.trim().length > 0
 
-    // 前端直连 DeepSeek 查询已收录 buff 集（供 get_buff_sets 等工具）
+    // 前端直连 AI 查询已收录 buff 集（供 get_buff_sets 等工具）
     async function getBuffSets(queryType?: string, queryName?: string, query?: string) {
         const supabase = createClient()
         let q = supabase
@@ -238,7 +238,7 @@ export default function BuffEntityEditor({
         return { total: (data ?? []).length, buffSets: data ?? [] }
     }
 
-    // 统一 AI 请求（首轮或追问），浏览器直连 DeepSeek
+    // 统一 AI 请求（首轮或追问），浏览器直连配置的服务端点
     async function runAiRequest(newUserMessage: string, history: { role: 'user' | 'assistant'; content: string }[]) {
         // 新一轮强制滚到底部（即使之前在看历史）
         autoScrollPaused.current = false
@@ -317,7 +317,7 @@ export default function BuffEntityEditor({
                 }
             })
         } catch (e) {
-            if (e instanceof DeepSeekError) {
+            if (e instanceof AiClientError) {
                 setAiError(e.message)
                 setAiDebug(e.debug)
             } else {
@@ -336,7 +336,7 @@ export default function BuffEntityEditor({
             return
         }
         if (!apiKey.trim()) {
-            setAiError('请先在上方侧栏填入 DeepSeek API Key')
+            setAiError('请先在上方侧栏填入 AI API Key')
             return
         }
         setAiHistory([])
@@ -728,7 +728,7 @@ export default function BuffEntityEditor({
             return
         }
         if (!apiKey.trim()) {
-            setAiError('请先在上方侧栏填入 DeepSeek API Key')
+            setAiError('请先在上方侧栏填入 AI API Key')
             return
         }
         if (buffs.length === 0) {
@@ -1235,7 +1235,7 @@ export default function BuffEntityEditor({
                     </div>
                 </div>
 
-                {/* ④ AI 协作区（DeepSeek 聊天式） */}
+                {/* ④ AI 协作区（OpenAI 兼容端点聊天式） */}
                 <div className="buff-editor-ai flex w-80 shrink-0 flex-col border-l border-(--card-border)">
                     {/* 头部 */}
                     <div className="flex shrink-0 flex-wrap items-center gap-1.5 border-b border-(--card-border) px-3 py-2">

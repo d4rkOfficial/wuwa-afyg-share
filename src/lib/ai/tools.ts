@@ -1,4 +1,4 @@
-// DeepSeek 工具调用：定义工具 schema + 执行器（纯前端可执行）
+// AI 工具调用：定义工具 schema + 执行器（纯前端可执行，不绑定具体服务商）
 import { fetchToolList, fetchToolInfo } from '@/lib/ai/info'
 import { getProvider } from '@/lib/upstream/provider/registry'
 import {

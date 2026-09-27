@@ -13,7 +13,7 @@ import {
     type AiConfig
 } from '@/lib/ai/config'
 import { toast } from '@/components/ui/toast'
-import type { ChatMessage } from '@/lib/ai/deepseek'
+import type { ChatMessage } from '@/lib/ai/client'
 import type { BuffEntityType, BuffSetRow } from '@/lib/types/db'
 
 interface Props {

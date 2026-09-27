@@ -1,5 +1,5 @@
-// 前端直连 DeepSeek 的 Buff 集生成循环（浏览器端执行，不再经过服务端 route）
-import { chatCompletionStream, sanitizeBuffs, type ChatMessage } from '@/lib/ai/deepseek'
+// 前端直连 AI 的 Buff 集生成循环（浏览器端执行，不再经过服务端 route）
+import { chatCompletionStream, sanitizeBuffs, type ChatMessage } from '@/lib/ai/client'
 import { buildTools, executeTool } from '@/lib/ai/tools'
 import { renderSystemPrompt, renderInitialTaskPrompt, DEFAULT_SYSTEM_PROMPT, DEFAULT_INITIAL_TASK_PROMPT } from '@/lib/ai/prompts'
 import { BUFF_ENTITY_TYPES } from '@/lib/consts/buff-zones'
@@ -111,9 +111,7 @@ export async function generateBuffSet(options: GenerateBuffSetOptions): Promise<
         emit({ type: 'prompt', kind: 'user', text: newUserMessage })
     }
 
-    emitLog(
-        `请求 AI（model=${options.model?.trim() || 'deepseek-v4-flash'}, tools=${tools.length}, 消息数=${messages.length}）…`
-    )
+    emitLog(`请求 AI（model=${options.model?.trim() || '默认'}, tools=${tools.length}, 消息数=${messages.length}）…`)
 
     let content = ''
     let reasoning = ''
@@ -182,8 +180,8 @@ export async function generateBuffSet(options: GenerateBuffSetOptions): Promise<
         }
 
         if (!content.trim()) {
-            emit({ type: 'error', message: 'DeepSeek 未返回内容' })
-            return finish({ buffs: null, rawContent: content, parseError: 'DeepSeek 未返回内容' })
+            emit({ type: 'error', message: 'AI 未返回内容' })
+            return finish({ buffs: null, rawContent: content, parseError: 'AI 未返回内容' })
         }
 
         let buffs: ReturnType<typeof sanitizeBuffs> | null = null
