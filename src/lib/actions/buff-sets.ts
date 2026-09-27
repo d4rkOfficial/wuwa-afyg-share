@@ -6,9 +6,14 @@ import {
     BUFF_ENTITY_TYPES,
     BUFF_ZONE_MAP,
     ZONE_NO_REF_IDS,
+    ZONE_NO_OVERRIDE_IDS,
     BUFF_REF_ZONE_MAP,
     BUFF_SCOPES,
-    sanitizeCondition
+    resolveBuffZoneId,
+    sanitizeCondition,
+    sanitizeZoneCondition,
+    isConditionEmpty,
+    type BuffConditionScope
 } from '@/lib/consts/buff-zones'
 import type { BuffEntityType, BuffCondition, BuffScope, BuffRefOwner } from '@/lib/types/db'
 
@@ -42,6 +47,7 @@ interface ZoneInput {
     value: number
     ref?: ZoneRefInput | null
     override?: boolean
+    condition?: BuffCondition | null
 }
 
 export interface InputBuff {
@@ -72,35 +78,61 @@ function sanitizeRef(ref: unknown): ZoneRefInput | undefined {
     return out
 }
 
+/**
+ * @desc 清洗乘区贡献条目列表（与工具箱「一切皆 buff」口径一致）：
+ * - zoneId 走旧 id 别名重映射 + 白名单校验
+ * - **同一乘区可出现多次**（每次是独立贡献单元），仅剔除完全重复的条目（同乘区 + 同覆盖 + 同条件）
+ * - 覆盖：extraRatio/百分比类乘区不支持覆盖；同一乘区内**只允许一个**覆盖条目（后写的取消先写的）
+ * - 乘区级条件只保留伤害类型 / 伤害属性；层数类乘区丢弃引用
+ */
 function sanitizeZones(zones: unknown): ZoneInput[] {
     if (!Array.isArray(zones)) return []
     const out: ZoneInput[] = []
     const seen = new Set<string>()
     for (const z of zones) {
-        const zoneId = typeof z?.zoneId === 'string' ? z.zoneId.trim() : ''
-        if (!BUFF_ZONE_MAP.has(zoneId) || seen.has(zoneId)) continue
-        seen.add(zoneId)
+        const raw = typeof z?.zoneId === 'string' ? z.zoneId.trim() : ''
+        const zoneId = resolveBuffZoneId(raw)
+        if (!BUFF_ZONE_MAP.has(zoneId)) continue
         const value = typeof z?.value === 'number' && Number.isFinite(z.value) ? z.value : 0
+        const override = !!z?.override && !ZONE_NO_OVERRIDE_IDS.has(zoneId)
         // 层数类乘区（集谐干涉/同奏增益等）只填固定层数，不保留引用
         const ref = ZONE_NO_REF_IDS.has(zoneId) ? undefined : sanitizeRef(z?.ref)
+        // 带引用的条目覆盖标记由引用接管（与工具箱一致：设引用即清覆盖）
+        const finalOverride = ref ? false : override
+        const condition = sanitizeZoneCondition(z?.condition)
+        const dedupeKey = `${zoneId}|${finalOverride ? 'o' : 'a'}|${condition ? JSON.stringify(condition) : ''}`
+        if (seen.has(dedupeKey)) continue
+        seen.add(dedupeKey)
         out.push({
             zoneId,
             value,
             ...(ref ? { ref } : {}),
-            ...(z?.override ? { override: true } : {})
+            ...(finalOverride ? { override: true } : {}),
+            ...(condition ? { condition } : {})
         })
     }
-    return out
+    // 同一乘区内只保留一个覆盖条目（最后出现的生效，与工具箱「同乘区覆盖唯一」一致）
+    const overrideKept = new Set<string>()
+    const deduped: ZoneInput[] = []
+    for (let i = out.length - 1; i >= 0; i--) {
+        const zone = out[i]
+        if (zone.override) {
+            if (overrideKept.has(zone.zoneId)) continue
+            overrideKept.add(zone.zoneId)
+        }
+        deduped.unshift(zone)
+    }
+    return deduped
 }
 
 function normalizeScope(scope: unknown): BuffScope {
     return scope && BUFF_SCOPES.includes(scope as BuffScope) ? (scope as BuffScope) : 'team'
 }
 
-// 按实体类型约束条件类型：角色仅 chain（共鸣链）、武器仅 refinement（精炼），其它实体不支持条件
-// 多字段条件模型：不再按实体类型限制（角色/武器/声骸/套装均可设链/精炼/属性/类型条件）
-function sanitizeConditionForEntity(cond: unknown): BuffCondition | null {
-    return sanitizeCondition(cond) ?? null
+// 条件按挂载层级清洗：实例级保留链/阶硬门槛（链阶互斥），乘区级只保留类型/属性
+function sanitizeConditionForScope(cond: unknown, scope: BuffConditionScope): BuffCondition | null {
+    const clean = sanitizeCondition(cond, scope)
+    return clean && !isConditionEmpty(clean) ? clean : null
 }
 
 export async function upsertBuffSet(input: InputBuff): Promise<ActionResult> {
@@ -123,7 +155,7 @@ export async function upsertBuffSet(input: InputBuff): Promise<ActionResult> {
             buff_name: buffName,
             scope: normalizeScope(input.scope),
             exclusive: !!input.exclusive,
-            condition: sanitizeConditionForEntity(input.condition),
+            condition: sanitizeConditionForScope(input.condition, 'buff'),
             buff_set: sanitizeZones(input.zones)
         },
         { onConflict: 'entity_type,entity_name,buff_name' }
@@ -194,7 +226,7 @@ export async function upsertBuffEntity(input: UpsertEntityInput): Promise<Action
             buffName: b.buffName.trim().slice(0, 80),
             scope: normalizeScope(b.scope),
             exclusive: !!b.exclusive,
-            condition: sanitizeConditionForEntity(b.condition),
+            condition: sanitizeConditionForScope(b.condition, 'buff'),
             zones: sanitizeZones(b.zones)
         }))
         .filter((b) => b.buffName && b.zones.length > 0)

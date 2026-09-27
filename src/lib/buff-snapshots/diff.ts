@@ -38,7 +38,8 @@ function stableStringify(v: unknown): string {
     return JSON.stringify(v)
 }
 
-// 规范化行：buff_set 按 zoneId 排序（编辑/生成顺序可能不同，比较前归一化）
+// 规范化行：buff_set 按 zoneId 排序，同 zoneId 的多条贡献条目再按内容排序
+// （编辑/生成顺序可能不同，比较前归一化；同一乘区可有多条，各带自己的条件）
 function canonicalRow(row: BuffSetRow): unknown {
     return {
         entity_type: row.entity_type,
@@ -47,7 +48,10 @@ function canonicalRow(row: BuffSetRow): unknown {
         scope: row.scope,
         exclusive: !!row.exclusive,
         condition: row.condition ?? null,
-        buff_set: [...row.buff_set].sort((a, b) => (a.zoneId < b.zoneId ? -1 : a.zoneId > b.zoneId ? 1 : 0))
+        buff_set: [...row.buff_set].sort((a, b) => {
+            if (a.zoneId !== b.zoneId) return a.zoneId < b.zoneId ? -1 : 1
+            return stableStringify(a) < stableStringify(b) ? -1 : stableStringify(a) > stableStringify(b) ? 1 : 0
+        })
     }
 }
 

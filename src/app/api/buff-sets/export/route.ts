@@ -4,12 +4,16 @@
 import { createClient, hasEnv } from '@/lib/supabase/server'
 import { rebuildSnapshotState, type SnapshotDiff } from '@/lib/buff-snapshots/diff'
 import { buffSetsToSql } from '@/lib/buff-snapshots/export-sql'
+import { upgradeBuffSetRowV2 } from '@/lib/buff-snapshots/migrate-v2'
 import type { BuffSetRow } from '@/lib/types/db'
 
 export const dynamic = 'force-dynamic'
 
 const BUFF_COLUMNS = 'entity_type, entity_name, buff_name, scope, exclusive, condition, buff_set'
 const SNAPSHOT_COLUMNS = 'id, created_at, note, is_root, state, diff'
+
+/** @desc 导出前把行升级到 v2：导出的 SQL 直接给外部库执行，不该带老结构 */
+const toV2 = (row: BuffSetRow): BuffSetRow => upgradeBuffSetRowV2(row).row
 
 export async function GET() {
     if (!hasEnv()) return Response.json({ error: '服务未配置' }, { status: 503 })
@@ -23,21 +27,24 @@ export async function GET() {
         .from('buff_set_snapshot')
         .select(SNAPSHOT_COLUMNS)
         .order('created_at', { ascending: true })
-    const chain = (chainData ?? []) as Array<{
+    const chain = ((chainData ?? []) as Array<{
         id: string
         is_root: boolean
         state: BuffSetRow[] | null
         diff: SnapshotDiff | null
-    }>
+    }>).map((s) => ({
+        ...s,
+        state: Array.isArray(s.state) ? s.state.map(toV2) : s.state
+    }))
     if (chain.length > 0 && chain.some((s) => s.is_root)) {
-        rows = rebuildSnapshotState(chain, null)
+        rows = rebuildSnapshotState(chain, null)?.map(toV2) ?? null
     }
 
     // 兜底：无快照时导出当前实时数据
     if (!rows) {
         source = '实时数据（暂无快照）'
         const { data } = await supabase.from('buff_sets').select(BUFF_COLUMNS)
-        rows = (data ?? []) as BuffSetRow[]
+        rows = ((data ?? []) as BuffSetRow[]).map(toV2)
     }
 
     const sql = buffSetsToSql(rows, { source, exportedAt: new Date().toISOString() })

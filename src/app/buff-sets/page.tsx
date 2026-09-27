@@ -3,6 +3,7 @@ import { Icon } from '@iconify/react'
 import SetupNotice from '@/components/setup-notice'
 import BuffSetsBrowser from '@/components/buff-sets-browser'
 import { createClient, hasEnv } from '@/lib/supabase/server'
+import { upgradeBuffSetRowV2 } from '@/lib/buff-snapshots/migrate-v2'
 import type { BuffSetRow } from '@/lib/types/db'
 
 export const dynamic = 'force-dynamic'
@@ -15,7 +16,9 @@ export default async function BuffSetsPage() {
         .from('buff_sets')
         .select('entity_type, entity_name, buff_name, scope, exclusive, condition, buff_set')
 
-    const rows = (data ?? []) as BuffSetRow[]
+    // 读取边界兜底：库内可能还残留 v1 行（迁移未跑 / 刚还原了旧快照），这里按 v2 规则就地升级后再渲染。
+    // 这是纯函数、不写库，页面永远按 v2 显示；正式落库升级在管理页「Buff 集结构迁移」。
+    const rows = ((data ?? []) as BuffSetRow[]).map((r) => upgradeBuffSetRowV2(r).row)
 
     // 底部管理入口：仅管理员可见
     const {

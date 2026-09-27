@@ -5,12 +5,8 @@
 
 import { revalidatePath } from 'next/cache'
 import { requireAdmin } from '@/lib/supabase/admin'
-import {
-    diffBuffSets,
-    rebuildSnapshotState,
-    serializeSnapshotState,
-    type SnapshotDiff
-} from '@/lib/buff-snapshots/diff'
+import { diffBuffSets, rebuildSnapshotState, serializeSnapshotState, type SnapshotDiff } from '@/lib/buff-snapshots/diff'
+import { upgradeBuffSetRowV2 } from '@/lib/buff-snapshots/migrate-v2'
 import type { BuffSetRow } from '@/lib/types/db'
 
 export interface ActionResult<T = undefined> {
@@ -27,13 +23,19 @@ async function withAdmin() {
 const BUFF_COLUMNS = 'entity_type, entity_name, buff_name, scope, exclusive, condition, buff_set'
 const SNAPSHOT_COLUMNS = 'id, created_by, created_at, note, is_root, state, diff, prev_id'
 
+/**
+ * @desc 读取边界统一升级到 v2：库内/旧快照里可能还存在老结构行（迁移未跑、或刚还原了旧版本），
+ * 不升级会让「对比」把结构升级本身误报成大量差异。纯函数，不写库。
+ */
+const toV2 = (row: BuffSetRow): BuffSetRow => upgradeBuffSetRowV2(row).row
+
 async function fetchAllBuffSets(supabase: Awaited<ReturnType<typeof withAdmin>>['supabase']): Promise<BuffSetRow[]> {
     const { data } = await supabase
         .from('buff_sets')
         .select(BUFF_COLUMNS)
         .order('entity_type', { ascending: true })
         .order('entity_name', { ascending: true })
-    return (data ?? []) as BuffSetRow[]
+    return ((data ?? []) as BuffSetRow[]).map(toV2)
 }
 
 interface ChainSnapshot {
@@ -46,10 +48,15 @@ interface ChainSnapshot {
     diff: SnapshotDiff | null
 }
 
-// 读取快照链（按创建时间升序：根在前、版本依次在后）
+// 读取快照链（按创建时间升序：根在前、版本依次在后）。
+// 只有**根快照**带全量 state（版本快照的 state 恒为 NULL，见 check 约束 buff_set_snapshot_shape），
+// 这里只就地升级根的 state 以保证 diff 口径一致；版本快照的 diff 形状不动。
 async function loadChain(supabase: Awaited<ReturnType<typeof withAdmin>>['supabase']): Promise<ChainSnapshot[]> {
     const { data } = await supabase.from('buff_set_snapshot').select(SNAPSHOT_COLUMNS).order('created_at', { ascending: true })
-    return (data ?? []) as ChainSnapshot[]
+    return ((data ?? []) as ChainSnapshot[]).map((s) => ({
+        ...s,
+        state: Array.isArray(s.state) ? s.state.map(toV2) : s.state
+    }))
 }
 
 export interface BuffSnapshotView {
@@ -165,7 +172,7 @@ export async function restoreBuffSnapshot(targetId: string): Promise<ActionResul
     const targetState = rebuildSnapshotState(chain, targetId)
     if (!targetState) return { error: '快照不存在或缺少根快照' }
 
-    const { data, error } = await supabase.rpc('restore_buff_set_snapshot', {
+    const { data, error } = await supabase.rpc('restore_buff_set_snapshot_v2', {
         p_target: targetId,
         p_state: serializeSnapshotState(targetState)
     })

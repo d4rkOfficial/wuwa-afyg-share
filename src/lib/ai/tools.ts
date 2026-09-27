@@ -1,7 +1,16 @@
 // DeepSeek 工具调用：定义工具 schema + 执行器（纯前端可执行）
 import { fetchToolList, fetchToolInfo } from '@/lib/ai/info'
 import { getProvider } from '@/lib/upstream/provider/registry'
-import { BUFF_ENTITY_TYPES, BUFF_ZONES, BUFF_ZONE_MAP, BUFF_REF_ZONES, BUFF_REF_ZONE_MAP } from '@/lib/consts/buff-zones'
+import {
+    BUFF_ENTITY_TYPES,
+    BUFF_ZONES,
+    BUFF_ZONE_MAP,
+    BUFF_REF_ZONES,
+    BUFF_REF_ZONE_MAP,
+    sanitizeCondition,
+    sanitizeZoneCondition,
+    resolveBuffZoneId
+} from '@/lib/consts/buff-zones'
 import {
     DEFAULT_SLANG_DICT,
     EFFECTS_TEXT,
@@ -160,22 +169,33 @@ const BASE_TOOLS: ToolDefinition[] = [
                                 condition: {
                                     type: 'object',
                                     description:
-                                        '生效条件（可选，多字段可并存、全部满足才生效）：{"chain":n} 需角色共鸣链 ≥ n（1-6）；{"refinement":n} 需武器精炼 ≥ n（1-5）；{"elements":["物理",...]} 伤害属性多选；{"damageTypes":["普攻伤害",...]} 伤害类型多选',
+                                        '实例级生效条件（可选）：{"chains":[{"charIdx":0,"min":3}]} 需该槽位角色共鸣链 ≥ min（min 取 0-6，0=本体）；{"refinements":[{"charIdx":0,"min":3}]} 需武器精炼 ≥ min（1-5）。链与阶互斥，只写其一。兼容旧写法 {"chain":3} / {"refinement":3}（等价 charIdx=0）',
                                     properties: {
-                                        chain: { type: 'number', minimum: 1, maximum: 6 },
-                                        refinement: { type: 'number', minimum: 1, maximum: 5 },
-                                        elements: { type: 'array', items: { type: 'string' } },
-                                        damageTypes: { type: 'array', items: { type: 'string' } }
+                                        chains: { type: 'array', items: { type: 'object' } },
+                                        refinements: { type: 'array', items: { type: 'object' } },
+                                        chain: { type: 'number', minimum: 0, maximum: 6 },
+                                        refinement: { type: 'number', minimum: 1, maximum: 5 }
                                     }
                                 },
                                 zones: {
                                     type: 'array',
+                                    description:
+                                        '乘区贡献条目列表：同一乘区可出现多次，各带自己的数值 / 引用 / 覆盖 / 乘区级条件',
                                     items: {
                                         type: 'object',
                                         properties: {
                                             zoneId: { type: 'string' },
                                             value: { type: 'number' },
-                                            override: { type: 'boolean' }
+                                            override: { type: 'boolean' },
+                                            condition: {
+                                                type: 'object',
+                                                description:
+                                                    '乘区级生效条件（可选，只允许伤害类型 / 伤害属性；链阶只能挂在 Buff 实例级）：{"damageTypes":["共鸣技能伤害"]}、{"elements":["导电"]}，两者之间为"且"',
+                                                properties: {
+                                                    elements: { type: 'array', items: { type: 'string' } },
+                                                    damageTypes: { type: 'array', items: { type: 'string' } }
+                                                }
+                                            }
                                         }
                                     }
                                 }
@@ -222,7 +242,7 @@ const BASE_TOOLS: ToolDefinition[] = [
         function: {
             name: 'get_condition_rules',
             description:
-                '获取 Buff 生效条件（condition）的取值与判定细则（角色共鸣链 chain / 武器精炼 refinement / 伤害属性 elements / 伤害类型 damageTypes，多字段可并存）。当某增益确实存在共鸣链/精炼门槛或属性/类型限定时调用，确认字段结构后给 buff 加 condition。',
+                '获取 Buff 生效条件（condition）的取值与判定细则。条件分两层：Buff 实例级放链/阶硬门槛（chains/refinements，链阶互斥，元素为 [{charIdx,min}]）；乘区级（写在具体 zone 条目里）放伤害属性 elements / 伤害类型 damageTypes，且同一乘区可在不同条件下出现多条。当某增益确实存在共鸣链/精炼门槛或属性/类型限定时调用，确认字段结构后再写条件。',
             parameters: { type: 'object', properties: {} }
         }
     },
@@ -436,7 +456,7 @@ interface ProposedBuff {
     scope?: string
     exclusive?: boolean
     condition?: Record<string, unknown>
-    zones?: Array<{ zoneId?: string; value?: number; override?: boolean }>
+    zones?: Array<{ zoneId?: string; value?: number; override?: boolean; condition?: Record<string, unknown> }>
 }
 
 // 比对已存 buff 与拟定 buff，返回差异清单
@@ -497,27 +517,25 @@ function buildDiff(
 function sameBuff(existing: BuffSetRow, p: ProposedBuff): boolean {
     if (existing.scope !== p.scope) return false
     if (!!existing.exclusive !== !!p.exclusive) return false
-    // 条件归一化比较（兼容旧格式 {type,min} 与新多字段模型）
+    // 条件比较：统一走 whitelist 清洗归一化（链/阶升级为数组形式、链阶互斥、乘区级只留类型·属性）
     const normCond = (c: unknown): string => {
-        if (!c || typeof c !== 'object') return ''
-        const o = c as Record<string, unknown>
-        if (o.type === 'chain' || o.type === 'refinement') {
-            const min = typeof o.min === 'number' ? Math.floor(o.min) : 0
-            return `${o.type}:${min}`
-        }
-        const parts: string[] = []
-        if (typeof o.chain === 'number') parts.push(`chain:${Math.floor(o.chain)}`)
-        if (typeof o.refinement === 'number') parts.push(`refinement:${Math.floor(o.refinement)}`)
-        if (Array.isArray(o.elements)) parts.push(`elements:${[...(o.elements as string[])].sort().join(',')}`)
-        if (Array.isArray(o.damageTypes)) parts.push(`damageTypes:${[...(o.damageTypes as string[])].sort().join(',')}`)
-        return parts.join('|')
+        const clean = sanitizeCondition(c, 'buff')
+        if (!clean) return ''
+        return JSON.stringify({
+            chains: (clean.chains ?? []).map((x) => `${x.charIdx}:${x.min}`).sort(),
+            refinements: (clean.refinements ?? []).map((x) => `${x.charIdx}:${x.min}`).sort(),
+            elements: [...(clean.elements ?? [])].sort(),
+            damageTypes: [...(clean.damageTypes ?? [])].sort()
+        })
     }
     if (normCond(existing.condition) !== normCond(p.condition)) return false
     const eZones = existing.buff_set ?? []
     const pZones = p.zones ?? []
     if (eZones.length !== pZones.length) return false
-    const key = (z: { zoneId?: string; value?: number; override?: boolean }) =>
-        `${z.zoneId}:${z.value}:${z.override ? 'o' : 'a'}`
+    const key = (z: { zoneId?: string; value?: number; override?: boolean; condition?: unknown }) =>
+        `${resolveBuffZoneId(String(z.zoneId ?? ''))}:${z.value}:${z.override ? 'o' : 'a'}:${
+            sanitizeZoneCondition(z.condition) ? JSON.stringify(sanitizeZoneCondition(z.condition)) : ''
+        }`
     const eKeys = [...eZones].map(key).sort().join('|')
     const pKeys = pZones.map(key).sort().join('|')
     return eKeys === pKeys

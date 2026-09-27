@@ -18,12 +18,15 @@ export interface GeneratedZone {
     value: number
     ref?: GeneratedZoneRef
     override?: boolean
+    /** @desc 乘区级生效条件（伤害类型 / 伤害属性；链阶只能挂在 Buff 实例级） */
+    condition?: BuffCondition
 }
 
 export interface GeneratedBuff {
     buffName: string
     scope?: BuffScope
     exclusive?: boolean
+    /** @desc 实例级生效条件（链/阶硬门槛，链阶互斥） */
     condition?: BuffCondition | null
     zones: GeneratedZone[]
 }

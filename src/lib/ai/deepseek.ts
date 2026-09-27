@@ -1,6 +1,15 @@
 // AI 流式客户端（浏览器直连；无 CORS 的提供商自动走站点 /api/ai/stream 转发代理）
-import type { GeneratedBuff } from '@/lib/ai/types'
-import { BUFF_ZONE_MAP, ZONE_NO_REF_IDS, BUFF_REF_ZONE_MAP, BUFF_SCOPES, sanitizeCondition } from '@/lib/consts/buff-zones'
+import type { GeneratedBuff, GeneratedZone, GeneratedZoneRef } from '@/lib/ai/types'
+import {
+    BUFF_ZONE_MAP,
+    ZONE_NO_REF_IDS,
+    ZONE_NO_OVERRIDE_IDS,
+    BUFF_REF_ZONE_MAP,
+    BUFF_SCOPES,
+    resolveBuffZoneId,
+    sanitizeCondition,
+    sanitizeZoneCondition
+} from '@/lib/consts/buff-zones'
 import type { BuffScope } from '@/lib/types/db'
 
 const DEEPSEEK_BASE = 'https://api.deepseek.com'
@@ -231,31 +240,63 @@ export function sanitizeBuffs(buffs: GeneratedBuff[]): GeneratedBuff[] {
     for (const b of buffs) {
         const name = b.buffName?.trim()
         if (!name || seen.has(name)) continue
-        const zones = (Array.isArray(b.zones) ? b.zones : [])
-            .filter((z) => z && BUFF_ZONE_MAP.has(z.zoneId) && Number.isFinite(z.value))
-            .map((z) => ({
-                zoneId: z.zoneId,
-                value: z.value,
-                ...(z.override ? { override: true } : {}),
-                // 层数类乘区（集谐干涉/同奏增益等）只填固定层数，丢弃模型误输出的引用
-                ...(!ZONE_NO_REF_IDS.has(z.zoneId) && sanitizeRef(z.ref) ? { ref: sanitizeRef(z.ref) } : {})
-            }))
+        const zones = sanitizeZones(b.zones)
         if (!zones.length) continue
         const scope: BuffScope =
             b.scope && BUFF_SCOPES.includes(b.scope as BuffScope) ? (b.scope as BuffScope) : 'team'
         const exclusive = scope === 'effect_only' || !!b.exclusive
-        const condition = sanitizeCondition(b.condition)
+        const condition = sanitizeCondition(b.condition, 'buff')
         seen.add(name)
         out.push({ buffName: name, scope, exclusive, ...(condition ? { condition } : {}), zones })
     }
     return out
 }
 
+/**
+ * @desc 清洗乘区贡献条目列表（同工具箱口径）：
+ * 旧 id 别名重映射 + 白名单校验；**同一乘区可保留多条**（各带自己的条件）；同名同覆盖同条件的重复条目剔除；
+ * 同一乘区内只保留一个覆盖条目；百分比类 / 额外倍率不支持覆盖；层数类乘区丢弃引用。
+ */
+function sanitizeZones(zones: GeneratedBuff['zones'] | undefined): GeneratedZone[] {
+    const out: GeneratedZone[] = []
+    const seen = new Set<string>()
+    for (const z of Array.isArray(zones) ? zones : []) {
+        if (!z) continue
+        const zoneId = resolveBuffZoneId(typeof z.zoneId === 'string' ? z.zoneId.trim() : '')
+        if (!BUFF_ZONE_MAP.has(zoneId) || !Number.isFinite(z.value)) continue
+        // 层数类乘区（集谐干涉/同奏增益等）只填固定层数，丢弃模型误输出的引用
+        const ref = !ZONE_NO_REF_IDS.has(zoneId) && sanitizeRef(z.ref) ? sanitizeRef(z.ref) : undefined
+        const override = !!z.override && !ref && !ZONE_NO_OVERRIDE_IDS.has(zoneId)
+        const condition = sanitizeZoneCondition(z.condition)
+        const key = `${zoneId}|${override ? 'o' : 'a'}|${condition ? JSON.stringify(condition) : ''}`
+        if (seen.has(key)) continue
+        seen.add(key)
+        out.push({
+            zoneId,
+            value: z.value,
+            ...(override ? { override: true } : {}),
+            ...(ref ? { ref } : {}),
+            ...(condition ? { condition } : {})
+        })
+    }
+    const overrideKept = new Set<string>()
+    const deduped: GeneratedZone[] = []
+    for (let i = out.length - 1; i >= 0; i--) {
+        const zone = out[i]
+        if (zone.override) {
+            if (overrideKept.has(zone.zoneId)) continue
+            overrideKept.add(zone.zoneId)
+        }
+        deduped.unshift(zone)
+    }
+    return deduped
+}
+
 // 只保留白名单引用乘区、合法数值
-function sanitizeRef(ref: GeneratedBuff['zones'][number]['ref']): GeneratedBuff['zones'][number]['ref'] | undefined {
+function sanitizeRef(ref: GeneratedZoneRef | undefined): GeneratedZoneRef | undefined {
     if (!ref || !BUFF_REF_ZONE_MAP.has(ref.targetZoneId)) return undefined
     if (!Number.isFinite(ref.pct)) return undefined
-    const clean: NonNullable<GeneratedBuff['zones'][number]['ref']> = {
+    const clean: GeneratedZoneRef = {
         targetZoneId: ref.targetZoneId,
         pct: ref.pct
     }

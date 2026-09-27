@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from 'react'
 import { Icon } from '@iconify/react'
-import { BUFF_ZONE_MAP, BUFF_SCOPE_LABELS } from '@/lib/consts/buff-zones'
+import { BUFF_ZONE_MAP, BUFF_SCOPE_LABELS, describeCondition, describeZoneConditionBadge } from '@/lib/consts/buff-zones'
 import type { BuffEntityType, BuffSetRow } from '@/lib/types/db'
 
 interface Props {
@@ -157,7 +157,7 @@ export default function BuffSetsBrowser({ rows }: Props) {
                                     key={`${item.entity_type}/${item.entity_name}/${item.buff_name}`}
                                     className="mg-card p-4"
                                 >
-                                    <div className="mb-2 flex items-center gap-2">
+                                    <div className="mb-2 flex flex-wrap items-center gap-2">
                                         <span className="mg-title truncate text-sm">{item.buff_name}</span>
                                         <span className="mg-num shrink-0 rounded-none bg-(--accent) px-1.5 py-0.5 text-[10px] text-(--accent-fg)">
                                             {BUFF_SCOPE_LABELS[item.scope] ?? item.scope}
@@ -167,14 +167,31 @@ export default function BuffSetsBrowser({ rows }: Props) {
                                                 {item.entity_type[0]}件
                                             </span>
                                         )}
+                                        {item.condition && (
+                                            <span
+                                                className="min-w-0 shrink-0 truncate rounded-none border border-(--card-border) px-1.5 py-0.5 text-[10px] text-(--accent-text)"
+                                                title={`链/阶条件：${describeCondition(item.condition)}`}
+                                            >
+                                                {describeCondition(item.condition)}
+                                            </span>
+                                        )}
                                     </div>
                                     <ul className="space-y-1">
                                         {item.buff_set.map((zone, i) => (
-                                            <li key={i} className="flex items-center justify-between gap-2 text-sm">
-                                                <span className="truncate text-(--muted)">
-                                                    {zoneLabel(zone.zoneId)}
+                                            <li key={`${zone.zoneId}-${i}`} className="flex items-center justify-between gap-2 text-sm">
+                                                <span className="flex min-w-0 items-center gap-1.5">
+                                                    <span className="truncate text-(--muted)">{zoneLabel(zone.zoneId)}</span>
+                                                    {describeZoneConditionBadge(zone.condition) && (
+                                                        <span
+                                                            className="shrink-0 rounded-none px-1 py-0.5 text-[10px] text-(--accent-text)"
+                                                            style={{ background: 'color-mix(in srgb, var(--accent) 18%, transparent)' }}
+                                                            title={`该乘区条件：${describeCondition(zone.condition)}`}
+                                                        >
+                                                            {describeZoneConditionBadge(zone.condition)}
+                                                        </span>
+                                                    )}
                                                     {zone.ref && (
-                                                        <span className="ml-1 text-[10px] text-(--info)">
+                                                        <span className="shrink-0 text-[10px] text-(--info)">
                                                             引用{zoneLabel(zone.ref.targetZoneId)}×{zone.ref.pct}%
                                                         </span>
                                                     )}

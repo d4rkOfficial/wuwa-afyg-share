@@ -42,10 +42,24 @@ export type BuffScope = 'self' | 'self_except' | 'team' | 'effect_only'
 // 引用归属：self = 引自己（角色自身面板）；owner = 引主人（武器/声骸/套装的装备者面板）
 export type BuffRefOwner = 'self' | 'owner'
 
-// 生效条件（多字段可并存，全部满足才生效）：chain = 角色共鸣链 ≥ n（1-6）；
-// refinement = 武器精炼 ≥ n（1-5）；elements = 伤害属性多选；damageTypes = 伤害类型多选
+// 链条件 / 阶条件子句：charIdx 为受益角色槽位（0-2），min 为门槛（链 0-6，0=角色本体；阶 1-5）
+export interface BuffGateClause {
+    charIdx: number
+    min: number
+}
+
+// 生效条件：按挂载位置分两层（与 wuwa-afyg-tool 一致）
+// - Buff 实例级（buff_sets.condition）：chains / refinements 为硬性门槛且**互斥**（同时存在只判定链）；
+//   elements / damageTypes 为旧数据的兼容读取（工具箱读取时会下放到乘区）
+// - 乘区级（buff_set[].condition）：只允许 elements / damageTypes
 export interface BuffCondition {
+    /** @desc 链条件：角色共鸣链 ≥ min（硬性门槛，仅实例级） */
+    chains?: BuffGateClause[]
+    /** @desc 阶条件：武器精炼 ≥ min（硬性门槛，仅实例级；与 chains 互斥） */
+    refinements?: BuffGateClause[]
+    /** @desc 兼容旧结构：等价于 chains=[{ charIdx: 0, min: chain }] */
     chain?: number
+    /** @desc 兼容旧结构：等价于 refinements=[{ charIdx: 0, min: refinement }] */
     refinement?: number
     elements?: string[]
     damageTypes?: string[]
@@ -63,11 +77,14 @@ export interface BuffZoneRef {
     refOwner?: BuffRefOwner
 }
 
+// 乘区**贡献条目**：同一乘区可出现多次，每次是独立贡献单元（各带数值 / 引用 / 覆盖 / 自己的生效条件）
 export interface BuffZoneValue {
     zoneId: string
     value: number
     ref?: BuffZoneRef
     override?: boolean
+    /** @desc 乘区级生效条件（只允许伤害类型 / 伤害属性；链/阶由实例级统一把关） */
+    condition?: BuffCondition
 }
 
 export interface BuffSetRow {

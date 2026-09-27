@@ -5,7 +5,26 @@ import { useRouter } from 'next/navigation'
 import { Icon } from '@iconify/react'
 import { upsertBuffEntity, deleteBuffEntity } from '@/lib/actions/buff-sets'
 import { toast } from '@/components/ui/toast'
-import { BUFF_ENTITY_LABELS, BUFF_ZONES, BUFF_ZONE_MAP, ZONE_NO_REF_IDS, BUFF_REF_ZONES, BUFF_REF_ZONE_MAP, BUFF_SCOPE_LABELS, BUFF_ELEMENTS, BUFF_DAMAGE_TYPES, BUFF_DAMAGE_TYPE_SHORT, CHAIN_MAX, REFINE_MAX, sanitizeCondition } from '@/lib/consts/buff-zones'
+import {
+    BUFF_ENTITY_LABELS,
+    BUFF_ZONE_MAP,
+    ZONE_NO_REF_IDS,
+    ZONE_NO_OVERRIDE_IDS,
+    BUFF_ZONE_SECTION_VIEWS,
+    BUFF_REF_ZONES,
+    BUFF_REF_ZONE_MAP,
+    BUFF_SCOPE_LABELS,
+    BUFF_ELEMENTS,
+    BUFF_DAMAGE_TYPES,
+    BUFF_DAMAGE_TYPE_SHORT,
+    CHAIN_MAX,
+    REFINE_MAX,
+    sanitizeCondition,
+    sanitizeZoneCondition,
+    isConditionEmpty,
+    describeCondition,
+    describeZoneConditionBadge
+} from '@/lib/consts/buff-zones'
 import type { BuffEntityType, BuffScope, BuffSetRow, BuffCondition } from '@/lib/types/db'
 import type { GeneratedBuff } from '@/lib/ai/types'
 import { generateBuffSet, type GenerateEvent } from '@/lib/ai/generate'
@@ -37,13 +56,19 @@ function simplifyPct(pct: number): { divisor: number; multiplier: number } {
     return { divisor: 100 / g, multiplier: num / g }
 }
 
+/** @desc 实例级条件的参考角色槽位（工坊没有配队上下文，统一按 0 号位描述） */
+const LIBRARY_CHAR_IDX = 0
+
+const chainMinOf = (cond: BuffCondition | null | undefined): number | undefined =>
+    cond?.chains?.[0]?.min ?? cond?.chain
+
 interface Props {
     initial: {
         entityType: BuffEntityType
         entityName: string
         buffs: BuffSetRow[]
     }
-    
+
     apiKey: string
     aiBaseUrl: string
     aiModel: string
@@ -77,6 +102,8 @@ interface ZoneRow {
     zoneId: string
     value: string
     override: boolean
+    /** @desc 乘区级生效条件（只允许伤害类型 / 伤害属性；链阶由实例级统一把关） */
+    condition: BuffCondition | null
     ref?: ZoneRefRow | null
 }
 
@@ -84,13 +111,17 @@ interface BuffRow {
     buffName: string
     scope: BuffScope
     exclusive: boolean
+    /** @desc 实例级生效条件（链 / 阶硬门槛，互斥） */
     condition?: BuffCondition | null
     zones: ZoneRow[]
 }
 
+/** @desc 乘区条件徽标（伤害类型在前、属性在后，类内 `/`、类间 `·`） */
+const zoneConditionBadge = (cond: BuffCondition | null): string => describeZoneConditionBadge(cond)
+
 export default function BuffEntityEditor({
     initial,
-    
+
     apiKey,
     aiBaseUrl,
     aiModel,
@@ -117,11 +148,12 @@ export default function BuffEntityEditor({
             buffName: r.buff_name,
             scope: r.scope ?? 'team',
             exclusive: !!r.exclusive,
-            condition: sanitizeCondition(r.condition) ?? null,
+            condition: sanitizeCondition(r.condition, 'buff') ?? null,
             zones: (r.buff_set ?? []).map((z) => ({
                 zoneId: z.zoneId,
                 value: String(z.value),
                 override: !!z.override,
+                condition: sanitizeZoneCondition(z.condition) ?? null,
                 ref: z.ref
                     ? {
                           targetZoneId: z.ref.targetZoneId,
@@ -356,19 +388,30 @@ export default function BuffEntityEditor({
     // ── buff 列表与就地编辑 ──
     const [activeBuffIdx, setActiveBuffIdx] = useState<number | null>(null)
     const [condPanelOpen, setCondPanelOpen] = useState(false)
+    /** @desc 展开行内「乘区条件」面板的乘区下标（同一乘区可有多条，故用下标定位） */
+    const [expandedZoneIdx, setExpandedZoneIdx] = useState<number | null>(null)
 
     const activeBuff = activeBuffIdx !== null ? buffs[activeBuffIdx] : null
+    const activeZones = activeBuff?.zones ?? []
+    /** @desc 各乘区当前条目数（右栏「添加乘区」用；同一乘区可多条） */
+    const zoneCounts = (() => {
+        const map = new Map<string, number>()
+        for (const z of activeZones) map.set(z.zoneId, (map.get(z.zoneId) ?? 0) + 1)
+        return map
+    })()
 
-    // 条件摘要（对齐工具箱：角色 ≥N链，武器 ≥N阶，伤害属性，伤害类型短名）
+    /** @desc 各实体类型可配置的实例级硬门槛：角色 = 共鸣链、武器 = 精炼（与工具箱一致） */
+    const canChain = entityType === 'character'
+    const canRefinement = entityType === 'weapon'
+
     const conditionSummary = (() => {
         const cond = activeBuff?.condition
         if (!cond) return ''
         const parts: string[] = []
-        if (cond.chain !== undefined) parts.push(`角色 ≥${cond.chain}链`)
-        if (cond.refinement !== undefined) parts.push(`武器 ≥${cond.refinement}阶`)
-        if (cond.elements?.length) parts.push(`伤害属性 ${cond.elements.join('/')}`)
-        if (cond.damageTypes?.length)
-            parts.push(`伤害类型 ${cond.damageTypes.map((d) => BUFF_DAMAGE_TYPE_SHORT[d] ?? d).join('/')}`)
+        const chain = chainMinOf(cond)
+        if (chain !== undefined && canChain) parts.push(chain > 0 ? `≥${chain}链` : '角色本体')
+        const refine = cond.refinements?.[0]?.min ?? cond.refinement
+        if (refine !== undefined && canRefinement) parts.push(`武器 ≥${refine}阶`)
         return parts.join('，')
     })()
 
@@ -386,6 +429,7 @@ export default function BuffEntityEditor({
         ]
         setBuffs(next)
         setActiveBuffIdx(next.length - 1)
+        setExpandedZoneIdx(null)
     }
 
     function removeBuffAt(idx: number) {
@@ -395,6 +439,7 @@ export default function BuffEntityEditor({
             if (prev === idx) return null
             return prev > idx ? prev - 1 : prev
         })
+        setExpandedZoneIdx(null)
     }
 
     function updateActiveBuff(patch: Partial<BuffRow>) {
@@ -406,85 +451,118 @@ export default function BuffEntityEditor({
         updateActiveBuff({ scope, exclusive: scope === 'effect_only' })
     }
 
-    // 多字段条件：开 = 空对象（可同时设置链/精炼/属性/类型），关 = null（经面板清除）
+    /**
+     * @desc 设置实例级链门槛（再次点击取消）。
+     * 链与阶**互斥**：设置链会清空全部阶条件（与工具箱一致）。
+     */
     function setBuffChain(min: number) {
         const cond = { ...(activeBuff?.condition ?? {}) }
-        if (cond.chain === min) delete cond.chain
-        else cond.chain = min
-        updateActiveBuff({ condition: cond })
+        const clearing = chainMinOf(cond) === min
+        const next: BuffCondition = { ...cond }
+        delete next.chain
+        delete next.refinement
+        delete next.refinements
+        if (clearing) delete next.chains
+        else next.chains = [{ charIdx: LIBRARY_CHAR_IDX, min }]
+        updateActiveBuff({ condition: next })
     }
 
+    /** @desc 设置实例级阶门槛（再次点击取消）；设置阶会清空全部链条件 */
     function setBuffRefinement(min: number) {
         const cond = { ...(activeBuff?.condition ?? {}) }
-        if (cond.refinement === min) delete cond.refinement
-        else cond.refinement = min
-        updateActiveBuff({ condition: cond })
+        const current = cond.refinements?.[0]?.min ?? cond.refinement
+        const clearing = current === min
+        const next: BuffCondition = { ...cond }
+        delete next.chains
+        delete next.chain
+        delete next.refinement
+        if (clearing) delete next.refinements
+        else next.refinements = [{ charIdx: LIBRARY_CHAR_IDX, min }]
+        updateActiveBuff({ condition: next })
     }
 
-    function toggleConditionElement(el: string) {
-        const cond = { ...(activeBuff?.condition ?? {}) }
-        const list = cond.elements ?? []
-        const next = list.includes(el) ? list.filter((e) => e !== el) : [...list, el]
-        updateActiveBuff({ condition: { ...cond, elements: next } })
+    function clearBuffCondition() {
+        updateActiveBuff({ condition: null })
+        setCondPanelOpen(false)
     }
 
-    function toggleConditionDamageType(dt: string) {
-        const cond = { ...(activeBuff?.condition ?? {}) }
-        const list = cond.damageTypes ?? []
-        const next = list.includes(dt) ? list.filter((d) => d !== dt) : [...list, dt]
-        updateActiveBuff({ condition: { ...cond, damageTypes: next } })
-    }
-
-    function toggleZone(zoneId: string) {
+    /** @desc 添加一条乘区贡献条目（同一乘区可添加多次，各自独立配置） */
+    function addZone(zoneId: string) {
         if (activeBuffIdx === null) return
+        setBuffs((prev) =>
+            prev.map((b, i) =>
+                i === activeBuffIdx ? { ...b, zones: [...b.zones, { zoneId, value: '', override: false, condition: null, ref: null }] } : b
+            )
+        )
+    }
+
+    /** @desc 按下标移除某个乘区条目 */
+    function removeZoneAt(idx: number) {
+        if (activeBuffIdx === null) return
+        setBuffs((prev) => prev.map((b, i) => (i === activeBuffIdx ? { ...b, zones: b.zones.filter((_, k) => k !== idx) } : b)))
+        setExpandedZoneIdx((prev) => (prev === idx ? null : prev))
+    }
+
+    function patchZoneAt(idx: number, patch: Partial<ZoneRow>) {
+        if (activeBuffIdx === null) return
+        setBuffs((prev) =>
+            prev.map((b, i) => (i === activeBuffIdx ? { ...b, zones: b.zones.map((z, k) => (k === idx ? { ...z, ...patch } : z)) } : b))
+        )
+    }
+
+    /** @desc 切换覆盖：extraRatio / 百分比类乘区恒为追加；开启覆盖时清掉同乘区其它条目的覆盖（覆盖唯一） */
+    function setZoneOverride(idx: number, override: boolean) {
+        if (activeBuffIdx === null) return
+        const target = activeZones[idx]
+        if (!target) return
+        const nextOverride = override && !ZONE_NO_OVERRIDE_IDS.has(target.zoneId)
         setBuffs((prev) =>
             prev.map((b, i) => {
                 if (i !== activeBuffIdx) return b
-                if (b.zones.some((z) => z.zoneId === zoneId)) {
-                    return { ...b, zones: b.zones.filter((z) => z.zoneId !== zoneId) }
+                return {
+                    ...b,
+                    zones: b.zones.map((z, k) => {
+                        if (k === idx) return { ...z, override: nextOverride, ref: nextOverride ? null : z.ref }
+                        if (nextOverride && z.zoneId === target.zoneId && z.override) return { ...z, override: false }
+                        return z
+                    })
                 }
-                return { ...b, zones: [...b.zones, { zoneId, value: '', override: false, ref: null }] }
             })
         )
     }
 
-    function setZoneValue(zoneId: string, value: string) {
-        if (activeBuffIdx === null) return
-        setBuffs((prev) =>
-            prev.map((b, i) =>
-                i === activeBuffIdx
-                    ? { ...b, zones: b.zones.map((z) => (z.zoneId === zoneId ? { ...z, value } : z)) }
-                    : b
-            )
-        )
+    // 乘区级条件的行内面板
+    function toggleZoneCondition(idx: number) {
+        setExpandedZoneIdx((prev) => (prev === idx ? null : idx))
     }
 
-    function setZoneOverride(zoneId: string, override: boolean) {
-        if (activeBuffIdx === null) return
-        setBuffs((prev) =>
-            prev.map((b, i) =>
-                i === activeBuffIdx
-                    ? { ...b, zones: b.zones.map((z) => (z.zoneId === zoneId ? { ...z, override } : z)) }
-                    : b
-            )
-        )
+    function patchZoneCondition(idx: number, part: Partial<BuffCondition>) {
+        const current = activeZones[idx]?.condition ?? {}
+        const next: BuffCondition = { ...current, ...part }
+        const clean = sanitizeZoneCondition(next) ?? null
+        patchZoneAt(idx, { condition: clean })
     }
 
-    // ── 引用配置弹窗 ──
-    const [refTarget, setRefTarget] = useState<{ buffIdx: number; zoneId: string } | null>(null)
-    const refZone = refTarget ? buffs[refTarget.buffIdx]?.zones.find((z) => z.zoneId === refTarget.zoneId) ?? null : null
+    function toggleZoneConditionDamageType(idx: number, dt: string) {
+        const list = activeZones[idx]?.condition?.damageTypes ?? []
+        const next = list.includes(dt) ? list.filter((d) => d !== dt) : [...list, dt]
+        patchZoneCondition(idx, { damageTypes: next.length ? next : undefined })
+    }
+
+    function toggleZoneConditionElement(idx: number, el: string) {
+        const list = activeZones[idx]?.condition?.elements ?? []
+        const next = list.includes(el) ? list.filter((e) => e !== el) : [...list, el]
+        patchZoneCondition(idx, { elements: next.length ? next : undefined })
+    }
+
+    // ── 引用配置弹窗（按下标定位，同一乘区可有多条） ──
+    const [refTargetIdx, setRefTargetIdx] = useState<number | null>(null)
+    const refZone = refTargetIdx !== null ? (activeZones[refTargetIdx] ?? null) : null
 
     function saveRef(ref: ZoneRefRow | null) {
-        if (!refTarget) return
-        const { buffIdx, zoneId } = refTarget
-        setBuffs((prev) =>
-            prev.map((b, i) =>
-                i === buffIdx
-                    ? { ...b, zones: b.zones.map((z) => (z.zoneId === zoneId ? { ...z, ref } : z)) }
-                    : b
-            )
-        )
-        setRefTarget(null)
+        if (refTargetIdx === null) return
+        patchZoneAt(refTargetIdx, { ref, ...(ref ? { override: false } : {}) })
+        setRefTargetIdx(null)
     }
 
     function onSave() {
@@ -495,46 +573,51 @@ export default function BuffEntityEditor({
         }
         const payload = buffs.map((b) => {
             const zones = b.zones
-                .map((z): { zoneId: string; value: number; override?: boolean; ref?: unknown } | null => {
-                    const n = Number(z.value)
-                    if (!z.zoneId || Number.isNaN(n)) return null
-                    return {
-                        zoneId: z.zoneId,
-                        value: n,
-                        ...(z.ref
-                            ? {
-                                  ref: {
-                                      targetZoneId: z.ref.targetZoneId,
-                                      pct: Number(z.ref.pct) || 0,
-                                      ...(z.ref.threshold !== undefined && z.ref.threshold !== ''
-                                          ? { threshold: Number(z.ref.threshold) || 0 }
-                                          : {}),
-                                      ...(z.ref.lower !== undefined && z.ref.lower !== ''
-                                          ? { lower: Number(z.ref.lower) || 0 }
-                                          : {}),
-                                      ...(z.ref.upper !== undefined && z.ref.upper !== ''
-                                          ? { upper: Number(z.ref.upper) || 0 }
-                                          : {}),
-                                      ...(z.ref.discrete ? { discrete: true } : {}),
-                                      ...(z.ref.divisor !== undefined && z.ref.divisor !== ''
-                                          ? { divisor: Number(z.ref.divisor) || 0 }
-                                          : {}),
-                                      ...(z.ref.multiplier !== undefined && z.ref.multiplier !== ''
-                                          ? { multiplier: Number(z.ref.multiplier) || 0 }
-                                          : {}),
-                                      ...(z.ref.refOwner ? { refOwner: z.ref.refOwner } : {})
+                .map(
+                    (z): { zoneId: string; value: number; override?: boolean; condition?: BuffCondition; ref?: unknown } | null => {
+                        const n = Number(z.value)
+                        if (!z.zoneId || Number.isNaN(n)) return null
+                        const condition = sanitizeZoneCondition(z.condition)
+                        return {
+                            zoneId: z.zoneId,
+                            value: n,
+                            ...(condition ? { condition } : {}),
+                            ...(z.ref
+                                ? {
+                                      ref: {
+                                          targetZoneId: z.ref.targetZoneId,
+                                          pct: Number(z.ref.pct) || 0,
+                                          ...(z.ref.threshold !== undefined && z.ref.threshold !== ''
+                                              ? { threshold: Number(z.ref.threshold) || 0 }
+                                              : {}),
+                                          ...(z.ref.lower !== undefined && z.ref.lower !== ''
+                                              ? { lower: Number(z.ref.lower) || 0 }
+                                              : {}),
+                                          ...(z.ref.upper !== undefined && z.ref.upper !== ''
+                                              ? { upper: Number(z.ref.upper) || 0 }
+                                              : {}),
+                                          ...(z.ref.discrete ? { discrete: true } : {}),
+                                          ...(z.ref.divisor !== undefined && z.ref.divisor !== ''
+                                              ? { divisor: Number(z.ref.divisor) || 0 }
+                                              : {}),
+                                          ...(z.ref.multiplier !== undefined && z.ref.multiplier !== ''
+                                              ? { multiplier: Number(z.ref.multiplier) || 0 }
+                                              : {}),
+                                          ...(z.ref.refOwner ? { refOwner: z.ref.refOwner } : {})
+                                      }
                                   }
-                              }
-                            : {}),
-                        ...(z.override ? { override: true } : {})
+                                : {}),
+                            ...(z.override ? { override: true } : {})
+                        }
                     }
-                })
-                .filter((z): z is { zoneId: string; value: number; override?: boolean; ref?: unknown } => z !== null)
+                )
+                .filter((z): z is { zoneId: string; value: number; override?: boolean; condition?: BuffCondition; ref?: unknown } => z !== null)
+            const condition = sanitizeCondition(b.condition, 'buff')
             return {
                 buffName: b.buffName,
                 scope: b.scope,
                 exclusive: b.exclusive,
-                ...(b.condition ? { condition: b.condition } : {}),
+                ...(condition ? { condition } : {}),
                 zones
             }
         })
@@ -565,17 +648,17 @@ export default function BuffEntityEditor({
 
     // ── AI ──
     // 把 AI 生成的 buffs 应用到列表（数字 → 字符串草稿）
-    // AI buffs → 编辑草稿行
     function toBuffRow(b: GeneratedBuff): BuffRow {
         return {
             buffName: b.buffName,
             scope: b.scope ?? 'team',
             exclusive: !!b.exclusive,
-            condition: sanitizeCondition(b.condition) ?? null,
-            zones: b.zones.map((z) => ({
+            condition: sanitizeCondition(b.condition, 'buff') ?? null,
+            zones: (b.zones ?? []).map((z) => ({
                 zoneId: z.zoneId,
                 value: String(z.value),
                 override: !!z.override,
+                condition: sanitizeZoneCondition(z.condition) ?? null,
                 ref: z.ref
                     ? {
                           targetZoneId: z.ref.targetZoneId,
@@ -597,6 +680,7 @@ export default function BuffEntityEditor({
     function applyBuffList(list: GeneratedBuff[]) {
         setBuffs(list.map(toBuffRow))
         setActiveBuffIdx(0)
+        setExpandedZoneIdx(null)
     }
 
     // 追加合并：同名覆盖（保持原位置），无同名则追加到末尾
@@ -654,6 +738,7 @@ export default function BuffEntityEditor({
         const zonePayload = (z: ZoneRow) => ({
             zoneId: z.zoneId,
             value: Number(z.value) || 0,
+            ...(sanitizeZoneCondition(z.condition) ? { condition: sanitizeZoneCondition(z.condition) } : {}),
             ...(z.ref
                 ? {
                       ref: {
@@ -682,7 +767,7 @@ export default function BuffEntityEditor({
                 buffName: b.buffName,
                 scope: b.scope,
                 exclusive: !!b.exclusive,
-                ...(b.condition ? { condition: b.condition } : {}),
+                ...(sanitizeCondition(b.condition, 'buff') ? { condition: sanitizeCondition(b.condition, 'buff') } : {}),
                 zones: b.zones.map(zonePayload)
             }))
         )
@@ -741,7 +826,10 @@ export default function BuffEntityEditor({
                             buffs.map((buff, idx) => (
                                 <button
                                     key={idx}
-                                    onClick={() => setActiveBuffIdx(idx)}
+                                    onClick={() => {
+                                        setActiveBuffIdx(idx)
+                                        setExpandedZoneIdx(null)
+                                    }}
                                     className={`w-full rounded-none px-2 py-1.5 text-left transition-colors ${
                                         idx === activeBuffIdx
                                             ? 'bg-(--accent) text-(--accent-fg)'
@@ -757,7 +845,7 @@ export default function BuffEntityEditor({
                                                 (z) =>
                                                     `${BUFF_ZONE_MAP.get(z.zoneId)?.label ?? z.zoneId}+${
                                                         z.ref ? '引用' : z.value
-                                                    }`
+                                                    }${zoneConditionBadge(z.condition) ? `[${zoneConditionBadge(z.condition)}]` : ''}`
                                             )
                                             .join(' · ') || '无乘区'}
                                     </span>
@@ -767,9 +855,9 @@ export default function BuffEntityEditor({
                     </div>
                 </div>
 
-                {/* ② 中：就地编辑器 */}
+                {/* ② 中：就地编辑器（Buff 名 / 作用域 / 实例级链阶门槛 / 乘区贡献条目列表） */}
                 <div className="buff-editor-main flex min-w-0 flex-1 flex-col">
-                    {activeBuff ? (
+                    {activeBuff && activeBuffIdx !== null ? (
                         <>
                             <div className="flex shrink-0 flex-wrap items-center gap-2 border-b border-(--card-border) px-3 py-2">
                                 <input
@@ -795,7 +883,7 @@ export default function BuffEntityEditor({
                                     ))}
                                 </div>
                                 <button
-                                    onClick={() => removeBuffAt(activeBuffIdx!)}
+                                    onClick={() => removeBuffAt(activeBuffIdx)}
                                     className="shrink-0 rounded-none p-1 text-(--muted) transition-colors hover:text-(--danger)"
                                     title="删除该 Buff"
                                 >
@@ -803,110 +891,77 @@ export default function BuffEntityEditor({
                                 </button>
                             </div>
 
-                            {/* 生效条件（折叠面板：整行摘要 + 展开四段） */}
+                            {/* 实例级生效条件（折叠面板：链 / 阶硬门槛，互斥；属性·类型挂在乘区上） */}
                             <div className="shrink-0 border-b border-(--card-border)">
                                 <button
                                     onClick={() => setCondPanelOpen((v) => !v)}
                                     className={`flex w-full items-center gap-1.5 px-3 py-2 text-left text-[11px] transition-colors hover:bg-(--card-hover) ${
                                         conditionSummary ? 'text-(--accent-text)' : 'text-(--muted)'
                                     }`}
-                                    title="生效条件"
+                                    title="链/阶条件（硬性门槛，链阶互斥）"
                                 >
                                     <Icon
                                         icon={condPanelOpen ? 'mdi:chevron-down' : 'mdi:chevron-right'}
                                         className="size-3.5 shrink-0 text-(--muted)"
                                     />
-                                    <span className="shrink-0">生效条件</span>
+                                    <span className="shrink-0">链/阶条件</span>
                                     {conditionSummary && (
                                         <span className="min-w-0 truncate text-[11px]">：{conditionSummary}</span>
                                     )}
                                 </button>
                                 {condPanelOpen && (
                                     <div className="flex flex-wrap items-center gap-2 px-3 pb-2.5">
-                                        <div className="flex items-center gap-2 rounded-none border border-(--card-border) bg-(--input-bg) px-2 py-1">
-                                            <span className="text-[11px] text-(--fg)">共鸣链</span>
-                                            <div className="flex overflow-hidden rounded-none border border-(--card-border)">
-                                                {Array.from({ length: CHAIN_MAX + 1 }, (_, k) => k).map((n) => (
-                                                    <button
-                                                        key={n}
-                                                        onClick={() => setBuffChain(n)}
-                                                        className={`flex h-6 min-w-6 items-center justify-center px-1 text-[11px] transition-colors ${
-                                                            activeBuff.condition?.chain === n
-                                                                ? 'bg-(--accent) text-(--accent-fg)'
-                                                                : 'text-(--muted) hover:text-(--fg)'
-                                                        }`}
-                                                    >
-                                                        {n}
-                                                    </button>
-                                                ))}
+                                        {canChain ? (
+                                            <div className="flex items-center gap-2 rounded-none border border-(--card-border) bg-(--input-bg) px-2 py-1">
+                                                <span className="text-[11px] text-(--fg)">共鸣链</span>
+                                                <div className="flex overflow-hidden rounded-none border border-(--card-border)">
+                                                    {Array.from({ length: CHAIN_MAX + 1 }, (_, k) => k).map((n) => (
+                                                        <button
+                                                            key={n}
+                                                            onClick={() => setBuffChain(n)}
+                                                            title={n === 0 ? '本体（0链）' : `≥${n}链`}
+                                                            className={`flex h-6 min-w-6 items-center justify-center px-1 text-[11px] transition-colors ${
+                                                                chainMinOf(activeBuff.condition) === n
+                                                                    ? 'bg-(--accent) text-(--accent-fg)'
+                                                                    : 'text-(--muted) hover:text-(--fg)'
+                                                            }`}
+                                                        >
+                                                            {n === 0 ? '本体' : n}
+                                                        </button>
+                                                    ))}
+                                                </div>
                                             </div>
-                                            {activeBuff.condition?.chain !== undefined && (
-                                                <span className="text-[11px] font-medium text-(--accent-text)">
-                                                    ≥<span className="mg-num">{activeBuff.condition.chain}</span>链
-                                                </span>
-                                            )}
-                                        </div>
-                                        <div className="flex items-center gap-2 rounded-none border border-(--card-border) bg-(--input-bg) px-2 py-1">
-                                            <span className="text-[11px] text-(--fg)">精炼</span>
-                                            <div className="flex overflow-hidden rounded-none border border-(--card-border)">
-                                                {Array.from({ length: REFINE_MAX }, (_, k) => k + 1).map((n) => (
-                                                    <button
-                                                        key={n}
-                                                        onClick={() => setBuffRefinement(n)}
-                                                        className={`flex h-6 min-w-6 items-center justify-center px-1 text-[11px] transition-colors ${
-                                                            activeBuff.condition?.refinement === n
-                                                                ? 'bg-(--accent) text-(--accent-fg)'
-                                                                : 'text-(--muted) hover:text-(--fg)'
-                                                        }`}
-                                                    >
-                                                        {n}
-                                                    </button>
-                                                ))}
+                                        ) : (
+                                            <span className="text-[10px] text-(--muted)">
+                                                {entityType === 'weapon'
+                                                    ? '链条件只用于角色实体'
+                                                    : '链/阶条件只用于角色 / 武器实体'}
+                                            </span>
+                                        )}
+                                        {canRefinement && (
+                                            <div className="flex items-center gap-2 rounded-none border border-(--card-border) bg-(--input-bg) px-2 py-1">
+                                                <span className="text-[11px] text-(--fg)">精炼</span>
+                                                <div className="flex overflow-hidden rounded-none border border-(--card-border)">
+                                                    {Array.from({ length: REFINE_MAX }, (_, k) => k + 1).map((n) => (
+                                                        <button
+                                                            key={n}
+                                                            onClick={() => setBuffRefinement(n)}
+                                                            title={`≥${n}阶`}
+                                                            className={`flex h-6 min-w-6 items-center justify-center px-1 text-[11px] transition-colors ${
+                                                                (activeBuff.condition?.refinements?.[0]?.min ??
+                                                                    activeBuff.condition?.refinement) === n
+                                                                    ? 'bg-(--accent) text-(--accent-fg)'
+                                                                    : 'text-(--muted) hover:text-(--fg)'
+                                                            }`}
+                                                        >
+                                                            {n}
+                                                        </button>
+                                                    ))}
+                                                </div>
                                             </div>
-                                            {activeBuff.condition?.refinement && (
-                                                <span className="text-[11px] font-medium text-(--accent-text)">
-                                                    ≥<span className="mg-num">{activeBuff.condition.refinement}</span>阶
-                                                </span>
-                                            )}
-                                        </div>
-                                        <div className="flex flex-wrap items-center gap-1 rounded-none border border-(--card-border) bg-(--input-bg) px-2 py-1">
-                                            <span className="text-[11px] text-(--fg)">伤害属性</span>
-                                            {BUFF_ELEMENTS.map((el) => (
-                                                <button
-                                                    key={el}
-                                                    onClick={() => toggleConditionElement(el)}
-                                                    className={`rounded-none px-1.5 py-0.5 text-[11px] transition-colors ${
-                                                        (activeBuff.condition?.elements ?? []).includes(el)
-                                                            ? 'bg-(--accent) text-(--accent-fg)'
-                                                            : 'text-(--muted) hover:text-(--fg)'
-                                                    }`}
-                                                >
-                                                    {el}
-                                                </button>
-                                            ))}
-                                        </div>
-                                        <div className="flex flex-wrap items-center gap-1 rounded-none border border-(--card-border) bg-(--input-bg) px-2 py-1">
-                                            <span className="text-[11px] text-(--fg)">伤害类型</span>
-                                            {BUFF_DAMAGE_TYPES.map((dt) => (
-                                                <button
-                                                    key={dt}
-                                                    onClick={() => toggleConditionDamageType(dt)}
-                                                    title={dt}
-                                                    className={`rounded-none px-1.5 py-0.5 text-[11px] transition-colors ${
-                                                        (activeBuff.condition?.damageTypes ?? []).includes(dt)
-                                                            ? 'bg-(--accent) text-(--accent-fg)'
-                                                            : 'text-(--muted) hover:text-(--fg)'
-                                                    }`}
-                                                >
-                                                    {BUFF_DAMAGE_TYPE_SHORT[dt] ?? dt}
-                                                </button>
-                                            ))}
-                                        </div>
+                                        )}
                                         <button
-                                            onClick={() => {
-                                                updateActiveBuff({ condition: null })
-                                                setCondPanelOpen(false)
-                                            }}
+                                            onClick={clearBuffCondition}
                                             className="flex h-6 items-center gap-1 rounded-none border border-(--card-border) px-2 text-[10px] text-(--muted) transition-colors hover:border-(--danger) hover:text-(--danger)"
                                         >
                                             <Icon icon="mdi:close-circle-outline" className="size-3" />
@@ -916,105 +971,208 @@ export default function BuffEntityEditor({
                                 )}
                             </div>
 
-                            {/* Zone 行列表 */}
+                            {/* 乘区贡献条目列表（同一乘区可多条，各自带数值 / 引用 / 覆盖 / 乘区级条件） */}
                             <div className="min-h-0 flex-1 space-y-1 overflow-y-auto p-2">
-                                {activeBuff.zones.length === 0 ? (
+                                {activeZones.length === 0 ? (
                                     <div className="py-6 text-center mg-note">
-                                        暂无乘区，点击右侧乘区添加
+                                        暂无乘区，点击右侧乘区清单添加
                                     </div>
                                 ) : (
-                                    activeBuff.zones.map((z) => {
+                                    activeZones.map((z, idx) => {
                                         const def = BUFF_ZONE_MAP.get(z.zoneId)
                                         const noRef = ZONE_NO_REF_IDS.has(z.zoneId)
+                                        const noOverride = ZONE_NO_OVERRIDE_IDS.has(z.zoneId)
+                                        const badge = zoneConditionBadge(z.condition)
                                         return (
-                                            <div
-                                                key={z.zoneId}
-                                                className="flex items-center gap-1.5 rounded-none px-2.5 py-1.5"
-                                                style={{ background: 'var(--input-bg)' }}
-                                            >
-                                                <span className="min-w-0 flex-1 truncate text-[11px]">
-                                                    {def?.label ?? z.zoneId}
-                                                </span>
-                                                {z.ref && !noRef ? (
-                                                    (() => {
-                                                        const refDef = BUFF_REF_ZONE_MAP.get(z.ref!.targetZoneId)
-                                                        const th = Number(z.ref!.threshold ?? 0)
-                                                        const refOp = th < 0 ? '+' : '-'
-                                                        const refTh = Math.abs(th)
-                                                        const refS = simplifyPct(Number(z.ref!.pct))
-                                                        const hasThreshold = th !== 0
-                                                        const hasLower = z.ref!.lower !== undefined
-                                                        const hasUpper = z.ref!.upper !== undefined
-                                                        return (
-                                                            <span
-                                                                className="min-w-0 flex-1 truncate text-right text-[10px] text-(--muted)"
-                                                                title={`引用: (${refDef?.label ?? '?'}${hasThreshold ? ` ${refOp} ${refTh}${refDef?.unit === '%' ? '%' : ''}` : ''}) ÷${refS.divisor}×${refS.multiplier}${hasLower || hasUpper ? ` clamp(${hasLower ? z.ref!.lower : ''} ~ ${hasUpper ? z.ref!.upper : ''})` : ''}`}
-                                                            >
-                                                                引用: ({refDef?.label ?? '?'}
-                                                                {hasThreshold ? refOp + refTh + (refDef?.unit === '%' ? '%' : '') : ''}
-                                                                ) ÷<span className="mg-num">{refS.divisor}</span>×
-                                                                <span className="mg-num">{refS.multiplier}</span>
-                                                                {hasLower || hasUpper ? (
-                                                                    <span className="text-(--muted)">
-                                                                        ({hasLower ? z.ref!.lower : ''}~{hasUpper ? z.ref!.upper : ''})
-                                                                    </span>
-                                                                ) : null}
-                                                            </span>
-                                                        )
-                                                    })()
-                                                ) : (
-                                                    <>
-                                                        <input
-                                                            type="number"
-                                                            value={z.value}
-                                                            onChange={(e) => setZoneValue(z.zoneId, e.target.value)}
-                                                            className="w-16 rounded-none border border-(--card-border) bg-(--input-bg) px-1.5 py-1 text-xs text-right outline-none focus:border-(--accent) mg-num"
-                                                        />
-                                                        <span className="w-3 text-[10px] text-(--muted)">
-                                                            {def?.unit === '%' ? '%' : ''}
+                                            <div key={`${z.zoneId}-${idx}`} className="space-y-1">
+                                                <div
+                                                    className="flex items-center gap-1.5 rounded-none px-2.5 py-1.5"
+                                                    style={{ background: 'var(--input-bg)' }}
+                                                >
+                                                    <span className="shrink-0 truncate text-[11px]">
+                                                        {def?.label ?? z.zoneId}
+                                                    </span>
+                                                    {badge && (
+                                                        <span
+                                                            className="shrink-0 max-w-32 truncate rounded-none border border-transparent px-1.5 py-0.5 text-[10px]"
+                                                            style={{
+                                                                background: 'color-mix(in srgb, var(--accent) 18%, transparent)',
+                                                                color: 'var(--accent-text)'
+                                                            }}
+                                                            title={`该乘区条件：${describeCondition(z.condition)}`}
+                                                        >
+                                                            {badge}
                                                         </span>
-                                                    </>
-                                                )}
-                                                {z.zoneId !== 'extraRatio' && (
+                                                    )}
+                                                    {z.override && (
+                                                        <span
+                                                            className="shrink-0 px-1 py-0.5 text-[10px] font-black"
+                                                            style={{ background: 'var(--accent)', color: 'var(--accent-fg)' }}
+                                                            title="覆盖优先于一切：该乘区的其它条目都不参与计算"
+                                                        >
+                                                            覆盖生效
+                                                        </span>
+                                                    )}
+                                                    {z.ref && !noRef ? (
+                                                        (() => {
+                                                            const refDef = BUFF_REF_ZONE_MAP.get(z.ref!.targetZoneId)
+                                                            const th = Number(z.ref!.threshold ?? 0)
+                                                            const refOp = th < 0 ? '+' : '-'
+                                                            const refTh = Math.abs(th)
+                                                            const refS = simplifyPct(Number(z.ref!.pct))
+                                                            const hasThreshold = th !== 0
+                                                            const hasLower = z.ref!.lower !== undefined
+                                                            const hasUpper = z.ref!.upper !== undefined
+                                                            return (
+                                                                <span
+                                                                    className="min-w-0 flex-1 truncate text-right text-[10px] text-(--muted)"
+                                                                    title={`引用: (${refDef?.label ?? '?'}${hasThreshold ? ` ${refOp} ${refTh}${refDef?.unit === '%' ? '%' : ''}` : ''}) ÷${refS.divisor}×${refS.multiplier}${hasLower || hasUpper ? ` clamp(${hasLower ? z.ref!.lower : ''} ~ ${hasUpper ? z.ref!.upper : ''})` : ''}`}
+                                                                >
+                                                                    引用: ({refDef?.label ?? '?'}
+                                                                    {hasThreshold ? refOp + refTh + (refDef?.unit === '%' ? '%' : '') : ''}
+                                                                    ) ÷<span className="mg-num">{refS.divisor}</span>×
+                                                                    <span className="mg-num">{refS.multiplier}</span>
+                                                                    {hasLower || hasUpper ? (
+                                                                        <span className="text-(--muted)">
+                                                                            ({hasLower ? z.ref!.lower : ''}~{hasUpper ? z.ref!.upper : ''})
+                                                                        </span>
+                                                                    ) : null}
+                                                                </span>
+                                                            )
+                                                        })()
+                                                    ) : (
+                                                        <>
+                                                            <input
+                                                                type="number"
+                                                                value={z.value}
+                                                                onChange={(e) => patchZoneAt(idx, { value: e.target.value })}
+                                                                className="w-16 rounded-none border border-(--card-border) bg-(--input-bg) px-1.5 py-1 text-xs text-right outline-none focus:border-(--accent) mg-num"
+                                                            />
+                                                            <span className="w-3 text-[10px] text-(--muted)">
+                                                                {def?.unit === '%' ? '%' : ''}
+                                                            </span>
+                                                        </>
+                                                    )}
+                                                    {!noOverride && (
+                                                        <button
+                                                            onClick={() => setZoneOverride(idx, !z.override)}
+                                                            className={`shrink-0 rounded-none border px-1.5 py-1 text-[10px] transition-colors ${
+                                                                z.override
+                                                                    ? 'border-(--accent) text-(--accent-text)'
+                                                                    : 'border-transparent text-(--muted) hover:text-(--fg)'
+                                                            }`}
+                                                            title="覆盖/追加"
+                                                        >
+                                                            {z.override ? '覆盖' : '追加'}
+                                                        </button>
+                                                    )}
+                                                    {!noRef && (
+                                                        <button
+                                                            onClick={() => setRefTargetIdx(idx)}
+                                                            className={`shrink-0 rounded-none border px-1.5 py-1 text-[10px] transition-colors ${
+                                                                z.ref
+                                                                    ? 'border-(--accent) text-(--accent-text)'
+                                                                    : 'border-transparent text-(--muted) hover:text-(--fg)'
+                                                            }`}
+                                                            title={
+                                                                z.ref
+                                                                    ? `引${entityType === 'character' ? '自己' : '主人'} ${
+                                                                          BUFF_REF_ZONE_MAP.get(z.ref.targetZoneId)?.label ??
+                                                                          z.ref.targetZoneId
+                                                                      } × ${z.ref.pct}%`
+                                                                    : '引用某属性（如 当前攻击×N%）'
+                                                            }
+                                                        >
+                                                            <Icon icon="mdi:link-variant" className="mr-0.5 size-3" />
+                                                            {z.ref ? '已引用' : '引用'}
+                                                        </button>
+                                                    )}
                                                     <button
-                                                        onClick={() => setZoneOverride(z.zoneId, !z.override)}
+                                                        onClick={() => toggleZoneCondition(idx)}
                                                         className={`shrink-0 rounded-none border px-1.5 py-1 text-[10px] transition-colors ${
-                                                            z.override
-                                                                ? 'border-(--accent) text-(--accent-text)'
-                                                                : 'border-transparent text-(--muted) hover:text-(--fg)'
-                                                        }`}
-                                                        title="覆盖/追加"
-                                                    >
-                                                        {z.override ? '覆盖' : '追加'}
-                                                    </button>
-                                                )}
-                                                {!noRef && (
-                                                    <button
-                                                        onClick={() => setRefTarget({ buffIdx: activeBuffIdx!, zoneId: z.zoneId })}
-                                                        className={`shrink-0 rounded-none border px-1.5 py-1 text-[10px] transition-colors ${
-                                                            z.ref
+                                                            z.condition
                                                                 ? 'border-(--accent) text-(--accent-text)'
                                                                 : 'border-transparent text-(--muted) hover:text-(--fg)'
                                                         }`}
                                                         title={
-                                                            z.ref
-                                                                ? `引${entityType === 'character' ? '自己' : '主人'} ${
-                                                                      BUFF_REF_ZONE_MAP.get(z.ref.targetZoneId)?.label ?? z.ref.targetZoneId
-                                                                  } × ${z.ref.pct}%`
-                                                                : '引用某属性（如 当前攻击×N%）'
+                                                            z.condition
+                                                                ? `该乘区条件：${describeCondition(z.condition)}`
+                                                                : '为该乘区设置生效条件（伤害类型/属性）'
                                                         }
                                                     >
-                                                        <Icon icon="mdi:link-variant" className="mr-0.5 size-3" />
-                                                        {z.ref ? '已引用' : '引用'}
+                                                        <Icon
+                                                            icon={expandedZoneIdx === idx ? 'mdi:chevron-up' : 'mdi:filter-outline'}
+                                                            className="mr-0.5 size-3"
+                                                        />
+                                                        条件
                                                     </button>
+                                                    <button
+                                                        onClick={() => removeZoneAt(idx)}
+                                                        className="shrink-0 rounded-none p-1 text-(--muted) transition-colors hover:text-(--danger)"
+                                                        title="移除该乘区条目"
+                                                    >
+                                                        <Icon icon="mdi:close" className="size-3.5" />
+                                                    </button>
+                                                </div>
+
+                                                {/* 乘区级生效条件（行内展开）：只允许伤害类型 / 伤害属性 */}
+                                                {expandedZoneIdx === idx && (
+                                                    <div className="space-y-1.5 border-t border-(--card-border) bg-(--card) px-2.5 py-2">
+                                                        <div className="flex flex-wrap items-center gap-1">
+                                                            <span className="w-14 shrink-0 text-[10px] text-(--muted)">
+                                                                伤害类型
+                                                            </span>
+                                                            {BUFF_DAMAGE_TYPES.map((dt) => {
+                                                                const on = (z.condition?.damageTypes ?? []).includes(dt)
+                                                                return (
+                                                                    <button
+                                                                        key={dt}
+                                                                        onClick={() => toggleZoneConditionDamageType(idx, dt)}
+                                                                        title={dt}
+                                                                        className={`rounded-none border px-1.5 py-0.5 text-[10px] transition-colors ${
+                                                                            on
+                                                                                ? 'border-(--accent) bg-(--accent) text-(--accent-fg)'
+                                                                                : 'border-(--card-border) text-(--muted) hover:text-(--fg)'
+                                                                        }`}
+                                                                    >
+                                                                        {BUFF_DAMAGE_TYPE_SHORT[dt] ?? dt}
+                                                                    </button>
+                                                                )
+                                                            })}
+                                                        </div>
+                                                        <div className="flex flex-wrap items-center gap-1">
+                                                            <span className="w-14 shrink-0 text-[10px] text-(--muted)">
+                                                                伤害属性
+                                                            </span>
+                                                            {BUFF_ELEMENTS.map((el) => {
+                                                                const on = (z.condition?.elements ?? []).includes(el)
+                                                                return (
+                                                                    <button
+                                                                        key={el}
+                                                                        onClick={() => toggleZoneConditionElement(idx, el)}
+                                                                        className={`rounded-none border px-1.5 py-0.5 text-[10px] transition-colors ${
+                                                                            on
+                                                                                ? 'border-(--accent) bg-(--accent) text-(--accent-fg)'
+                                                                                : 'border-(--card-border) text-(--muted) hover:text-(--fg)'
+                                                                        }`}
+                                                                    >
+                                                                        {el}
+                                                                    </button>
+                                                                )
+                                                            })}
+                                                        </div>
+                                                        {!isConditionEmpty(z.condition) && (
+                                                            <div className="flex justify-end">
+                                                                <button
+                                                                    onClick={() => patchZoneAt(idx, { condition: null })}
+                                                                    className="text-[10px] text-(--muted) transition-colors hover:text-(--danger)"
+                                                                >
+                                                                    清空该乘区条件
+                                                                </button>
+                                                            </div>
+                                                        )}
+                                                    </div>
                                                 )}
-                                                <button
-                                                    onClick={() => toggleZone(z.zoneId)}
-                                                    className="shrink-0 rounded-none p-1 text-(--muted) transition-colors hover:text-(--danger)"
-                                                    title="移除乘区"
-                                                >
-                                                    <Icon icon="mdi:close" className="size-3.5" />
-                                                </button>
                                             </div>
                                         )
                                     })
@@ -1028,33 +1186,52 @@ export default function BuffEntityEditor({
                     )}
                 </div>
 
-                {/* ③ 乘区勾选面板 */}
+                {/* ③ 乘区清单（点击即添加一条贡献条目；同一乘区可多次添加） */}
                 <div className="buff-editor-zones flex w-44 shrink-0 flex-col border-r border-(--card-border)">
                     <div className="flex shrink-0 items-center gap-1.5 border-b border-(--card-border) px-3 py-2 text-xs text-(--muted)">
-                        <Icon icon="mdi:multiplication" className="size-3.5 shrink-0 text-(--accent-text)" />
-                        <span className="mg-title text-xs">乘区</span>
+                        <Icon icon="mdi:playlist-plus" className="size-3.5 shrink-0 text-(--accent-text)" />
+                        <span className="mg-title text-xs">添加乘区</span>
                     </div>
-                    <div className="min-h-0 flex-1 space-y-0.5 overflow-y-auto p-1.5">
-                        {BUFF_ZONES.map((def) => {
-                            const exists = activeBuff?.zones.some((z) => z.zoneId === def.id) ?? false
-                            return (
-                                <button
-                                    key={def.id}
-                                    onClick={() => toggleZone(def.id)}
-                                    className={`flex w-full items-center gap-1.5 rounded-none px-2 py-1.5 text-left text-[11px] font-medium transition-colors ${
-                                        exists
-                                            ? 'bg-(--accent) text-(--accent-fg)'
-                                            : 'text-(--muted) hover:bg-(--card-hover) hover:text-(--fg)'
-                                    }`}
-                                >
-                                    <Icon
-                                        icon={exists ? 'mdi:check' : 'mdi:circle-outline'}
-                                        className="size-3.5 shrink-0"
-                                    />
-                                    {def.label}
-                                </button>
-                            )
-                        })}
+                    <div className="min-h-0 flex-1 space-y-1.5 overflow-y-auto p-1.5">
+                        {BUFF_ZONE_SECTION_VIEWS.map((section) => (
+                            <div key={section.title}>
+                                <div className="px-1 pb-0.5 text-[10px] font-black tracking-[0.1em] text-(--muted)">
+                                    {section.title}
+                                </div>
+                                <div className="space-y-0.5">
+                                    {section.defs.map((def) => {
+                                        const count = zoneCounts.get(def.id) ?? 0
+                                        return (
+                                            <button
+                                                key={def.id}
+                                                onClick={() => addZone(def.id)}
+                                                disabled={activeBuffIdx === null}
+                                                title={`添加「${def.label}」${count > 0 ? `（已有 ${count} 条）` : ''}`}
+                                                className={`flex w-full items-center gap-1.5 rounded-none px-2 py-1.5 text-left text-[11px] font-medium transition-colors disabled:opacity-40 ${
+                                                    count > 0
+                                                        ? 'text-(--accent-text) hover:bg-(--card-hover)'
+                                                        : 'text-(--muted) hover:bg-(--card-hover) hover:text-(--fg)'
+                                                }`}
+                                            >
+                                                <Icon icon="mdi:plus" className="size-3.5 shrink-0" />
+                                                <span className="min-w-0 flex-1 truncate">{def.label}</span>
+                                                {count > 0 && (
+                                                    <span
+                                                        className="shrink-0 px-1 text-[10px]"
+                                                        style={{
+                                                            background: 'color-mix(in srgb, var(--accent) 18%, transparent)',
+                                                            color: 'var(--accent-text)'
+                                                        }}
+                                                    >
+                                                        {count}
+                                                    </span>
+                                                )}
+                                            </button>
+                                        )
+                                    })}
+                                </div>
+                            </div>
+                        ))}
                     </div>
                 </div>
 
@@ -1206,7 +1383,7 @@ export default function BuffEntityEditor({
                                                                             z.override ? '覆盖+' : '+'
                                                                         }${z.ref ? `引用${BUFF_REF_ZONES.find((r) => r.id === z.ref!.targetZoneId)?.label ?? z.ref!.targetZoneId}×${z.ref.pct}%` : z.value}${
                                                                             !z.ref && BUFF_ZONE_MAP.get(z.zoneId)?.unit === '%' ? '%' : ''
-                                                                        }`
+                                                                        }${zoneConditionBadge(sanitizeZoneCondition(z.condition) ?? null) ? `[${zoneConditionBadge(sanitizeZoneCondition(z.condition) ?? null)}]` : ''}`
                                                                 )
                                                                 .join(' · ')}
                                                         </span>
@@ -1350,14 +1527,14 @@ export default function BuffEntityEditor({
                 </div>
             </div>
 
-            {refTarget && (
+            {refTargetIdx !== null && (
                 <BuffRefModal
                     open
                     entityType={entityType}
-                    zoneId={refTarget.zoneId}
+                    zoneId={refZone?.zoneId ?? ''}
                     initialRef={refZone?.ref ?? null}
                     onSave={saveRef}
-                    onClose={() => setRefTarget(null)}
+                    onClose={() => setRefTargetIdx(null)}
                 />
             )}
 

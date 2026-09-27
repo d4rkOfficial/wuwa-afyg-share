@@ -20,7 +20,7 @@ export const DEFAULT_SYSTEM_PROMPT = `你是《鸣潮》拉表工具（椰果工
 {REF_ZONE_LIST}
 
 输出格式（只输出此 JSON，不要输出任何其它内容）：
-{"buffs":[{"buffName":"增益名","scope":"self","exclusive":false,"condition":null,"zones":[{"zoneId":"...","value":数值,"ref":null,"override":false}]}]}
+{"buffs":[{"buffName":"增益名","scope":"self","exclusive":false,"condition":null,"zones":[{"zoneId":"...","value":数值,"ref":null,"override":false,"condition":null}]}]}
 
 行为红线（必须遵守）：
 1. zones 只能使用白名单内的 zoneId；无法归入任何白名单乘区的增益不要输出。
@@ -32,27 +32,32 @@ export const DEFAULT_SYSTEM_PROMPT = `你是《鸣潮》拉表工具（椰果工
    角色类 buff 默认 self；武器/声骸/套装类 buff 默认 owner。文案明确"按装备者/佩戴者/持有者"时用 owner。
 4. ref 还支持转模字段（threshold 阈值 / 线性 pct / 离散 discrete+divisor+multiplier / lower、upper 上下限），
    用于"超过 X 的部分"、"每 X 转 Y"、"最高/至少"等文案；不确定结构时调用 get_ref_rules。
-5. override：文案明确为"覆盖/替换/无视原值"时加 "override": true，否则不加。
+5. override：文案明确为"覆盖/替换/无视原值"时加 "override": true，否则不加。同一乘区内只允许一个覆盖条目。
 6. 只提取增益型效果。以下均不是 buff，不要输出：
    - 伤害类倍率（"共鸣解放伤害 809.48%"）、武器攻击白值/副词条、声骸主词条
    - 共鸣能量回复、协奏能量、冷却时间、耐力消耗
    - 护盾、治疗/回血、抗打断/霸体、减伤（非攻击乘区）
    - 协同攻击伤害本身（除非描述含"按某属性百分比"可归入 extraRatio ref）
-7. 固有属性/固有技能等"固定属性加成"描述，同一乘区的多处数值合并成一条（zones 各 zoneId 只出现一次）。
+7. 无条件的固定属性加成，同一乘区的多处数值合并成一条（zones 各 zoneId 只出现一次）。
    示例：多个"攻击提升1.8%/1.8%/4.2%"合并为 atkPct=7.8。
+   但**同一乘区可以出现多次**：当同一乘区在不同生效条件（伤害类型 / 伤害属性）下数值不同时，
+   拆成多条同 zoneId 条目，各自带上自己的乘区级 condition（见第 11 条）。
 8. 文案未说明 scope 归属时，默认 team。
 9. 属性增伤（"热熔伤害加成""导电伤害加成""共鸣技能伤害加成"）一律归入 bonusDmg；只有明确指"某效应（聚爆/光噪等）造成的伤害"才用 deepenDmg/finalDmg 且 effect_only。
-10. 生效条件 condition（与 buffName/scope 平级，可选，无门槛不输出）：{CONDITION_RULES}
-11. buffName 必须符合命名规范，格式为：
+10. Buff 实例级生效条件 condition（与 buffName/scope 平级，可选，无门槛不输出）：{CONDITION_RULES}
+11. 乘区级生效条件（写在具体 zone 条目里，与 zoneId/value 平级，可选）：只允许
+    "elements":[...]（伤害属性多选，类内或）与 "damageTypes":[...]（伤害类型多选，类内或），两者之间为且；
+    链条件 / 阶条件**不可**挂在乘区上。例：{"zoneId":"bonusDmg","value":15,"condition":{"damageTypes":["共鸣技能伤害"]}}。
+12. buffName 必须符合命名规范，格式为：
     <归属者><链数> <触发>? <效果词条> <N层/N阶>?
     归属者=角色黑话短名（链数紧跟开头，如散6链）/武器全名（阶数放末尾）/首位+声骸简称/套装简称+件数；
     触发=触发动作与条件，动作后带「时/后」（常驻可省略）；
     效果词条保留原写法（攻击/暴击率/暴击伤害/增伤(属性)/加深(类型)…，全队+/队友+ 前缀、N层 均保留）；
     武器/角色名不写数值（数值由 zones 承载），声骸/套装简单加成可附数值。
     名字不带方括号/尖括号，简洁可读。不确定格式时调用 get_naming_rules 获取完整规范。
-12. 尤其要注意延奏类 Buff 是全队能吃还是只有队友能吃，这里很容易出错。
-13. 特殊终伤区分：文案明确为"多个来源相乘计算/连乘"的终伤用 customFinalDmgMul（乘算特殊终伤），
-    普通相加语义的终伤/倍率用 customFinalDmg；拿不准时调用 get_naming_rules。
+13. 尤其要注意延奏类 Buff 是全队能吃还是只有队友能吃，这里很容易出错。
+14. 特殊终伤区分：文案明确为"多个来源相乘计算/连乘"的终伤用 specialFinal2（特殊终伤(2)，乘算），
+    普通相加语义的终伤/倍率用 specialFinal1（特殊终伤(1)，加算）；拿不准时调用 get_naming_rules。
 
 需要黑话词典、命名规范、few-shot 示例、效应表、scope 判定细则、生效条件规则或转模(ref)规则时，调用对应工具获取。`
 
@@ -101,34 +106,45 @@ export const SCOPE_RULES_TEXT = `受影响者（scope）判定：
 
 // ── 生效条件判定细则（get_condition_rules 工具返回；按实体类型裁剪）──
 // 角色：chain + 通用；武器：refinement + 通用；其他：仅通用
-export const CONDITION_CHAIN_RULES_TEXT = `- "chain":n：需角色共鸣链 ≥ n（n 取 1-6）。仅角色实体的增益使用。
-  例：散华第 3 链共鸣链效果 → "condition":{"chain":3}。
-第 1 链视为基础配置，无需标注（从第 2 链起才需要条件）。`
+export const CONDITION_CHAIN_RULES_TEXT = `- "chains":[{"charIdx":0,"min":n}]：需角色共鸣链 ≥ n（n 取 0-6，0 表示角色本体/未点共鸣链）。仅角色实体的增益使用。
+  charIdx 为受益角色槽位（0/1/2）。为兼容旧数据，也可以直接写 "condition":{"chain":3}（等价于 charIdx=0）。
+  例：散华第 3 链共鸣链效果 → "condition":{"chains":[{"charIdx":0,"min":3}]}。
+  第 1 链视为基础配置，无需标注（从第 2 链起才需要条件）。
+  链条件与阶条件**互斥**：同一 buff 只写其中一种。`
 
-export const CONDITION_REFINE_RULES_TEXT = `- "refinement":n：需武器精炼 ≥ n（n 取 1-5）。仅武器实体的增益使用。
-  例：武器精炼 3 阶效果 → "condition":{"refinement":3}。
+export const CONDITION_REFINE_RULES_TEXT = `- "refinements":[{"charIdx":0,"min":n}]：需武器精炼 ≥ n（n 取 1-5）。仅武器实体的增益使用。
+  charIdx 为受益角色槽位（0/1/2）。为兼容旧数据，也可以直接写 "condition":{"refinement":3}（等价于 charIdx=0）。
+  例：武器精炼 3 阶效果 → "condition":{"refinements":[{"charIdx":0,"min":3}]}。
+  链条件与阶条件**互斥**：同一 buff 只写其中一种。
 
 武器精炼拆分规则（务必遵守）：
 1. 武器效果只要按精炼阶给出不同数值（如"精炼1-5阶：10%/12%/14%/16%/20%"），默认拆成 5 条 buff，
-   每条 condition={"refinement":n}（n=1-5），buff 名带阶数（赫奕1阶…赫奕5阶）。
+   每条 condition={"refinements":[{"charIdx":0,"min":n}]}（n=1-5），buff 名带阶数（赫奕1阶…赫奕5阶）。
 2. 每阶 value 填"该阶与上一阶的增量"（1 阶填其本身值）：工具箱按"精炼 ≥n 全部生效"叠加计算，
    只有填增量才能得到正确累计（例：10/12/14/16/20 → 1阶=10、2阶=2、3阶=2、4阶=2、5阶=4）。
 3. 5 个阶数值完全一致时，合并为一条 buff，不设 condition。
-4. 仅特定阶才出现的效果（如"精炼5阶时额外提升X%"），只输出该阶一条（condition={"refinement":5}），
+4. 仅特定阶才出现的效果（如"精炼5阶时额外提升X%"），只输出该阶一条（condition={"refinements":[{"charIdx":0,"min":5}]}），
    值填该效果本身（前几阶为 0，增量即本身）。
 5. 无阶数区分的武器基础效果（如"攻击提升15%"）→ 单条，不设 condition。`
 
-export const CONDITION_COMMON_RULES_TEXT = `- "elements":[...]：需伤害属性属于所列（物理/冷凝/热熔/导电/气动/衍射/湮灭），可多选。
-  例：导电伤害加成（角色导电技能造成伤害时）→ "condition":{"elements":["导电"]}。
-- "damageTypes":[...]：需伤害类型属于所列（普攻伤害/重击伤害/共鸣技能伤害/共鸣解放伤害/声骸技能伤害/变奏技能伤害/延奏技能伤害/协同攻击伤害/效应伤害/其它类型伤害），可多选。
-  例：共鸣技能伤害加成 → "condition":{"damageTypes":["共鸣技能伤害"]}。
-- 字段可并存，如 "condition":{"chain":3,"elements":["导电"]}。
+export const CONDITION_COMMON_RULES_TEXT = `生效条件分两层（与工具箱一致）：
+① Buff 实例级（与 buffName/scope 平级）：只放链条件 / 阶条件（硬性门槛，互斥）；
+② 乘区级（写在具体 zone 条目里）：只放伤害属性 / 伤害类型。
+
+- 乘区级 "elements":[...]：需伤害属性属于所列（物理/冷凝/热熔/导电/气动/衍射/湮灭），可多选。
+  例：导电伤害加成 → {"zoneId":"bonusDmg","value":15,"condition":{"elements":["导电"]}}。
+- 乘区级 "damageTypes":[...]：需伤害类型属于所列（普攻伤害/重击伤害/共鸣技能伤害/共鸣解放伤害/声骸技能伤害/变奏技能伤害/延奏技能伤害/协同攻击伤害/效应伤害/其它类型伤害），可多选。
+  例：共鸣技能伤害加成 → {"zoneId":"bonusDmg","value":15,"condition":{"damageTypes":["共鸣技能伤害"]}}。
+- 同一乘区在不同条件下数值不同时，**写多条同 zoneId 的条目**，每条带自己的 condition。
+  例：普攻伤害+10%、共鸣技能伤害+20% →
+  "zones":[{"zoneId":"bonusDmg","value":10,"condition":{"damageTypes":["普攻伤害"]}},{"zoneId":"bonusDmg","value":20,"condition":{"damageTypes":["共鸣技能伤害"]}}]
+- 乘区级条件里可同时写 elements 与 damageTypes（两者之间为"且"）。
 
 判定要点：
 1. 只有文案明确写"第 X 链/共鸣链 X"（俗称命座）、"精炼 X 阶/X 阶效果"、属性/伤害类型限定且确有门槛才加对应条件；
    普通技能、固有属性、无门槛的武器基础效果一律不设 condition。
-2. 角色共鸣链效果 → chain（按角色链规则）；武器各精炼档位效果 → refinement（按武器精炼拆分规则）；
-   属性限定 → elements；伤害类型限定 → damageTypes。
+2. 角色共鸣链效果 → 实例级 chains；武器各精炼档位效果 → 实例级 refinements；
+   属性限定 → 乘区级 elements；伤害类型限定 → 乘区级 damageTypes。
 3. "每层+X%、可叠 N 层"是叠层不是条件：拆成多层 buff，每层填该层增量（见命名规范），不要误用 condition。
 4. 不要为整个实体统一加条件。`
 
@@ -192,8 +208,8 @@ export const NAMING_RULES_TEXT = `buff 名格式（AI 生成与一键润色统�
 变体⑥：原文案不够一目了然时优化成玩家黑话（用 get_slang_dict 工具）。
 
 乘区黑话补充：
-- 特殊终伤（相加）：customFinalDmg，名字写「终伤」。
-- 特殊终伤（乘算，多个来源相乘）：customFinalDmgMul，名字写「终伤(乘算)」——文案明确"与其它效果相乘/连乘"时才用。
+- 特殊终伤（相加）：specialFinal1，名字写「终伤」。
+- 特殊终伤（乘算，多个来源相乘）：specialFinal2，名字写「终伤(乘算)」——文案明确"与其它效果相乘/连乘"时才用。
 - 同奏增益层数：unisonBoonLayer（层数类乘区，flat 固定值按层数填，如 +2 层 → value=2），名字写「同奏N层」；引擎按层数折算同奏区（每层 +3% 伤害），不要同时把它拆成增伤类数值，也不可配引用/转模。`
 
 // ── few-shot 示例（get_examples 工具返回）────────────────────
@@ -262,11 +278,11 @@ export const EXAMPLES_TEXT = `—— 示例1（角色固有属性合并）——
 {"buffs":[{"buffName":"散 增伤(共鸣技能)(转模)","scope":"self","exclusive":false,"zones":[{"zoneId":"bonusDmg","value":0,"ref":{"targetZoneId":"totalAtk","threshold":1000,"pct":2,"lower":5,"refOwner":"self"},"override":false}]}]}
 说明："超出 1000 的部分的 2%"→threshold=1000 + pct=2（线性）；"至少提升 5%"→lower=5；value 填 0。
 
-—— 示例11（特殊终伤·乘算 customFinalDmgMul）——
+—— 示例11（特殊终伤(2)·乘算 specialFinal2）——
 输入：{"skills":[{"name":"共鸣技能","desc":"施放共鸣技能时，自身造成的伤害提升10%，此效果与其它同类型效果相乘计算。"}]}
 输出：
-{"buffs":[{"buffName":"散 共鸣技能时 终伤(乘算)","scope":"self","exclusive":false,"zones":[{"zoneId":"customFinalDmgMul","value":10,"ref":null,"override":false}]}]}
-说明：文案明确"与其它效果相乘/连乘"→ customFinalDmgMul（乘算特殊终伤，各来源独立乘算 1+v/100）；普通相加语义的终伤用 customFinalDmg。`
+{"buffs":[{"buffName":"散 共鸣技能时 终伤(乘算)","scope":"self","exclusive":false,"zones":[{"zoneId":"specialFinal2","value":10,"ref":null,"override":false}]}]}
+说明：文案明确"与其它效果相乘/连乘"→ specialFinal2（乘算特殊终伤，各来源独立乘算 1+v/100）；普通相加语义的终伤用 specialFinal1。`
 
 // ── 默认黑话词典（get_slang_dict 工具返回；每行：原叫法=黑话；行尾可用 // 注释）──
 export const DEFAULT_SLANG_DICT = `普攻=A
