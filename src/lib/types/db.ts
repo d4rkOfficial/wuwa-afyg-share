@@ -1,4 +1,4 @@
-// 数据库行类型（与 supabase/migrations/0001_init.sql 保持一致，手动维护）
+// 数据库行类型（与 supabase/migrations/init.sql 保持一致，手动维护）
 
 import type { TeamPreview } from '@/lib/types/project'
 

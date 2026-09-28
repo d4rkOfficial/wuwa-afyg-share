@@ -24,9 +24,9 @@ const BUFF_COLUMNS = 'entity_type, entity_name, buff_name, scope, exclusive, con
 const SNAPSHOT_COLUMNS = 'id, created_by, created_at, note, is_root, state, diff, prev_id'
 
 /**
- * @desc 读取边界统一归一化到 v2。库内数据已由 0005 迁移升到 v2，但仍会出现 v1 形状：
- * 版本快照存的是 diff（按设计保持 v1 形状），重建出来的行是 v1；用旧快照还原时写回的行也是 v1。
- * 不归一化会让「对比」把结构升级本身误报成大量差异。纯函数，不写库。
+ * @desc 读取边界统一归一化。库内数据已是当前结构，但**版本快照存的是 diff**，
+ * `rebuildSnapshotState` 重建出来的行、以及用旧快照还原时写回的行，都可能带历史形状。
+ * 不归一化会让「对比」把结构差异误报成大量内容差异。纯函数，不写库。
  */
 const toV2 = (row: BuffSetRow): BuffSetRow => upgradeBuffSetRowV2(row).row
 

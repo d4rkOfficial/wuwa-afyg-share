@@ -12,7 +12,7 @@
 | 文档 | 内容 |
 | ---- | ---- |
 | [docs/api.md](docs/api.md) | **工坊对外 API**：最小集（列出工程 / 下载工程，接入工具箱必须实现）、扩展集（Buff 集 / 标准词条集）、可选业务 API |
-| [docs/deployment.md](docs/deployment.md) | 部署到 Cloudflare Workers、Supabase 初始化与增量迁移、环境变量、本地开发、首个管理员设置、免费档注意事项 |
+| [docs/deployment.md](docs/deployment.md) | 部署到 Cloudflare Workers、Supabase 数据库初始化、环境变量、本地开发、首个管理员设置、免费档注意事项 |
 
 ## 业务功能
 
@@ -29,7 +29,7 @@
 
 - **Buff 集** — 角色/武器/声骸/套装的固定增益库；管理员在弹窗 IDE 中编辑，AI 可协作生成/润色/追问；公开浏览页按「类型 → 实体」分级展示。工具箱「Buff 集 → 从工坊同步」按实体整份覆盖拉取（本地自定义不受影响）
 - **标准词条集** — 特殊角色的整份声骸词条方案（5 个部位的主词条 + 副主词条 + 共 14 条副词条，即「标准 14 词条」）。cost 组合不限（5 部位合计 ≤ 12）；编辑时主词条只选类型、**数值固定为满级上限**，副主词条**按 cost 自动推导**，副词条数值从**档位下拉**中选择。管理员在 `/admin/substat-sets` 维护，也可用 JSON 整体导入导出。工具箱在配装页「词条方案 → 工坊同步」或首次进入的同步弹窗中拉取；一般角色的方案由工具箱按角色数据本地生成
-- **Buff 集快照** — 管理员可创建/更新快照（单快照模型）、对比当前与快照差异、一键恢复；快照只存基准，差异现算不落库
+- **Buff 集快照** — 管理员可创建/更新快照（根 + 版本链：根存全量、版本存差异，可对比、可恢复到任意版本、可合并到根）、对比当前与快照差异、一键恢复
 - **Buff 集 SQL 导出** — 公开下载全量 SQL（优先导出最新快照状态）
 
 ### 站点与权限
@@ -59,7 +59,7 @@
 | 后端 | [Supabase](https://supabase.com)（Postgres + Auth + RLS） |
 | 部署 | [Cloudflare Workers](https://workers.cloudflare.com)（[OpenNext](https://opennext.js.org/cloudflare)） |
 
-部署、数据库迁移与环境变量见 [docs/deployment.md](docs/deployment.md)。
+部署、数据库初始化与环境变量见 [docs/deployment.md](docs/deployment.md)。
 
 ## 声明
 

@@ -28,26 +28,15 @@ pnpm upload       # 构建并上传新版本
 
 自定义域名：`wuwa-afyg-share.200503.xyz`（Worker → Domains & Routes；DNS 在阿里云，CNAME 指向 Worker 端点）。
 
-## 数据库初始化与升级
+## 数据库初始化
 
 在 [Supabase](https://supabase.com/dashboard) 创建项目后，在 **SQL Editor** 执行：
 
 ```
-supabase/migrations/0001_init.sql
+supabase/migrations/init.sql
 ```
 
-> `0001_init.sql` 为全量初始化（已合并原 0001~0012 及 Buff 集单快照 / 管理员权限链 / 工程保护等后续增量），**全新数据库一次执行即可**；已按旧迁移初始化过的库请勿重跑。
-
-后续增量迁移（已部署库的升级补丁）：
-
-| 迁移 | 用途 |
-| ---- | ---- |
-| `0002_upgrade_snapshot_chain.sql` | Buff 集快照链（根 + 版本链） |
-| `0003_search_projects.sql` | 工程搜索索引 |
-| `0003_squash_snapshot.sql` | 快照合并到根（squash） |
-| `0004_standard_substat_sets.sql` | 标准词条集（`standard_substat_sets` 表 + RLS，接口见 [api.md](api.md)） |
-
-> 全新库执行完 `0001_init.sql` 后，还需补执行尚未包含在其中的增量（当前为 `0004_standard_substat_sets.sql`）。
+> 单文件全量初始化（建表 + RLS + 策略 + RPC + 定时清理），**全新数据库一次执行即可**；已初始化过的库请勿重跑。
 
 ## Auth 配置
 

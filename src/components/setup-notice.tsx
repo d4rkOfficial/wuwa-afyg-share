@@ -9,7 +9,7 @@ export default function SetupNotice() {
                 </code>{' '}
                 并填入 Supabase 凭据（参考 .env.example），然后执行
                 <code className="mx-1 rounded-none border border-(--card-border) bg-(--card-hover) px-1.5 py-0.5">
-                    supabase/migrations/0001_init.sql
+                    supabase/migrations/init.sql
                 </code>{' '}
                 建表。
             </p>

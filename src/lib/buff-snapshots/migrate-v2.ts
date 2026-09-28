@@ -1,19 +1,20 @@
 /**
- * @desc Buff 集 v2 结构归一化（与 `supabase/migrations/0005_buff_set_v2.sql` 同一套口径）。
+ * @desc Buff 集行归一化：把历史形状的行就地转成当前结构（纯函数，不写库）。
  *
- * 库内数据已于 0005 迁移一次性升到 v2，管理端的「迁移」入口连同预演/报告界面已经下线。
- * 这里保留一个纯函数，是因为**读取边界仍可能出现 v1 形状**：
- *   · 版本快照存的是 diff（按设计保持 v1 形状不动），`rebuildSnapshotState` 重建出来的行是 v1；
- *   · 用 0005 之前的旧快照还原时，写回的行也会带 v1 形状。
+ * 为什么需要它：**读取边界仍可能出现旧形状**——
+ *   · 版本快照存的是 diff，`rebuildSnapshotState` 重建出来的行可能带旧形状；
+ *   · 用早先的快照还原时，写回的行也可能带旧形状。
  * 这些行在进入渲染 / diff / 导出之前必须归一化，否则：
  *   · 公开浏览页会漏掉乘区级条件下的显示；
  *   · 快照 diff 会把「结构升级本身」误报成大量内容差异。
  *
- * v1 → v2 的差异：
+ * 旧 → 新 的差异：
  *   · buff_set[]：每条只有 { zoneId, value, ref?, override? }，一个乘区只能出现一次
  *                → 乘区贡献条目列表（同乘区可多条、带乘区级 condition、覆盖唯一）
  *   · condition：实例级单值 { chain? , refinement? } + 混挂的 elements/damageTypes
  *                → chains/refinements[{ charIdx, min }]（链阶互斥），属性/类型下放到每个乘区
+ *
+ * 口径与 `supabase/migrations/init.sql` 里的表结构、以及 `$lib/consts/buff-zones` 的清洗规则一致。
  */
 
 import type { BuffCondition, BuffSetRow, BuffZoneRef, BuffZoneValue } from '@/lib/types/db'
@@ -23,7 +24,7 @@ export interface BuffSetMigrateResult {
     /** @desc 该行已是 v2，无需改动（幂等：对已是 v2 的行返回 already=true） */
     already: boolean
     row: BuffSetRow
-    /** @desc 改动过的结构路径（诊断用；正式迁移报告由数据库侧出） */
+    /** @desc 改动过的结构路径（诊断用） */
     changes: string[]
 }
 
