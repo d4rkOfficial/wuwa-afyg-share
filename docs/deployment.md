@@ -28,7 +28,7 @@ pnpm upload       # 构建并上传新版本
 
 自定义域名：`wuwa-afyg-share.200503.xyz`（Worker → Domains & Routes；DNS 在阿里云，CNAME 指向 Worker 端点）。
 
-## 数据库初始化
+## 数据库初始化与升级
 
 在 [Supabase](https://supabase.com/dashboard) 创建项目后，在 **SQL Editor** 执行：
 
@@ -36,7 +36,15 @@ pnpm upload       # 构建并上传新版本
 supabase/migrations/init.sql
 ```
 
-> 单文件全量初始化（建表 + RLS + 策略 + RPC + 定时清理），**全新数据库一次执行即可**；已初始化过的库请勿重跑。
+> 单文件全量脚本（建表 + RLS + 策略 + RPC + 定时清理），**全部语句幂等，可重复执行**：
+>
+> - **全新库**：执行一次即完成初始化。
+> - **已初始化的库**：直接重跑同一个文件就是升级（没有增量脚本）。
+>
+> 唯一需要单独执行的是「设置首个管理员」这类一次性人工操作（见下）。
+>
+> 跑完后若 PostgREST 仍报 `Could not find the function public.xxx in the schema cache`，
+> 是 schema 缓存未刷新：在 SQL Editor 执行 `notify pgrst, 'reload schema';`，或等几秒重试。
 
 ## Auth 配置
 

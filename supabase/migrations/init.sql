@@ -1,11 +1,23 @@
 -- ═══════════════════════════════════════════════════════════════
--- 椰果工坊 · 数据库初始化（单文件，全新库一次执行）
+-- 椰果工坊 · 数据库初始化 / 升级（单文件，可重复执行）
 --
 -- 内容：用户资料 / 管理员判定 / 工程表 / 计数器与搜索 RPC / 过期清理 /
 --       Buff 集 / 标准词条集 / 公告 / Buff 集快照（根 + 版本链） / 管理员权限链 / 批量删除。
 -- 评论功能已下线（不建 project_comments 表）。
 --
--- 适用：全新数据库一次性执行；已初始化过的库请勿重跑。
+-- 适用（两条路径共用本文件，没有增量脚本）：
+--   · 全新库：执行一次即完成初始化。
+--   · 已初始化的库：**直接重跑本文件即完成升级**。
+-- 幂等性由以下写法保证，新增对象时请沿用：
+--   · 建表 / 建索引 / 扩展 → `if not exists`
+--   · 函数 / 触发器函数 → `create or replace`
+--   · 触发器 → 先 `drop trigger if exists`
+--   · **RLS 策略 → 必须先 `drop policy if exists`**（策略没有 `create or replace`，
+--     漏掉这句会让整个文件在第二次执行时报 `policy ... already exists` 而中断，
+--     后面的新函数（如 squash_buff_set_snapshot）就永远建不出来）
+--   · 加约束 → 包在 `do $$ ... if not exists (select 1 from pg_constraint ...)` 里
+--   · 数据播种/回填 → `on conflict do nothing`
+--   · 唯一例外是「存量管理员回填」这类幂等 DML，见文末说明
 -- ═══════════════════════════════════════════════════════════════
 
 -- ─────────────────────────────────────────────────────────────
@@ -43,15 +55,18 @@ create trigger profiles_set_updated_at
 alter table public.profiles enable row level security;
 
 -- 用户名公开可见（供列表展示与页面查询）
+drop policy if exists profiles_public_read on public.profiles;
 create policy profiles_public_read on public.profiles
     for select
     using (true);
 
 -- 仅本人可写入
+drop policy if exists profiles_own_insert on public.profiles;
 create policy profiles_own_insert on public.profiles
     for insert to authenticated
     with check (auth.uid () = id);
 
+drop policy if exists profiles_own_update on public.profiles;
 create policy profiles_own_update on public.profiles
     for update to authenticated
     using (auth.uid () = id)
@@ -115,36 +130,45 @@ create index if not exists projects_team_preview_gin_idx
 alter table public.projects enable row level security;
 
 -- 公开只读可见工程（未过期 + 已发布）
+drop policy if exists projects_public_read on public.projects;
 create policy projects_public_read on public.projects
     for select
     using (published = true and (expires_at is null or expires_at > now()));
 
 -- 作者本人（删除豁免保护工程）
+drop policy if exists projects_author_select on public.projects;
 create policy projects_author_select on public.projects
     for select to authenticated
     using (auth.uid () = author_id);
+drop policy if exists projects_author_insert on public.projects;
 create policy projects_author_insert on public.projects
     for insert to authenticated
     with check (auth.uid () = author_id);
+drop policy if exists projects_author_update on public.projects;
 create policy projects_author_update on public.projects
     for update to authenticated
     using (auth.uid () = author_id)
     with check (auth.uid () = author_id);
+drop policy if exists projects_author_delete on public.projects;
 create policy projects_author_delete on public.projects
     for delete to authenticated
     using (auth.uid () = author_id and protected = false);
 
 -- 管理员（删除豁免保护工程）
+drop policy if exists projects_admin_select on public.projects;
 create policy projects_admin_select on public.projects
     for select to authenticated
     using (public.is_admin ());
+drop policy if exists projects_admin_insert on public.projects;
 create policy projects_admin_insert on public.projects
     for insert to authenticated
     with check (public.is_admin ());
+drop policy if exists projects_admin_update on public.projects;
 create policy projects_admin_update on public.projects
     for update to authenticated
     using (public.is_admin ())
     with check (public.is_admin ());
+drop policy if exists projects_admin_delete on public.projects;
 create policy projects_admin_delete on public.projects
     for delete to authenticated
     using (public.is_admin () and protected = false);
@@ -213,11 +237,13 @@ create table if not exists public.buff_sets (
 alter table public.buff_sets enable row level security;
 
 -- 公开只读
+drop policy if exists buff_sets_public_read on public.buff_sets;
 create policy buff_sets_public_read on public.buff_sets
     for select
     using (true);
 
 -- 仅管理员可编辑（公开读策略不变；站点侧编辑同样仅管理员）
+drop policy if exists buff_sets_admin_all on public.buff_sets;
 create policy buff_sets_admin_all on public.buff_sets
     for all to authenticated
     using (public.is_admin ())
@@ -276,11 +302,13 @@ create trigger standard_substat_sets_set_updated_at
 alter table public.standard_substat_sets enable row level security;
 
 -- 公开只读（与 buff_sets 一致）
+drop policy if exists standard_substat_sets_public_read on public.standard_substat_sets;
 create policy standard_substat_sets_public_read on public.standard_substat_sets
     for select
     using (true);
 
 -- 仅管理员可编辑（与 buff_sets 一致：公开读策略不变；站点侧编辑同样仅管理员）
+drop policy if exists standard_substat_sets_admin_all on public.standard_substat_sets;
 create policy standard_substat_sets_admin_all on public.standard_substat_sets
     for all to authenticated
     using (public.is_admin ())
@@ -302,10 +330,12 @@ create table if not exists public.announcements (
 
 alter table public.announcements enable row level security;
 
+drop policy if exists announcements_public_read on public.announcements;
 create policy announcements_public_read on public.announcements
     for select
     using (true);
 
+drop policy if exists announcements_admin_all on public.announcements;
 create policy announcements_admin_all on public.announcements
     for all to authenticated
     using (public.is_admin ())
@@ -353,11 +383,13 @@ create unique index if not exists buff_set_snapshot_root_one
 alter table public.buff_set_snapshot enable row level security;
 
 -- 公开只读（快照内容本身是公开 buff 数据）
+drop policy if exists buff_set_snapshot_public_read on public.buff_set_snapshot;
 create policy buff_set_snapshot_public_read on public.buff_set_snapshot
     for select
     using (true);
 
 -- 仅管理员写（写入统一走 RPC，此策略为兜底）
+drop policy if exists buff_set_snapshot_admin_write on public.buff_set_snapshot;
 create policy buff_set_snapshot_admin_write on public.buff_set_snapshot
     for all to authenticated
     using (public.is_admin ())
@@ -576,6 +608,7 @@ create unique index if not exists admin_grants_root_unique
 alter table public.admin_grants enable row level security;
 
 -- 仅管理员可读（权限树展示）；写入仅走 definer RPC
+drop policy if exists admin_grants_admin_read on public.admin_grants;
 create policy admin_grants_admin_read on public.admin_grants
     for select to authenticated
     using (public.is_admin ());
@@ -807,10 +840,16 @@ $$;
 
 grant execute on function public.search_projects (text, text, text) to anon, authenticated, service_role;
 
+-- 通知 PostgREST 重载 schema 缓存：新函数/新表要等缓存刷新后才能被 supabase.rpc() / REST 访问，
+-- 否则会报 `Could not find the function public.xxx in the schema cache`。Supabase 的 DDL 事件触发器
+-- 通常会自动重载，这里再显式发一次，保证用 psql / 其它通道执行时也立即生效（无监听者时是空操作）。
+notify pgrst, 'reload schema';
+
 -- ═══════════════════════════════════════════════════════════════
 -- 使用说明
---  1. 全新库：本文件一次性执行。
---  2. 设置首个管理员（执行后立即生效）：
+--  1. 全新库：本文件执行一次即完成初始化。
+--  2. 已初始化的库：直接重跑本文件即完成升级（全部语句幂等，无增量脚本）。
+--  3. 设置首个管理员（执行后立即生效）：
 --     update public.profiles p set is_admin = true
 --     from auth.users u where u.id = p.id and u.email = 'you@example.com';
 --     需要其成为根管理员（不可被页面撤销）时，执行回填：
@@ -818,5 +857,5 @@ grant execute on function public.search_projects (text, text, text) to anon, aut
 --     select id, null from public.profiles
 --     where is_admin and id not in (select grantee_id from public.admin_grants)
 --     on conflict do nothing;
---  3. Buff 集：仅管理员可编辑；快照创建/对比/恢复/删除仅管理员。
+--  4. Buff 集：仅管理员可编辑；快照创建/对比/恢复/删除仅管理员。
 -- ═══════════════════════════════════════════════════════════════
