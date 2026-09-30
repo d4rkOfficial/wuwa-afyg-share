@@ -41,7 +41,11 @@ export const BUFF_ZONES: BuffZoneDef[] = [
     { id: 'dmgRedPen', label: '免伤无视(穿免)', unit: '%' },
 
     { id: 'tuneStrainLayer', label: '集谐干涉层数', unit: 'flat' },
-    { id: 'unisonBoonLayer', label: '同奏增益层数', unit: 'flat' }
+    { id: 'unisonBoonLayer', label: '同奏增益层数', unit: 'flat' },
+
+    { id: 'customLayer1', label: '自定义层数(1)', unit: 'flat' },
+    { id: 'customLayer2', label: '自定义层数(2)', unit: 'flat' },
+    { id: 'customLayer3', label: '自定义层数(3)', unit: 'flat' }
 ]
 
 export const BUFF_ZONE_MAP = new Map(BUFF_ZONES.map((z) => [z.id, z]))
@@ -56,7 +60,8 @@ export const BUFF_ZONE_SECTIONS: Array<{ title: string; ids: string[] }> = [
     { title: '倍率追加或锚定', ids: ['extraRatio'] },
     { title: '使目标', ids: ['defDown', 'resDown'] },
     { title: '对目标', ids: ['resPen', 'defPen', 'dmgRedPen'] },
-    { title: '层数相关独立终伤', ids: ['tuneStrainLayer', 'unisonBoonLayer'] }
+    { title: '层数相关独立终伤', ids: ['tuneStrainLayer', 'unisonBoonLayer'] },
+    { title: '自定义层数', ids: ['customLayer1', 'customLayer2', 'customLayer3'] }
 ]
 
 /** @desc 分区后的乘区清单（与工具箱「添加乘区」右栏同构；未列入分区的乘区兜底进「其它」） */
@@ -83,8 +88,13 @@ export const resolveBuffZoneId = (id: string): string => LEGACY_BUFF_ZONE_IDS[id
 /** @desc 覆盖（override）白名单外的乘区：与工具箱一致，百分比类与额外倍率不支持覆盖 */
 export const ZONE_NO_OVERRIDE_IDS = new Set<string>(['atkPct', 'hpPct', 'defPct', 'extraRatio'])
 
-/** @desc 层数类乘区（集谐干涉/同奏增益等）：只支持直接填固定层数，不支持 ref 引用/转模（对齐 wuwa-afyg-tool） */
-export const ZONE_NO_REF_IDS = new Set<string>(['tuneStrainLayer', 'unisonBoonLayer'])
+/**
+ * @desc 不支持 ref 引用/转模的乘区（对齐 wuwa-afyg-tool 的 ZONE_NO_REF_IDS）。
+ *
+ * **层数类乘区（集谐干涉/同奏增益/自定义层数）现已支持引用**，因此本集合当前为空 ——
+ * 保留这道闸门是为了「以后确实需要某个纯固定值乘区」时有统一落点，新增乘区默认即可引用。
+ */
+export const ZONE_NO_REF_IDS = new Set<string>()
 
 export const BUFF_ENTITY_TYPES = ['character', 'weapon', 'echo', '1set', '2set', '3set', '4set', '5set'] as const
 
