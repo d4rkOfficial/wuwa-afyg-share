@@ -41,11 +41,7 @@ export const BUFF_ZONES: BuffZoneDef[] = [
     { id: 'dmgRedPen', label: '免伤无视(穿免)', unit: '%' },
 
     { id: 'tuneStrainLayer', label: '集谐干涉层数', unit: 'flat' },
-    { id: 'unisonBoonLayer', label: '同奏增益层数', unit: 'flat' },
-
-    { id: 'customLayer1', label: '自定义层数(1)', unit: 'flat' },
-    { id: 'customLayer2', label: '自定义层数(2)', unit: 'flat' },
-    { id: 'customLayer3', label: '自定义层数(3)', unit: 'flat' }
+    { id: 'unisonBoonLayer', label: '同奏增益层数', unit: 'flat' }
 ]
 
 export const BUFF_ZONE_MAP = new Map(BUFF_ZONES.map((z) => [z.id, z]))
@@ -60,8 +56,7 @@ export const BUFF_ZONE_SECTIONS: Array<{ title: string; ids: string[] }> = [
     { title: '倍率追加或锚定', ids: ['extraRatio'] },
     { title: '使目标', ids: ['defDown', 'resDown'] },
     { title: '对目标', ids: ['resPen', 'defPen', 'dmgRedPen'] },
-    { title: '层数相关独立终伤', ids: ['tuneStrainLayer', 'unisonBoonLayer'] },
-    { title: '自定义层数', ids: ['customLayer1', 'customLayer2', 'customLayer3'] }
+    { title: '层数相关独立终伤', ids: ['tuneStrainLayer', 'unisonBoonLayer'] }
 ]
 
 /** @desc 分区后的乘区清单（与工具箱「添加乘区」右栏同构；未列入分区的乘区兜底进「其它」） */
@@ -91,8 +86,8 @@ export const ZONE_NO_OVERRIDE_IDS = new Set<string>(['atkPct', 'hpPct', 'defPct'
 /**
  * @desc 不支持 ref 引用/转模的乘区（对齐 wuwa-afyg-tool 的 ZONE_NO_REF_IDS）。
  *
- * 目前**只有集谐干涉层数**在名单里：它只允许直接填固定层数。同奏增益层数与
- * 自定义层数(1)(2)(3) 都可以引用；新增乘区默认即可引用。
+ * 目前**只有集谐干涉层数**在名单里：它只允许直接填固定层数。同奏增益层数可以引用；
+ * 新增乘区默认即可引用。
  */
 export const ZONE_NO_REF_IDS = new Set<string>(['tuneStrainLayer'])
 
@@ -110,8 +105,8 @@ export const BUFF_ENTITY_LABELS: Record<BuffEntityType, string> = {
 }
 
 // 引用乘区白名单（对齐 wuwa-afyg-tool 的 ZONE_REF_DEFS）
-// 末尾四项是**按角色独立**的层数来源：读被引用角色自己累计的层数。
-// 同奏增益层数与自定义层数属于角色，可被其它乘区按角色引用；集谐干涉层数不属于角色，故不在列。
+// 最后一项是**按角色独立**的层数来源：读被引用角色自己累计的同奏增益层数。
+// 集谐干涉层数挂在目标身上、不属于角色，故不在列。
 export const BUFF_REF_ZONES: Array<{ id: string; label: string; unit: '%' | 'flat' }> = [
     { id: 'baseAtk', label: '攻击白值', unit: 'flat' },
     { id: 'totalAtk', label: '当前攻击', unit: 'flat' },
@@ -124,10 +119,7 @@ export const BUFF_REF_ZONES: Array<{ id: string; label: string; unit: '%' | 'fla
     { id: 'offTuneBuildupRate', label: '偏谐值累积效率', unit: '%' },
     { id: 'critRate', label: '暴击率', unit: '%' },
     { id: 'critDmg', label: '暴击伤害', unit: '%' },
-    { id: 'unisonBoonLayer', label: '同奏增益层数', unit: 'flat' },
-    { id: 'customLayer1', label: '自定义层数(1)', unit: 'flat' },
-    { id: 'customLayer2', label: '自定义层数(2)', unit: 'flat' },
-    { id: 'customLayer3', label: '自定义层数(3)', unit: 'flat' }
+    { id: 'unisonBoonLayer', label: '同奏增益层数', unit: 'flat' }
 ]
 
 export const BUFF_REF_ZONE_MAP = new Map(BUFF_REF_ZONES.map((z) => [z.id, z]))
