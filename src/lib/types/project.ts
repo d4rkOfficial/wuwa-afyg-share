@@ -14,7 +14,15 @@ export interface CharSlot {
     character: string | null
     weapon: string | null
     triggerSets: SelectedSet[]
-    echoes: [EchoSlot, EchoSlot, EchoSlot, EchoSlot, EchoSlot]
+    /**
+     * @desc 声骸槽位：主工具**只导出已装备的槽位**（长度可少于 5，常见为 3）。
+     * 工坊不补齐 —— 补齐会改变落库内容，也让「下载 = 上传的文件」这个承诺失真。
+     */
+    echoes: EchoSlot[]
+    /** @desc 共鸣链（0-6）—— 链/阶真源在队伍槽位上，工坊只做透传 */
+    chain?: number
+    /** @desc 武器精炼阶（1-5，0 = 无专） */
+    refinement?: number
 }
 
 export interface PhaseState {
@@ -22,6 +30,14 @@ export interface PhaseState {
     data: unknown
 }
 
+/**
+ * @desc 主工具导出的工程数据。
+ *
+ * 这里只声明工坊自己会读的字段；其余字段（`conditionProfile` / `comparison` / `buffs` /
+ * `version` / `analysis` …）**允许存在且必须原样透传**，因此留了索引签名。
+ * 工坊是分享中转站，绝不能因为「不认识这个字段」就把它从落库内容里抹掉
+ * —— 那正是「上传工坊再下载丢链/阶」的成因。
+ */
 export interface ProjectData {
     id: string
     name: string
@@ -37,6 +53,7 @@ export interface ProjectData {
         calculation: PhaseState
         config: PhaseState
     }
+    [key: string]: unknown
 }
 
 /** 主工具导出的文件：{ version, exportedAt, project } 或裸数组/裸对象（旧版兼容） */

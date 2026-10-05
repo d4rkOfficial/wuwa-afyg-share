@@ -14,45 +14,43 @@ function isRecord(v: unknown): v is Record<string, unknown> {
 }
 
 function emptyCharSlot(): CharSlot {
-    return {
-        character: null,
-        weapon: null,
-        triggerSets: [],
-        echoes: Array.from({ length: 5 }, () => ({ name: null, cost: 0 })) as CharSlot['echoes']
-    }
+    return { character: null, weapon: null, triggerSets: [], echoes: [] }
 }
 
-function sanitizeTeam(raw: unknown): ProjectData['team'] {
-    const slots = Array.isArray(raw) ? raw : []
-    const team: ProjectData['team'] = [emptyCharSlot(), emptyCharSlot(), emptyCharSlot()]
-    for (let i = 0; i < 3; i++) {
-        const s = slots[i]
-        if (!isRecord(s)) continue
-        const character = typeof s.character === 'string' ? s.character : null
-        const weapon = typeof s.weapon === 'string' ? s.weapon : null
-        const triggerSets = Array.isArray(s.triggerSets)
-            ? (s.triggerSets.filter(isRecord) as Record<string, unknown>[])
+/**
+ * @desc 清洗队伍槽位：只规范化「列表展示必需」的字段，**其余字段原样保留**。
+ *
+ * 逐字段重建（只留 character/weapon/triggerSets/echoes）曾经把 `chain` / `refinement`
+ * 直接抹掉 —— 工坊落库的是清洗后的对象，于是「上传工坊再下载」必然丢链/阶配置。
+ * 故这里改为「展开原对象 + 覆盖规范化字段」，未知字段（含工具侧未来新增的）全部透传。
+ */
+function sanitizeCharSlot(raw: unknown): CharSlot {
+    if (!isRecord(raw)) return emptyCharSlot()
+    const toEcho = (e: unknown): EchoSlot => ({
+        name: isRecord(e) && typeof e.name === 'string' ? e.name : null,
+        cost: isRecord(e) && typeof e.cost === 'number' ? e.cost : 0
+    })
+    const echoesRaw = Array.isArray(raw.echoes) ? raw.echoes : []
+    return {
+        ...(raw as unknown as CharSlot),
+        character: typeof raw.character === 'string' ? raw.character : null,
+        weapon: typeof raw.weapon === 'string' ? raw.weapon : null,
+        triggerSets: Array.isArray(raw.triggerSets)
+            ? (raw.triggerSets.filter(isRecord) as Record<string, unknown>[])
                   .map((t) => ({
                       name: typeof t.name === 'string' ? t.name : '',
                       pieces: typeof t.pieces === 'number' ? t.pieces : 0
                   }))
                   .filter((t) => t.name)
-            : []
-        const echoesRaw = Array.isArray(s.echoes) ? s.echoes : []
-        const toEcho = (raw: unknown): EchoSlot => ({
-            name: isRecord(raw) && typeof raw.name === 'string' ? raw.name : null,
-            cost: isRecord(raw) && typeof raw.cost === 'number' ? raw.cost : 0
-        })
-        const echoes = [
-            toEcho(echoesRaw[0]),
-            toEcho(echoesRaw[1]),
-            toEcho(echoesRaw[2]),
-            toEcho(echoesRaw[3]),
-            toEcho(echoesRaw[4])
-        ] as CharSlot['echoes']
-        team[i] = { character, weapon, triggerSets, echoes }
+            : [],
+        // 只规范化长度与形状，**不补齐到 5 个**：主工具导出几个就是几个
+        echoes: echoesRaw.map(toEcho)
     }
-    return team
+}
+
+function sanitizeTeam(raw: unknown): ProjectData['team'] {
+    const slots = Array.isArray(raw) ? raw : []
+    return [sanitizeCharSlot(slots[0]), sanitizeCharSlot(slots[1]), sanitizeCharSlot(slots[2])]
 }
 
 function sanitizePhaseState(raw: unknown): PhaseState {
@@ -69,6 +67,14 @@ function sanitizePhaseState(raw: unknown): PhaseState {
  *   1. { version, exportedAt, project }   — 当前导出格式
  *   2. [project, ...]                      — 旧版批量导出
  *   3. { ...project }                      — 裸工程对象
+ *
+ * **工坊只是分享中转站，不做数据加工**：这里只规范化「列表/详情页预览必需」的字段
+ * （id / name / createdAt / team / phases），其余字段一律 `...` 透传。
+ *
+ * 曾经是逐字段白名单重建，导致工坊落库时静默丢掉 `conditionProfile`（链/阶配置）、
+ * `comparison`（链/阶对比点）、`analysis`（结果快照）、`buffs`、`version`，
+ * 症状就是「上传工坊再下载后丢了链/阶」。工具侧字段会继续演进，
+ * 白名单必然再次落后 —— 所以口径是「只覆盖认识的字段，不认识的照抄」。
  */
 export function parseProjectFile(raw: unknown): ProjectData {
     let project: Record<string, unknown> | null = null
@@ -106,6 +112,8 @@ export function parseProjectFile(raw: unknown): ProjectData {
         : undefined
 
     return {
+        // 先铺开原对象（保留 version/conditionProfile/comparison/analysis/buffs 等全部字段）
+        ...(project as unknown as ProjectData),
         id: typeof project.id === 'string' ? project.id : crypto.randomUUID(),
         name,
         createdAt,
