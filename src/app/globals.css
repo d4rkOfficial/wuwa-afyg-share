@@ -2,20 +2,20 @@
 
 /* ──────────────────────────────────────────────────────────────
    杂志衬线设计系统 · Token 层
-   柔和配色（非纯黑纯白）/ 衬线重音标题 / 单一强调色 / 零阴影零渐变 / 一致锐角
-   圆角统一为 0（rounded-none）；阴影全局置零；层次靠细边框与弱化文字
+   柔和配色（非纯黑纯白）/ 衬线重音标题 / 单一强调色 / 零阴影零渐变 / 克制的圆角
+   圆角统一为一档小圆角（rounded-sm = 6px）；阴影全局置零；层次靠细边框与弱化文字
    ────────────────────────────────────────────────────────────── */
 
 @theme {
-    /* 一致锐角：所有 rounded-* 工具类收敛为 0 */
-    --radius-xs: 0px;
-    --radius-sm: 0px;
-    --radius: 0px;
-    --radius-md: 0px;
-    --radius-lg: 0px;
-    --radius-xl: 0px;
-    --radius-2xl: 0px;
-    --radius-3xl: 0px;
+    /* 小圆角：容器与按钮共用一档 6px，保持全站节奏一致 */
+    --radius-xs: 4px;
+    --radius-sm: 6px;
+    --radius: 6px;
+    --radius-md: 8px;
+    --radius-lg: 10px;
+    --radius-xl: 12px;
+    --radius-2xl: 14px;
+    --radius-3xl: 16px;
 
     /* 杂志衬线：中文优先宋/仿宋体系，西文回落到 Georgia/Times */
     --font-sans:
@@ -111,6 +111,16 @@ body {
         outline: none;
         border-color: var(--accent) !important;
     }
+
+    /* 漏写圆角工具类的原生控件兜底：全站按钮/输入一律小圆角 */
+    button,
+    input,
+    select,
+    optgroup,
+    textarea,
+    [role='button'] {
+        border-radius: var(--radius-sm);
+    }
 }
 
 ::selection {
@@ -129,7 +139,7 @@ body {
 }
 *::-webkit-scrollbar-thumb {
     background: var(--card-hover);
-    border-radius: 0;
+    border-radius: 999px;
 }
 *::-webkit-scrollbar-thumb:hover {
     background: var(--muted);
@@ -182,7 +192,7 @@ select {
     display: inline-flex;
     align-items: center;
     gap: 0.375rem;
-    border-radius: 0;
+    border-radius: var(--radius-sm);
     padding: 0.375rem 0.75rem;
     font-size: 0.75rem;
     line-height: 1.25rem;
@@ -254,7 +264,7 @@ html.light .theme-icon-light {
     bottom: 1px;
     left: 25%;
     height: 2px;
-    border-radius: 0;
+    border-radius: 999px;
     background: currentColor;
     opacity: 0;
     visibility: hidden;
@@ -290,7 +300,7 @@ html.light .theme-icon-light {
 .project-filter-search {
     grid-area: search;
     display: grid;
-    grid-template-columns: minmax(0, 1fr) auto;
+    grid-template-columns: auto minmax(0, 1fr) auto;
     align-items: stretch;
     gap: 0.5rem;
     min-width: 0;
@@ -313,7 +323,7 @@ html.light .theme-icon-light {
     left: 0;
     width: 32%;
     height: 2px;
-    border-radius: 0;
+    border-radius: 999px;
     background: var(--accent);
     opacity: 0;
     transform: translateX(-115%);
@@ -359,7 +369,7 @@ html.light .theme-icon-light {
     .buff-editor-modal {
         width: calc(100vw - 1rem);
         height: calc(100dvh - 1rem);
-        border-radius: 0;
+        border-radius: var(--radius-sm);
     }
     .buff-editor-layout {
         display: grid;
@@ -400,7 +410,7 @@ html.light .theme-icon-light {
     .buff-editor-modal {
         width: calc(100vw - 0.5rem);
         height: calc(100dvh - 0.5rem);
-        border-radius: 0;
+        border-radius: var(--radius-sm);
     }
     .buff-editor-layout {
         grid-template-columns: clamp(7.25rem, 34vw, 8.5rem) minmax(0, 1fr);
@@ -448,7 +458,7 @@ html.light .theme-icon-light {
 
 /* ──────────────────────────────────────────────────────────────
    杂志衬线风格助手（全站统一）：
-   标题=衬线重音（字重+收紧字距）；分区=细分割线；卡片=直角+细边框；无英文小标（一律用图标）
+   标题=衬线重音（字重+收紧字距）；分区=细分割线；卡片=小圆角+细边框；无英文小标（一律用图标）
    ────────────────────────────────────────────────────────────── */
 @layer components {
     /* 衬线重音标题：不要在标题上再用 font-semibold，统一用 font-black + 收紧字距 */
@@ -478,11 +488,14 @@ html.light .theme-icon-light {
     .mg-hairline {
         border-color: var(--card-border);
     }
-    /* 直角卡片：细边框 + 实色底，不使用阴影 */
+    /* 小圆角卡片：细边框 + 实色底，不使用阴影 */
     .mg-card {
         background: var(--card);
         border: 1px solid var(--card-border);
-        border-radius: 0;
+        border-radius: var(--radius-sm);
+        transition:
+            border-color 160ms ease-out,
+            background-color 160ms ease-out;
     }
     /* 关键数字：等宽数字 + 衬线重音 */
     .mg-num {

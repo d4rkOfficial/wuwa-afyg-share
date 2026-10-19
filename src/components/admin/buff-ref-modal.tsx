@@ -109,14 +109,14 @@ export default function BuffRefModal({ open, entityType, zoneId, initialRef, onS
                         <Icon icon="mdi:link-variant" className="size-4 shrink-0 text-(--accent-text)" />
                         引用配置
                     </span>
-                    <button onClick={onClose} className="rounded-none p-1 text-(--muted) hover:text-(--fg)">
+                    <button onClick={onClose} className="rounded-sm p-1 text-(--muted) hover:text-(--fg)">
                         <Icon icon="mdi:close" className="size-5" />
                     </button>
                 </div>
 
                 <div className="min-h-0 flex-1 space-y-4 overflow-y-auto">
                     {/* refOwner 说明（由实体类型决定） */}
-                    <div className="rounded-none border border-(--card-border) bg-(--input-bg) px-3 py-2 mg-note">
+                    <div className="rounded-sm border border-(--card-border) bg-(--input-bg) px-3 py-2 mg-note">
                         <Icon icon="mdi:information-outline" className="mr-1 inline size-3.5 text-(--muted)" />
                         {entityType === 'character'
                             ? '角色只能引用自身面板属性'
@@ -138,10 +138,10 @@ export default function BuffRefModal({ open, entityType, zoneId, initialRef, onS
                     </div>
 
                     {/* 转换规则卡 */}
-                    <div className="space-y-2.5 rounded-none border border-(--card-border) bg-(--input-bg) px-3 py-2.5">
+                    <div className="space-y-2.5 rounded-sm border border-(--card-border) bg-(--input-bg) px-3 py-2.5">
                         <div className="text-xs text-(--fg)/80">{targetDef?.label ?? draft.targetZoneId}</div>
                         {/* 超过阈值部分 */}
-                        <div className="flex items-center rounded-none border border-(--card-border) overflow-hidden">
+                        <div className="flex items-center rounded-sm border border-(--card-border) overflow-hidden">
                             <button
                                 onClick={() => setHasThreshold((v) => !v)}
                                 className={`px-2.5 py-1.5 text-[11px] font-medium transition-colors ${
@@ -163,7 +163,7 @@ export default function BuffRefModal({ open, entityType, zoneId, initialRef, onS
                             </span>
                         </div>
                         {/* 线性/离散 */}
-                        <div className="flex rounded-none border border-(--card-border) overflow-hidden">
+                        <div className="flex rounded-sm border border-(--card-border) overflow-hidden">
                             <button
                                 onClick={() => set({ discrete: false })}
                                 className={`flex-1 px-2 py-1.5 text-[11px] font-medium transition-colors ${
@@ -183,7 +183,7 @@ export default function BuffRefModal({ open, entityType, zoneId, initialRef, onS
                             </button>
                         </div>
                         {/* 每 X 转 Y */}
-                        <div className="flex items-center rounded-none border border-(--card-border) overflow-hidden">
+                        <div className="flex items-center rounded-sm border border-(--card-border) overflow-hidden">
                             <span className="px-2.5 py-1.5 text-[11px] text-(--muted)">每</span>
                             <input
                                 type="number"
@@ -210,7 +210,7 @@ export default function BuffRefModal({ open, entityType, zoneId, initialRef, onS
 
                     {/* 上下限 */}
                     <div className="flex gap-2">
-                        <div className="flex flex-1 items-center rounded-none border border-(--card-border) overflow-hidden">
+                        <div className="flex flex-1 items-center rounded-sm border border-(--card-border) overflow-hidden">
                             <button
                                 onClick={() => setHasLower((v) => !v)}
                                 className={`px-2.5 py-1.5 text-[11px] font-medium transition-colors ${
@@ -228,7 +228,7 @@ export default function BuffRefModal({ open, entityType, zoneId, initialRef, onS
                             />
                             <span className="px-2.5 py-1.5 text-[11px] text-(--muted)">{zoneUnit}</span>
                         </div>
-                        <div className="flex flex-1 items-center rounded-none border border-(--card-border) overflow-hidden">
+                        <div className="flex flex-1 items-center rounded-sm border border-(--card-border) overflow-hidden">
                             <button
                                 onClick={() => setHasUpper((v) => !v)}
                                 className={`px-2.5 py-1.5 text-[11px] font-medium transition-colors ${
@@ -252,17 +252,17 @@ export default function BuffRefModal({ open, entityType, zoneId, initialRef, onS
                 <div className="mt-3 flex items-center justify-between border-t border-(--card-border) pt-3">
                     <button
                         onClick={() => onSave(null)}
-                        className="rounded-none px-3 py-1.5 text-xs text-(--danger) transition-colors hover:bg-(--card-hover)"
+                        className="rounded-sm px-3 py-1.5 text-xs text-(--danger) transition-colors hover:bg-(--card-hover)"
                     >
                         清除引用
                     </button>
                     <div className="flex items-center gap-2">
-                        <button onClick={onClose} className="rounded-none px-3 py-1.5 text-xs text-(--muted) hover:bg-(--card-hover)">
+                        <button onClick={onClose} className="rounded-sm px-3 py-1.5 text-xs text-(--muted) hover:bg-(--card-hover)">
                             取消
                         </button>
                         <button
                             onClick={confirm}
-                            className="toolbar-btn toolbar-btn-primary rounded-none px-4 py-1.5 text-xs"
+                            className="toolbar-btn toolbar-btn-primary rounded-sm px-4 py-1.5 text-xs"
                         >
                             确认
                         </button>

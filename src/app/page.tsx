@@ -10,6 +10,7 @@ import { getProvider } from '@/lib/upstream'
 import { getLatestCharElements } from '@/lib/data/char-elements-latest'
 import { LIST_COLUMNS } from '@/lib/project/query'
 import { isExpiredProject } from '@/lib/utils/expiry'
+import { formatCount } from '@/lib/utils/format'
 import type { ProjectListItem, AnnouncementRow } from '@/lib/types/db'
 
 export const dynamic = 'force-dynamic'
@@ -90,16 +91,43 @@ export default async function HomePage({
 
     return (
         <div className="space-y-8 md:space-y-10">
-            {/* 刊头：站名衬线刊头 + 下细线 */}
-            <div className="border-b mg-hairline pb-4">
-                <h1 className="mg-title-xl text-3xl md:text-4xl">椰果工坊</h1>
+            {/* 刊头：站名衬线刊头 + 右侧启动器下载入口 + 下细线 */}
+            <div className="border-b mg-hairline pb-5">
+                <div className="flex flex-wrap items-end justify-between gap-x-6 gap-y-4">
+                    <div className="min-w-0">
+                        <h1 className="mg-title-xl text-3xl md:text-4xl">椰果工坊</h1>
+                        <p className="mt-2 flex flex-wrap items-center gap-x-2 gap-y-1.5 text-xs leading-relaxed text-(--muted) sm:text-sm">
+                            <span>分享、浏览和克隆《鸣潮》拉表排轴工程</span>
+                            <span className="inline-flex items-center gap-1 rounded-sm border border-(--card-border) bg-(--card) px-1.5 py-0.5 text-[11px] leading-none">
+                                <Icon icon="mdi:package-variant-closed" className="size-3" />
+                                <span className="mg-num">{formatCount(count ?? 0)}</span>
+                                个工程
+                            </span>
+                        </p>
+                    </div>
+                    <a
+                        href="/download"
+                        download
+                        title="下载椰果工具箱启动器：断网可用、随时拉表、白嫖免费AI模型"
+                        className="group inline-flex items-center gap-2.5 rounded-sm border border-(--card-border) bg-(--btn-bg) px-3 py-2 text-(--btn-text) transition-colors hover:bg-(--card) hover:text-(--fg)"
+                    >
+                        <Icon icon="mdi:download-box-outline" className="size-5 shrink-0" />
+                        <span className="flex min-w-0 flex-col leading-tight">
+                            <span className="text-sm font-black tracking-tight whitespace-nowrap">
+                                下载椰果工具箱启动器
+                            </span>
+                            <span className="hidden text-[11px] leading-snug font-medium opacity-70 sm:inline">
+                                断网可用 · 随时拉表 · 白嫖免费AI模型
+                            </span>
+                        </span>
+                    </a>
+                </div>
             </div>
 
             <AnnouncementBar announcements={announcements} isAdmin={isAdmin} />
 
-            {/* 分区：筛选（图标 + 筛选条 + 下细线） */}
+            {/* 分区：筛选（漏斗图标已移入筛选条内、搜索框左侧）+ 下细线 */}
             <div className="mg-section">
-                <Icon icon="mdi:filter-variant" className="size-4 shrink-0 text-(--accent-text)" />
                 <div className="min-w-0 flex-1">
                     <ProjectFilters
                         key={`${q}:${sort}:${character}`}
@@ -129,7 +157,7 @@ export default async function HomePage({
                     </p>
                     <Link
                         href="/upload"
-                        className="mt-4 inline-flex items-center gap-1.5 rounded-none border border-(--card-border) bg-(--btn-bg) px-4 py-2 text-sm font-medium text-(--btn-text) transition-colors hover:bg-(--card) hover:text-(--fg)"
+                        className="mt-4 inline-flex items-center gap-1.5 rounded-sm border border-(--card-border) bg-(--btn-bg) px-4 py-2 text-sm font-medium text-(--btn-text) transition-colors hover:bg-(--card) hover:text-(--fg)"
                     >
                         <Icon icon="mdi:plus" className="size-4" />
                         上传工程

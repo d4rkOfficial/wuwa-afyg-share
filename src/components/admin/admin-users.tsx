@@ -63,12 +63,12 @@ export default function AdminUsers({ admins }: Props) {
                         onChange={(e) => setUsername(e.target.value)}
                         onKeyDown={(e) => e.key === 'Enter' && onGrant()}
                         placeholder="输入用户名授予管理员权限"
-                        className="w-full rounded-none border border-(--card-border) bg-(--input-bg) px-3 py-2 text-sm outline-none transition-colors focus:border-(--accent)"
+                        className="w-full rounded-sm border border-(--card-border) bg-(--input-bg) px-3 py-2 text-sm outline-none transition-colors focus:border-(--accent)"
                     />
                     <button
                         onClick={onGrant}
                         disabled={pending || !username.trim()}
-                        className="inline-flex shrink-0 items-center gap-1.5 rounded-none px-4 py-2 text-sm font-medium border border-(--card-border) bg-(--btn-bg) text-(--btn-text) transition-colors hover:bg-(--card) hover:text-(--fg) transition-all  disabled:opacity-50"
+                        className="inline-flex shrink-0 items-center gap-1.5 rounded-sm px-4 py-2 text-sm font-medium border border-(--card-border) bg-(--btn-bg) text-(--btn-text) transition-colors hover:bg-(--card) hover:text-(--fg) transition-all  disabled:opacity-50"
                     >
                         <Icon icon={pending ? 'mdi:loading' : 'mdi:shield-plus-outline'} className={`size-4 ${pending ? 'animate-spin' : ''}`} />
                         授权
@@ -97,17 +97,17 @@ export default function AdminUsers({ admins }: Props) {
                             <div className="flex flex-wrap items-center gap-2">
                                 <span className="font-medium text-(--fg)">{a.username}</span>
                                 {a.grantedBy === null ? (
-                                    <span className="inline-flex items-center gap-1 rounded-none bg-(--accent) px-1.5 py-0.5 text-[10px] text-(--accent-fg)">
+                                    <span className="inline-flex items-center gap-1 rounded-sm bg-(--accent) px-1.5 py-0.5 text-[10px] text-(--accent-fg)">
                                         <Icon icon="mdi:shield-key-outline" className="size-3" />
                                         根管理员
                                     </span>
                                 ) : (
-                                    <span className="rounded-none bg-(--card-hover) px-1.5 py-0.5 text-[10px] text-(--muted)">
+                                    <span className="rounded-sm bg-(--card-hover) px-1.5 py-0.5 text-[10px] text-(--muted)">
                                         由 {a.grantedBy} 授权
                                     </span>
                                 )}
                                 {a.grantedByMe && (
-                                    <span className="rounded-none border border-(--success) px-1.5 py-0.5 text-[10px] text-(--success)">
+                                    <span className="rounded-sm border border-(--success) px-1.5 py-0.5 text-[10px] text-(--success)">
                                         我授权的
                                     </span>
                                 )}
@@ -125,7 +125,7 @@ export default function AdminUsers({ admins }: Props) {
                                 <button
                                     onClick={() => onRevoke(a.username)}
                                     disabled={pending}
-                                    className="shrink-0 rounded-none border border-(--danger) bg-(--danger) transition-colors hover:bg-(--card) hover:text-(--danger) px-3 py-1.5 text-xs text-(--danger-fg)  disabled:opacity-50"
+                                    className="shrink-0 rounded-sm border border-(--danger) bg-(--danger) transition-colors hover:bg-(--card) hover:text-(--danger) px-3 py-1.5 text-xs text-(--danger-fg)  disabled:opacity-50"
                                 >
                                     确认撤销（连坐收回）
                                 </button>
@@ -134,7 +134,7 @@ export default function AdminUsers({ admins }: Props) {
                                     onClick={() => setConfirmRevoke(a.id)}
                                     onBlur={() => setTimeout(() => setConfirmRevoke(null), 2500)}
                                     disabled={pending}
-                                    className="shrink-0 rounded-none border border-(--danger) bg-(--card) px-3 py-1.5 text-xs text-(--danger) transition-colors hover:bg-(--danger) hover:text-(--danger-fg) disabled:opacity-50"
+                                    className="shrink-0 rounded-sm border border-(--danger) bg-(--card) px-3 py-1.5 text-xs text-(--danger) transition-colors hover:bg-(--danger) hover:text-(--danger-fg) disabled:opacity-50"
                                 >
                                     撤销
                                 </button>

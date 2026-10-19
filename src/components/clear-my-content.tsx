@@ -35,7 +35,7 @@ export default function ClearMyContent() {
         <>
             <button
                 onClick={() => setOpen(true)}
-                className="inline-flex items-center gap-1.5 rounded-none border border-(--danger) bg-(--danger) px-3 py-2 text-sm text-(--danger-fg) transition-colors hover:bg-(--card) hover:text-(--danger)"
+                className="inline-flex items-center gap-1.5 rounded-sm border border-(--danger) bg-(--danger) px-3 py-2 text-sm text-(--danger-fg) transition-colors hover:bg-(--card) hover:text-(--danger)"
             >
                 <Icon icon="mdi:delete-sweep-outline" className="size-4" />
                 清空我的全部内容
@@ -60,7 +60,7 @@ export default function ClearMyContent() {
                             value={input}
                             onChange={(e) => setInput(e.target.value)}
                             placeholder={CONFIRM_TEXT}
-                            className="mt-2 w-full rounded-none border border-(--card-border) bg-(--input-bg) px-3 py-2 text-sm outline-none transition-colors focus:border-(--danger)"
+                            className="mt-2 w-full rounded-sm border border-(--card-border) bg-(--input-bg) px-3 py-2 text-sm outline-none transition-colors focus:border-(--danger)"
                         />
                         <div className="mt-4 flex justify-end gap-2">
                             <button
@@ -68,14 +68,14 @@ export default function ClearMyContent() {
                                     setOpen(false)
                                     setInput('')
                                 }}
-                                className="rounded-none border border-(--card-border) bg-(--card) px-3 py-1.5 text-sm text-(--muted) transition-colors hover:text-(--fg)"
+                                className="rounded-sm border border-(--card-border) bg-(--card) px-3 py-1.5 text-sm text-(--muted) transition-colors hover:text-(--fg)"
                             >
                                 取消
                             </button>
                             <button
                                 onClick={onConfirm}
                                 disabled={pending || input !== CONFIRM_TEXT}
-                                className="inline-flex items-center gap-1 rounded-none border border-(--danger) bg-(--danger) px-3 py-1.5 text-sm text-(--danger-fg) transition-colors hover:bg-(--card) hover:text-(--danger) disabled:opacity-50"
+                                className="inline-flex items-center gap-1 rounded-sm border border-(--danger) bg-(--danger) px-3 py-1.5 text-sm text-(--danger-fg) transition-colors hover:bg-(--card) hover:text-(--danger) disabled:opacity-50"
                             >
                                 <Icon
                                     icon={pending ? 'mdi:loading' : 'mdi:delete-sweep-outline'}

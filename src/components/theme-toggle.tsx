@@ -58,7 +58,7 @@ export default function ThemeToggle() {
         <button
             onClick={toggle}
             aria-label="切换主题"
-            className="theme-toggle inline-flex size-9 shrink-0 items-center justify-center text-(--muted) transition-colors hover:bg-(--card-hover) hover:text-(--fg)"
+            className="theme-toggle inline-flex size-9 shrink-0 items-center justify-center rounded-sm text-(--muted) transition-colors hover:bg-(--card-hover) hover:text-(--fg)"
         >
             <Icon icon="mdi:weather-sunny" className="theme-icon-dark size-5" />
             <Icon icon="mdi:weather-night" className="theme-icon-light size-5" />

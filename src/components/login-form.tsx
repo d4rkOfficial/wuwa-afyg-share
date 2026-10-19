@@ -56,7 +56,7 @@ export default function LoginForm({ redirect, error }: Props) {
                 </p>
                 <form onSubmit={onVerifyCode} className="mt-4 flex flex-col gap-2">
                     {codeErr && (
-                        <div className="rounded-none border border-(--danger) bg-(--danger) px-3 py-2 text-sm text-(--danger-fg)">
+                        <div className="rounded-sm border border-(--danger) bg-(--danger) px-3 py-2 text-sm text-(--danger-fg)">
                             {codeErr}
                         </div>
                     )}
@@ -68,12 +68,12 @@ export default function LoginForm({ redirect, error }: Props) {
                             autoComplete="one-time-code"
                             autoFocus
                             required
-                            className="mg-num flex-1 rounded-none border border-(--card-border) bg-(--input-bg) px-3 py-2.5 text-center text-lg tracking-widest outline-none transition-colors placeholder:text-sm placeholder:tracking-normal focus:border-(--accent)"
+                            className="mg-num flex-1 rounded-sm border border-(--card-border) bg-(--input-bg) px-3 py-2.5 text-center text-lg tracking-widest outline-none transition-colors placeholder:text-sm placeholder:tracking-normal focus:border-(--accent)"
                         />
                         <button
                             type="submit"
                             disabled={pending || !code.trim()}
-                            className="inline-flex items-center gap-1.5 rounded-none border border-(--card-border) bg-(--btn-bg) px-4 py-2.5 text-sm font-medium text-(--btn-text) transition-colors hover:bg-(--card) hover:text-(--fg) disabled:opacity-50"
+                            className="inline-flex items-center gap-1.5 rounded-sm border border-(--card-border) bg-(--btn-bg) px-4 py-2.5 text-sm font-medium text-(--btn-text) transition-colors hover:bg-(--card) hover:text-(--fg) disabled:opacity-50"
                         >
                             <Icon icon="mdi:login" className="size-4" />
                             登录
@@ -87,7 +87,7 @@ export default function LoginForm({ redirect, error }: Props) {
     return (
         <div className="space-y-4">
             {err && (
-                <div className="rounded-none border border-(--danger) bg-(--danger) px-3 py-2 text-sm text-(--danger-fg)">
+                <div className="rounded-sm border border-(--danger) bg-(--danger) px-3 py-2 text-sm text-(--danger-fg)">
                     {err}
                 </div>
             )}
@@ -95,7 +95,7 @@ export default function LoginForm({ redirect, error }: Props) {
             <button
                 onClick={onGithub}
                 disabled={pending}
-                className="flex w-full items-center justify-center gap-2 rounded-none border border-(--card-border) bg-(--card) px-4 py-2.5 text-sm font-medium transition-colors hover:bg-(--card-hover) disabled:opacity-50"
+                className="flex w-full items-center justify-center gap-2 rounded-sm border border-(--card-border) bg-(--card) px-4 py-2.5 text-sm font-medium transition-colors hover:bg-(--card-hover) disabled:opacity-50"
             >
                 <Icon icon="mdi:github" className="size-5" />
                 使用 GitHub 登录
@@ -114,12 +114,12 @@ export default function LoginForm({ redirect, error }: Props) {
                     onChange={(e) => setEmail(e.target.value)}
                     placeholder="name@example.com"
                     required
-                    className="flex-1 rounded-none border border-(--card-border) bg-(--input-bg) px-3 py-2.5 text-sm outline-none transition-colors placeholder:text-(--muted) focus:border-(--accent)"
+                    className="flex-1 rounded-sm border border-(--card-border) bg-(--input-bg) px-3 py-2.5 text-sm outline-none transition-colors placeholder:text-(--muted) focus:border-(--accent)"
                 />
                 <button
                     type="submit"
                     disabled={pending || !email}
-                    className="inline-flex items-center gap-1.5 rounded-none border border-(--card-border) bg-(--btn-bg) px-4 py-2.5 text-sm font-medium text-(--btn-text) transition-colors hover:bg-(--card) hover:text-(--fg) disabled:opacity-50"
+                    className="inline-flex items-center gap-1.5 rounded-sm border border-(--card-border) bg-(--btn-bg) px-4 py-2.5 text-sm font-medium text-(--btn-text) transition-colors hover:bg-(--card) hover:text-(--fg) disabled:opacity-50"
                 >
                     <Icon icon="mdi:send-outline" className="size-4" />
                     发送

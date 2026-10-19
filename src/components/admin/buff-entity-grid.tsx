@@ -132,12 +132,12 @@ export default function BuffEntityGrid({ existingCountMap, onSelect }: Props) {
         <div className="flex h-full flex-col mg-card p-4">
             {/* 顶部：主类型 tab + 过滤 */}
             <div className="mb-3 flex shrink-0 flex-wrap items-center justify-between gap-2">
-                <div className="flex rounded-none border border-(--card-border) bg-(--card-hover) p-0.5">
+                <div className="flex rounded-sm border border-(--card-border) bg-(--card-hover) p-0.5">
                     {MAIN_TABS.map((t) => (
                         <button
                             key={t.type}
                             onClick={() => switchMainTab(t.type)}
-                            className={`rounded-none px-3 py-1.5 text-xs font-medium transition-colors ${
+                            className={`rounded-sm px-3 py-1.5 text-xs font-medium transition-colors ${
                                 mainTab === t.type ? 'bg-(--accent) text-(--accent-fg)' : 'text-(--muted) hover:text-(--fg)'
                             }`}
                         >
@@ -149,18 +149,18 @@ export default function BuffEntityGrid({ existingCountMap, onSelect }: Props) {
                     <button
                         onClick={handleRefresh}
                         disabled={refreshing}
-                        className="inline-flex items-center gap-1 rounded-none border border-(--card-border) bg-(--card-hover) px-2.5 py-1.5 text-[11px] text-(--muted) transition-colors hover:text-(--fg) disabled:opacity-50"
+                        className="inline-flex items-center gap-1 rounded-sm border border-(--card-border) bg-(--card-hover) px-2.5 py-1.5 text-[11px] text-(--muted) transition-colors hover:text-(--fg) disabled:opacity-50"
                         title="刷新目录与条目数"
                     >
                         <Icon icon={refreshing ? 'mdi:loading' : 'mdi:refresh'} className="size-3.5" />
                         刷新
                     </button>
-                    <div className="flex items-center gap-1 rounded-none border border-(--card-border) bg-(--card-hover) p-0.5">
+                    <div className="flex items-center gap-1 rounded-sm border border-(--card-border) bg-(--card-hover) p-0.5">
                         {FILTERS.map((f) => (
                             <button
                                 key={f.key}
                                 onClick={() => setFilter(f.key)}
-                                className={`rounded-none px-2.5 py-1 text-[11px] font-medium transition-colors ${
+                                className={`rounded-sm px-2.5 py-1 text-[11px] font-medium transition-colors ${
                                     filter === f.key ? 'bg-(--accent) text-(--accent-fg)' : 'text-(--muted) hover:text-(--fg)'
                                 }`}
                             >
@@ -178,7 +178,7 @@ export default function BuffEntityGrid({ existingCountMap, onSelect }: Props) {
                         <button
                             key={p}
                             onClick={() => switchSetPiece(p)}
-                            className={`rounded-none px-2 py-1 text-[11px] transition-colors ${
+                            className={`rounded-sm px-2 py-1 text-[11px] transition-colors ${
                                 setPiece === p ? 'bg-(--accent) text-(--accent-fg)' : 'text-(--muted) hover:bg-(--card-hover)'
                             }`}
                         >
@@ -194,10 +194,10 @@ export default function BuffEntityGrid({ existingCountMap, onSelect }: Props) {
                     <span className="text-[11px] text-(--muted)">
                         {mainTab === 'echo' ? 'Cost' : '星级'}
                     </span>
-                    <div className="flex items-center gap-1 rounded-none border border-(--card-border) bg-(--card-hover) p-0.5">
+                    <div className="flex items-center gap-1 rounded-sm border border-(--card-border) bg-(--card-hover) p-0.5">
                         <button
                             onClick={() => (mainTab === 'echo' ? setCostFilter(null) : setStarFilter(null))}
-                            className={`rounded-none px-2 py-1 text-[11px] transition-colors ${
+                            className={`rounded-sm px-2 py-1 text-[11px] transition-colors ${
                                 (mainTab === 'echo' ? costFilter === null : starFilter === null)
                                     ? 'bg-(--accent) text-(--accent-fg)'
                                     : 'text-(--muted) hover:text-(--fg)'
@@ -209,7 +209,7 @@ export default function BuffEntityGrid({ existingCountMap, onSelect }: Props) {
                             <button
                                 key={v}
                                 onClick={() => (mainTab === 'echo' ? setCostFilter(v) : setStarFilter(v))}
-                                className={`rounded-none px-2 py-1 text-[11px] transition-colors ${
+                                className={`rounded-sm px-2 py-1 text-[11px] transition-colors ${
                                     (mainTab === 'echo' ? costFilter === v : starFilter === v)
                                         ? 'bg-(--accent) text-(--accent-fg)'
                                         : 'text-(--muted) hover:text-(--fg)'
@@ -223,7 +223,7 @@ export default function BuffEntityGrid({ existingCountMap, onSelect }: Props) {
             )}
 
             {/* 搜索 */}
-            <div className="mb-3 flex shrink-0 items-center gap-2 rounded-none border border-(--card-border) bg-(--input-bg) px-3 py-1.5">
+            <div className="mb-3 flex shrink-0 items-center gap-2 rounded-sm border border-(--card-border) bg-(--input-bg) px-3 py-1.5">
                 <Icon icon="mdi:magnify" className="size-4 shrink-0 text-(--muted)" />
                 <input
                     value={search}
@@ -232,7 +232,7 @@ export default function BuffEntityGrid({ existingCountMap, onSelect }: Props) {
                     className="min-w-0 flex-1 bg-transparent text-sm outline-none placeholder:text-(--muted)"
                 />
                 {search && (
-                    <button onClick={() => setSearch('')} className="rounded-none p-0.5 text-(--muted) hover:text-(--fg)">
+                    <button onClick={() => setSearch('')} className="rounded-sm p-0.5 text-(--muted) hover:text-(--fg)">
                         <Icon icon="mdi:close" className="size-4" />
                     </button>
                 )}
@@ -240,11 +240,11 @@ export default function BuffEntityGrid({ existingCountMap, onSelect }: Props) {
 
             {/* 网格列表 / 骨架屏 */}
             <div className="min-h-0 flex-1 overflow-y-auto">
-                {error && <div className="rounded-none border border-(--danger) bg-(--danger) px-3 py-2 text-xs text-(--danger-fg)">{error}</div>}
+                {error && <div className="rounded-sm border border-(--danger) bg-(--danger) px-3 py-2 text-xs text-(--danger-fg)">{error}</div>}
                 {!error && catalog === null && (
                     <div className="grid grid-cols-2 gap-2 md:grid-cols-3 xl:grid-cols-4">
                         {Array.from({ length: SKELETON_COUNT }).map((_, i) => (
-                            <div key={i} className="h-16 animate-pulse rounded-none bg-(--card-hover)" />
+                            <div key={i} className="h-16 animate-pulse rounded-sm bg-(--card-hover)" />
                         ))}
                     </div>
                 )}
@@ -259,13 +259,13 @@ export default function BuffEntityGrid({ existingCountMap, onSelect }: Props) {
                             <button
                                 key={e.name}
                                 onClick={() => onSelect({ entityType: activeType, entityName: e.name })}
-                                className="group flex flex-col gap-1 rounded-none border border-(--card-border) bg-(--card-hover) px-3 py-2.5 text-left transition-colors hover:border-(--accent)"
+                                className="group flex flex-col gap-1 rounded-sm border border-(--card-border) bg-(--card-hover) px-3 py-2.5 text-left transition-colors hover:border-(--accent)"
                             >
                                 <span className="truncate text-sm font-medium text-(--fg) group-hover:text-(--accent-text)">
                                     {e.name}
                                 </span>
                                 <span
-                                    className={`w-fit rounded-none px-2 py-0.5 text-[10px] ${
+                                    className={`w-fit rounded-sm px-2 py-0.5 text-[10px] ${
                                         e.count > 0
                                             ? 'bg-(--accent) text-(--accent-fg)'
                                             : 'bg-(--card) text-(--muted)'

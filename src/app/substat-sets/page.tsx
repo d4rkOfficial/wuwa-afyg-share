@@ -138,7 +138,7 @@ export default async function SubstatSetsPage() {
                 {isAdmin && (
                     <Link
                         href="/admin/substat-sets"
-                        className="inline-flex items-center gap-1.5 border px-4 py-2 text-sm font-black tracking-tight transition-colors hover:border-(--accent) mg-hairline"
+                        className="inline-flex items-center gap-1.5 rounded-sm border px-4 py-2 text-sm font-black tracking-tight transition-colors hover:border-(--accent) mg-hairline"
                         style={{ background: 'var(--btn-bg)', color: 'var(--btn-text)' }}
                     >
                         <Icon icon="mdi:shield-edit-outline" className="size-4" />

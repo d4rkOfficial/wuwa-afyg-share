@@ -18,18 +18,20 @@ function pageHref(page: number, q: string, sort: string, character: string): str
     return `/?${params.toString()}`
 }
 
+// 页码折叠：首页与尾页常驻（任何位置都能一键跳到第一页 / 最后一页），
+// 省略号只出现在真正被折叠的那一侧，不再固定塞在中间。
+//   开头附近：1 2 3 4 … N
+//   中间位置：1 … p-1 p p+1 … N
+//   结尾附近：1 … N-3 N-2 N-1 N
 function pageItems(page: number, totalPages: number): (number | '…')[] {
+    // 页数够少时全部平铺，不出现省略号
     if (totalPages <= 7) return Array.from({ length: totalPages }, (_, i) => i + 1)
-    const set = new Set<number>([1, 2, totalPages - 1, totalPages, page - 1, page, page + 1])
-    const sorted = [...set].filter((n) => n >= 1 && n <= totalPages).sort((a, b) => a - b)
-    const out: (number | '…')[] = []
-    let prev = 0
-    for (const n of sorted) {
-        if (n - prev > 1) out.push('…')
-        out.push(n)
-        prev = n
+
+    if (page <= 3) return [1, 2, 3, 4, '…', totalPages]
+    if (page >= totalPages - 2) {
+        return [1, '…', totalPages - 3, totalPages - 2, totalPages - 1, totalPages]
     }
-    return out
+    return [1, '…', page - 1, page, page + 1, '…', totalPages]
 }
 
 export default function Pagination({ page, totalPages, q, sort, character }: Props) {
@@ -41,7 +43,7 @@ export default function Pagination({ page, totalPages, q, sort, character }: Pro
             <Link
                 href={link(Math.max(1, page - 1))}
                 aria-disabled={page <= 1}
-                className="inline-flex items-center gap-1 rounded-none border border-(--card-border) bg-(--card) px-3 py-1.5 text-sm text-(--muted) transition-colors hover:border-(--accent) hover:text-(--fg) aria-disabled:pointer-events-none aria-disabled:opacity-50"
+                className="inline-flex items-center gap-1 rounded-sm border border-(--card-border) bg-(--card) px-3 py-1.5 text-sm text-(--muted) transition-colors hover:border-(--accent) hover:text-(--fg) aria-disabled:pointer-events-none aria-disabled:opacity-50"
             >
                 <Icon icon="mdi:chevron-left" className="size-4" />
                 上一页
@@ -49,15 +51,21 @@ export default function Pagination({ page, totalPages, q, sort, character }: Pro
 
             {pageItems(page, totalPages).map((item, i) =>
                 item === '…' ? (
-                    <span key={`e${i}`} className="mg-num px-1 text-sm text-(--muted)">
+                    // 折叠占位：按下有反馈，但点击不改变页码
+                    <button
+                        key={`e${i}`}
+                        type="button"
+                        aria-label="更多页码"
+                        className="mg-num inline-flex size-8 items-center justify-center rounded-sm border border-(--card-border) bg-(--card) text-sm text-(--muted) transition-[background-color,color,transform] duration-150 ease-out hover:border-(--accent) hover:text-(--fg) active:scale-95 active:bg-(--card-hover)"
+                    >
                         …
-                    </span>
+                    </button>
                 ) : (
                     <Link
                         key={item}
                         href={link(item)}
                         aria-current={item === page ? 'page' : undefined}
-                        className={`mg-num inline-flex size-8 items-center justify-center rounded-none text-sm transition-colors ${
+                        className={`mg-num inline-flex size-8 items-center justify-center rounded-sm text-sm transition-colors ${
                             item === page
                                 ? 'border border-(--accent) bg-(--accent) text-(--accent-fg)'
                                 : 'border border-(--card-border) bg-(--card) text-(--muted) hover:border-(--accent) hover:text-(--fg)'
@@ -71,7 +79,7 @@ export default function Pagination({ page, totalPages, q, sort, character }: Pro
             <Link
                 href={link(Math.min(totalPages, page + 1))}
                 aria-disabled={page >= totalPages}
-                className="inline-flex items-center gap-1 rounded-none border border-(--card-border) bg-(--card) px-3 py-1.5 text-sm text-(--muted) transition-colors hover:border-(--accent) hover:text-(--fg) aria-disabled:pointer-events-none aria-disabled:opacity-50"
+                className="inline-flex items-center gap-1 rounded-sm border border-(--card-border) bg-(--card) px-3 py-1.5 text-sm text-(--muted) transition-colors hover:border-(--accent) hover:text-(--fg) aria-disabled:pointer-events-none aria-disabled:opacity-50"
             >
                 下一页
                 <Icon icon="mdi:chevron-right" className="size-4" />

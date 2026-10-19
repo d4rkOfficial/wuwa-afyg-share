@@ -27,9 +27,9 @@ interface Props {
 }
 
 const SELECT_CLASS =
-    'min-w-0 flex-1 rounded-none border border-(--card-border) bg-(--input-bg) px-2 py-1 text-xs outline-none transition-colors focus:border-(--accent)'
+    'min-w-0 flex-1 rounded-sm border border-(--card-border) bg-(--input-bg) px-2 py-1 text-xs outline-none transition-colors focus:border-(--accent)'
 const READONLY_CLASS =
-    'w-24 shrink-0 rounded-none border border-(--card-border) bg-(--card-hover) px-2 py-1 text-right text-xs mg-num text-(--muted)'
+    'w-24 shrink-0 rounded-sm border border-(--card-border) bg-(--card-hover) px-2 py-1 text-right text-xs mg-num text-(--muted)'
 
 export default function SubstatSlotEditor({ index, slot, onChange }: Props) {
     const pool = MAIN_STAT_POOL[slot.cost] ?? []
@@ -65,7 +65,7 @@ export default function SubstatSlotEditor({ index, slot, onChange }: Props) {
                         cost <span className="mg-num">{slot.cost}</span>
                     </span>
                 </span>
-                <div className="flex items-center gap-1 rounded-none border border-(--card-border) bg-(--card-hover) p-0.5">
+                <div className="flex items-center gap-1 rounded-sm border border-(--card-border) bg-(--card-hover) p-0.5">
                     {ECHO_COSTS.map((c) => (
                         <button
                             key={c}
@@ -78,7 +78,7 @@ export default function SubstatSlotEditor({ index, slot, onChange }: Props) {
                                     secondMainStat: secondMainStatFor(c)
                                 })
                             }
-                            className={`rounded-none px-2 py-0.5 text-[11px] font-medium transition-colors ${
+                            className={`rounded-sm px-2 py-0.5 text-[11px] font-medium transition-colors ${
                                 slot.cost === c
                                     ? 'bg-(--accent) text-(--accent-fg)'
                                     : 'text-(--muted) hover:text-(--fg)'
@@ -131,7 +131,7 @@ export default function SubstatSlotEditor({ index, slot, onChange }: Props) {
                     <span className="text-[10px] text-(--muted)">按 cost 自动推导，无需填写</span>
                 </div>
                 <div className="flex items-center gap-1.5">
-                    <span className="min-w-0 flex-1 truncate rounded-none border border-(--card-border) bg-(--card-hover) px-2 py-1 text-xs text-(--muted)">
+                    <span className="min-w-0 flex-1 truncate rounded-sm border border-(--card-border) bg-(--card-hover) px-2 py-1 text-xs text-(--muted)">
                         {autoSecond ? autoSecond.type : '—'}
                     </span>
                     <span className={READONLY_CLASS}>{autoSecond ? `+${autoSecond.value}` : '—'}</span>
@@ -148,7 +148,7 @@ export default function SubstatSlotEditor({ index, slot, onChange }: Props) {
                     <button
                         onClick={addSubstat}
                         disabled={slot.substats.length >= SUBSTAT_MAX_PER_SLOT}
-                        className="inline-flex items-center gap-1 rounded-none border border-(--card-border) bg-(--card-hover) px-2 py-0.5 text-[11px] text-(--muted) transition-colors hover:text-(--fg) disabled:opacity-40"
+                        className="inline-flex items-center gap-1 rounded-sm border border-(--card-border) bg-(--card-hover) px-2 py-0.5 text-[11px] text-(--muted) transition-colors hover:text-(--fg) disabled:opacity-40"
                     >
                         <Icon icon="mdi:plus" className="size-3" />
                         添加
@@ -187,7 +187,7 @@ export default function SubstatSlotEditor({ index, slot, onChange }: Props) {
                                 onChange={(e) =>
                                     updateSubstat(i, { ...stat, value: Number(e.target.value) })
                                 }
-                                className="w-24 shrink-0 rounded-none border border-(--card-border) bg-(--input-bg) px-2 py-1 text-right text-xs mg-num outline-none transition-colors focus:border-(--accent)"
+                                className="w-24 shrink-0 rounded-sm border border-(--card-border) bg-(--input-bg) px-2 py-1 text-right text-xs mg-num outline-none transition-colors focus:border-(--accent)"
                                 aria-label={`副词条 ${i + 1} 档位`}
                             >
                                 {tiers.map((t) => (

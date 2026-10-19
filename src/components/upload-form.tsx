@@ -97,7 +97,7 @@ export default function UploadForm() {
                 <div className="flex flex-col gap-3">
                     <button
                         onClick={() => fileRef.current?.click()}
-                        className="flex items-center justify-center gap-2 rounded-none border border-dashed border-(--card-border) bg-(--card-hover) px-4 py-8 text-sm text-(--muted) transition-colors hover:border-(--accent) hover:text-(--fg)"
+                        className="flex items-center justify-center gap-2 rounded-sm border border-dashed border-(--card-border) bg-(--card-hover) px-4 py-8 text-sm text-(--muted) transition-colors hover:border-(--accent) hover:text-(--fg)"
                     >
                         <Icon icon="mdi:file-upload-outline" className="size-6" />
                         点击选择导出的 .json 文件
@@ -109,18 +109,18 @@ export default function UploadForm() {
                         onChange={(e) => onTextChange(e.target.value)}
                         placeholder="……或直接粘贴工程 JSON 内容"
                         rows={5}
-                        className="w-full rounded-none border border-(--card-border) bg-(--input-bg) px-3 py-2.5 font-mono text-xs outline-none transition-colors placeholder:text-(--muted) focus:border-(--accent)"
+                        className="w-full rounded-sm border border-(--card-border) bg-(--input-bg) px-3 py-2.5 font-mono text-xs outline-none transition-colors placeholder:text-(--muted) focus:border-(--accent)"
                     />
                 </div>
 
                 {parseError && (
-                    <div className="mt-3 rounded-none border border-(--danger) bg-(--danger) px-3 py-2 text-sm text-(--danger-fg)">
+                    <div className="mt-3 rounded-sm border border-(--danger) bg-(--danger) px-3 py-2 text-sm text-(--danger-fg)">
                         {parseError}
                     </div>
                 )}
 
                 {preview && (
-                    <div className="mt-4 space-y-3 rounded-none border border-(--card-border) bg-(--card-hover) p-4">
+                    <div className="mt-4 space-y-3 rounded-sm border border-(--card-border) bg-(--card-hover) p-4">
                         <div className="flex items-center justify-between">
                             <span className="mg-title text-sm">{preview.name}</span>
                             <span className="mg-num text-xs text-(--muted)">
@@ -153,7 +153,7 @@ export default function UploadForm() {
                             placeholder="简单介绍这个工程，比如说有无参考轴视频？"
                             rows={3}
                             maxLength={500}
-                            className="w-full rounded-none border border-(--card-border) bg-(--input-bg) px-3 py-2.5 text-sm outline-none transition-colors placeholder:text-(--muted) focus:border-(--accent)"
+                            className="w-full rounded-sm border border-(--card-border) bg-(--input-bg) px-3 py-2.5 text-sm outline-none transition-colors placeholder:text-(--muted) focus:border-(--accent)"
                         />
                     </div>
 
@@ -163,7 +163,7 @@ export default function UploadForm() {
                             value={tagsText}
                             onChange={(e) => setTagsText(e.target.value)}
                             placeholder="轮切轴,轮椅轴,标准轴,进阶轴,冒烟轴,..."
-                            className="w-full rounded-none border border-(--card-border) bg-(--input-bg) px-3 py-2.5 text-sm outline-none transition-colors placeholder:text-(--muted) focus:border-(--accent)"
+                            className="w-full rounded-sm border border-(--card-border) bg-(--input-bg) px-3 py-2.5 text-sm outline-none transition-colors placeholder:text-(--muted) focus:border-(--accent)"
                         />
                     </div>
 
@@ -174,7 +174,7 @@ export default function UploadForm() {
                                 <button
                                     key={opt.label}
                                     onClick={() => setExpireDate(toDateInput(new Date(Date.now() + opt.days * 86400000)))}
-                                    className="rounded-none border border-(--card-border) bg-(--card) px-3 py-1.5 text-sm text-(--muted) transition-colors hover:text-(--fg)"
+                                    className="rounded-sm border border-(--card-border) bg-(--card) px-3 py-1.5 text-sm text-(--muted) transition-colors hover:text-(--fg)"
                                 >
                                     {opt.label}
                                 </button>
@@ -183,11 +183,11 @@ export default function UploadForm() {
                                 type="date"
                                 value={expireDate}
                                 onChange={(e) => setExpireDate(e.target.value)}
-                                className="rounded-none border border-(--card-border) bg-(--input-bg) px-3 py-1.5 text-sm outline-none transition-colors focus:border-(--accent)"
+                                className="rounded-sm border border-(--card-border) bg-(--input-bg) px-3 py-1.5 text-sm outline-none transition-colors focus:border-(--accent)"
                             />
                             <button
                                 onClick={() => setExpireDate('')}
-                                className={`rounded-none px-3 py-1.5 text-sm transition-colors ${
+                                className={`rounded-sm px-3 py-1.5 text-sm transition-colors ${
                                     !expireDate
                                         ? 'bg-(--accent) text-(--accent-fg)'
                                         : 'border border-(--card-border) bg-(--card) text-(--muted) hover:text-(--fg)'
@@ -202,7 +202,7 @@ export default function UploadForm() {
             </div>
 
             {submitError && (
-                <div className="rounded-none border border-(--danger) bg-(--danger) px-3 py-2 text-sm text-(--danger-fg)">
+                <div className="rounded-sm border border-(--danger) bg-(--danger) px-3 py-2 text-sm text-(--danger-fg)">
                     {submitError}
                 </div>
             )}
@@ -210,14 +210,14 @@ export default function UploadForm() {
             <div className="flex justify-end gap-2">
                 <button
                     onClick={() => router.back()}
-                    className="rounded-none border border-(--card-border) bg-(--card) px-4 py-2 text-sm text-(--muted) transition-colors hover:text-(--fg)"
+                    className="rounded-sm border border-(--card-border) bg-(--card) px-4 py-2 text-sm text-(--muted) transition-colors hover:text-(--fg)"
                 >
                     取消
                 </button>
                 <button
                     onClick={onSubmit}
                     disabled={!preview || pending}
-                    className="inline-flex items-center gap-1.5 rounded-none px-5 py-2 text-sm font-medium border border-(--card-border) bg-(--btn-bg) text-(--btn-text) transition-colors hover:bg-(--card) hover:text-(--fg) disabled:opacity-50"
+                    className="inline-flex items-center gap-1.5 rounded-sm px-5 py-2 text-sm font-medium border border-(--card-border) bg-(--btn-bg) text-(--btn-text) transition-colors hover:bg-(--card) hover:text-(--fg) disabled:opacity-50"
                 >
                     <Icon icon={pending ? 'mdi:loading' : 'mdi:publish'} className={`size-4 ${pending ? 'animate-spin' : ''}`} />
                     发布分享

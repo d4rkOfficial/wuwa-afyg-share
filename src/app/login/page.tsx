@@ -15,7 +15,9 @@ export default async function LoginPage({
                 <h1 className="mg-title-xl text-3xl md:text-4xl">登录</h1>
                 <p className="mt-1 text-sm leading-relaxed text-(--muted)">登录后即可上传和分享你的拉表排轴工程</p>
             </div>
-            <LoginForm redirect={redirect} error={error} />
+            <div className="mg-card p-5 sm:p-6">
+                <LoginForm redirect={redirect} error={error} />
+            </div>
         </div>
     )
 }

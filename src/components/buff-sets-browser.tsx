@@ -81,7 +81,7 @@ export default function BuffSetsBrowser({ rows }: Props) {
                                 setTab(t.type)
                                 setSelected(null)
                             }}
-                            className={`rounded-none px-2 py-1 text-[11px] transition-colors ${
+                            className={`rounded-sm px-2 py-1 text-[11px] transition-colors ${
                                 tab === t.type
                                     ? 'bg-(--accent) text-(--accent-fg)'
                                     : 'text-(--muted) hover:bg-(--card-hover)'
@@ -99,7 +99,7 @@ export default function BuffSetsBrowser({ rows }: Props) {
                         setSelected(null)
                     }}
                     placeholder="搜索实体名"
-                    className="mb-2 w-full rounded-none border border-(--card-border) bg-(--input-bg) px-2 py-1.5 text-sm outline-none focus:border-(--accent)"
+                    className="mb-2 w-full rounded-sm border border-(--card-border) bg-(--input-bg) px-2 py-1.5 text-sm outline-none focus:border-(--accent)"
                 />
 
                 <div className="max-h-[60vh] space-y-0.5 overflow-y-auto pr-0.5 md:max-h-[70vh]">
@@ -113,7 +113,7 @@ export default function BuffSetsBrowser({ rows }: Props) {
                             <button
                                 key={`${e.entityType}/${e.entityName}`}
                                 onClick={() => setSelected({ entityType: e.entityType, entityName: e.entityName })}
-                                className={`flex w-full items-center gap-2 rounded-none px-2 py-1.5 text-left text-sm transition-colors ${
+                                className={`flex w-full items-center gap-2 rounded-sm px-2 py-1.5 text-left text-sm transition-colors ${
                                     active ? 'bg-(--accent) text-(--accent-fg)' : 'text-(--fg) hover:bg-(--card-hover)'
                                 }`}
                             >
@@ -123,7 +123,7 @@ export default function BuffSetsBrowser({ rows }: Props) {
                                         {e.pieces.join('/')}件
                                     </span>
                                 )}
-                                <span className="mg-num shrink-0 rounded-none bg-(--accent) px-1.5 py-0.5 text-[10px] text-(--accent-fg)">
+                                <span className="mg-num shrink-0 rounded-sm bg-(--accent) px-1.5 py-0.5 text-[10px] text-(--accent-fg)">
                                     {e.buffs.length}
                                 </span>
                             </button>
@@ -145,7 +145,7 @@ export default function BuffSetsBrowser({ rows }: Props) {
                             <Icon icon="mdi:view-dashboard-outline" className="size-4 shrink-0 text-(--accent-text)" />
                             <h2 className="mg-title text-lg">{selected!.entityName}</h2>
                             {selectedBuffs[0].exclusive && (
-                                <span className="rounded-none border border-(--warning) px-1.5 py-0.5 text-[10px] text-(--warning)">
+                                <span className="rounded-sm border border-(--warning) px-1.5 py-0.5 text-[10px] text-(--warning)">
                                     效应专属
                                 </span>
                             )}
@@ -159,7 +159,7 @@ export default function BuffSetsBrowser({ rows }: Props) {
                                 >
                                     <div className="mb-2 flex flex-wrap items-center gap-2">
                                         <span className="mg-title truncate text-sm">{item.buff_name}</span>
-                                        <span className="mg-num shrink-0 rounded-none bg-(--accent) px-1.5 py-0.5 text-[10px] text-(--accent-fg)">
+                                        <span className="mg-num shrink-0 rounded-sm bg-(--accent) px-1.5 py-0.5 text-[10px] text-(--accent-fg)">
                                             {BUFF_SCOPE_LABELS[item.scope] ?? item.scope}
                                         </span>
                                         {isSet(item.entity_type) && (
@@ -169,7 +169,7 @@ export default function BuffSetsBrowser({ rows }: Props) {
                                         )}
                                         {item.condition && (
                                             <span
-                                                className="min-w-0 shrink-0 truncate rounded-none border border-(--card-border) px-1.5 py-0.5 text-[10px] text-(--accent-text)"
+                                                className="min-w-0 shrink-0 truncate rounded-sm border border-(--card-border) px-1.5 py-0.5 text-[10px] text-(--accent-text)"
                                                 title={`链/阶条件：${describeCondition(item.condition)}`}
                                             >
                                                 {describeCondition(item.condition)}
@@ -183,7 +183,7 @@ export default function BuffSetsBrowser({ rows }: Props) {
                                                     <span className="truncate text-(--muted)">{zoneLabel(zone.zoneId)}</span>
                                                     {describeZoneConditionBadge(zone.condition) && (
                                                         <span
-                                                            className="shrink-0 rounded-none px-1 py-0.5 text-[10px] text-(--accent-text)"
+                                                            className="shrink-0 rounded-sm px-1 py-0.5 text-[10px] text-(--accent-text)"
                                                             style={{ background: 'color-mix(in srgb, var(--accent) 18%, transparent)' }}
                                                             title={`该乘区条件：${describeCondition(zone.condition)}`}
                                                         >

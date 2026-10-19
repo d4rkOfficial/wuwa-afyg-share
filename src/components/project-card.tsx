@@ -71,7 +71,7 @@ export default function ProjectCard({ project, icons }: { project: ProjectListIt
                 <div className="flex items-start justify-between gap-3">
                     <h3 className="mg-title line-clamp-1 text-base">{project.title}</h3>
                     {project.game_version && (
-                        <span className="mg-num shrink-0 rounded-none border border-(--card-border) bg-(--card-hover) px-2 py-0.5 text-xs text-(--muted)">
+                        <span className="mg-num shrink-0 rounded-sm border border-(--card-border) bg-(--card-hover) px-2 py-0.5 text-xs text-(--muted)">
                             {project.game_version}
                         </span>
                     )}
@@ -87,7 +87,7 @@ export default function ProjectCard({ project, icons }: { project: ProjectListIt
                             <Link
                                 key={tag}
                                 href={`/?q=${encodeURIComponent(tag)}`}
-                                className="relative z-30 rounded-none bg-(--card-hover) px-2 py-0.5 text-xs text-(--muted) transition-colors hover:bg-(--accent) hover:text-(--accent-fg)"
+                                className="relative z-30 rounded-sm bg-(--card-hover) px-2 py-0.5 text-xs text-(--muted) transition-colors hover:bg-(--accent) hover:text-(--accent-fg)"
                             >
                                 #{tag}
                             </Link>
@@ -97,7 +97,7 @@ export default function ProjectCard({ project, icons }: { project: ProjectListIt
 
                 <div className="mt-auto flex items-center gap-3 text-xs text-(--muted)">
                     <span className="flex min-w-0 items-center gap-1.5">
-                        <span className="flex size-5 shrink-0 items-center justify-center rounded-none border border-(--card-border) bg-(--card-hover) text-[9px] font-black tracking-tight text-(--muted)">
+                        <span className="flex size-5 shrink-0 items-center justify-center rounded-sm border border-(--card-border) bg-(--card-hover) text-[9px] font-black tracking-tight text-(--muted)">
                             {project.author_name?.charAt(0) || '?'}
                         </span>
                         <span className="truncate">{project.author_name}</span>

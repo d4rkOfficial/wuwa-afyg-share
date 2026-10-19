@@ -47,7 +47,7 @@ export default function SubstatPlanJson({ value, onChange, status, onExport, onI
                 placeholder='{ "slots": [ … ] }'
                 // 管理页 CSS 让 textarea 随内容撑高（field-sizing: content），此处以内联样式改为固定高度内部滚动
                 style={{ maxHeight: '26rem', overflow: 'auto' }}
-                className="w-full rounded-none border border-(--card-border) bg-(--input-bg) px-2.5 py-2 font-mono text-[11px] leading-relaxed outline-none transition-colors focus:border-(--accent)"
+                className="w-full rounded-sm border border-(--card-border) bg-(--input-bg) px-2.5 py-2 font-mono text-[11px] leading-relaxed outline-none transition-colors focus:border-(--accent)"
             />
 
             {status && (

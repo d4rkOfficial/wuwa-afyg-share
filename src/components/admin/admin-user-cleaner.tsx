@@ -82,19 +82,19 @@ export default function AdminUserCleaner() {
                                     setSummary(null)
                                 }}
                                 placeholder="输入目标用户名"
-                                className="w-full rounded-none border border-(--card-border) bg-(--input-bg) px-3 py-2 text-sm outline-none transition-colors focus:border-(--accent)"
+                                className="w-full rounded-sm border border-(--card-border) bg-(--input-bg) px-3 py-2 text-sm outline-none transition-colors focus:border-(--accent)"
                             />
                             <button
                                 onClick={onLookup}
                                 disabled={pending || !username.trim()}
-                                className="shrink-0 rounded-none border border-(--card-border) px-3 py-2 text-sm text-(--muted) transition-colors hover:text-(--fg) disabled:opacity-50"
+                                className="shrink-0 rounded-sm border border-(--card-border) px-3 py-2 text-sm text-(--muted) transition-colors hover:text-(--fg) disabled:opacity-50"
                             >
                                 查询
                             </button>
                         </div>
 
                         {summary && (
-                            <div className="mt-3 rounded-none border border-(--card-border) bg-(--input-bg) px-3 py-2 text-sm">
+                            <div className="mt-3 rounded-sm border border-(--card-border) bg-(--input-bg) px-3 py-2 text-sm">
                                 <p>
                                     用户 <span className="font-medium text-(--fg)">{summary.username}</span>：
                                     <span className="mg-num text-(--fg)">{summary.projectCount}</span> 个工程
@@ -106,7 +106,7 @@ export default function AdminUserCleaner() {
                                     value={confirmText}
                                     onChange={(e) => setConfirmText(e.target.value)}
                                     placeholder={summary.username}
-                                    className="mt-1 w-full rounded-none border border-(--card-border) bg-(--card) px-3 py-1.5 text-sm outline-none transition-colors focus:border-(--danger)"
+                                    className="mt-1 w-full rounded-sm border border-(--card-border) bg-(--card) px-3 py-1.5 text-sm outline-none transition-colors focus:border-(--danger)"
                                 />
                             </div>
                         )}
@@ -119,14 +119,14 @@ export default function AdminUserCleaner() {
                                     setSummary(null)
                                     setConfirmText('')
                                 }}
-                                className="rounded-none border border-(--card-border) bg-(--card) px-3 py-1.5 text-sm text-(--muted) hover:text-(--fg)"
+                                className="rounded-sm border border-(--card-border) bg-(--card) px-3 py-1.5 text-sm text-(--muted) hover:text-(--fg)"
                             >
                                 取消
                             </button>
                             <button
                                 onClick={onConfirm}
                                 disabled={pending || !summary || confirmText !== summary.username}
-                                className="inline-flex items-center gap-1 rounded-none border border-(--danger) bg-(--danger) transition-colors hover:bg-(--card) hover:text-(--danger) px-3 py-1.5 text-sm text-(--danger-fg)  disabled:opacity-50"
+                                className="inline-flex items-center gap-1 rounded-sm border border-(--danger) bg-(--danger) transition-colors hover:bg-(--card) hover:text-(--danger) px-3 py-1.5 text-sm text-(--danger-fg)  disabled:opacity-50"
                             >
                                 <Icon icon={pending ? 'mdi:loading' : 'mdi:account-remove-outline'} className={`size-4 ${pending ? 'animate-spin' : ''}`} />
                                 确认删除

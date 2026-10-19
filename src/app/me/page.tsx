@@ -64,7 +64,7 @@ export default async function MePage() {
                     <form action={signOut}>
                         <button
                             type="submit"
-                            className="inline-flex items-center gap-1.5 rounded-none border border-(--card-border) bg-(--card) px-3 py-2 text-sm text-(--muted) transition-colors hover:text-(--fg)"
+                            className="inline-flex items-center gap-1.5 rounded-sm border border-(--card-border) bg-(--card) px-3 py-2 text-sm text-(--muted) transition-colors hover:text-(--fg)"
                         >
                             <Icon icon="mdi:logout" className="size-4" />
                             退出登录
@@ -72,7 +72,7 @@ export default async function MePage() {
                     </form>
                     <Link
                         href="/upload"
-                        className="inline-flex items-center gap-1.5 rounded-none px-4 py-2 text-sm font-medium border border-(--card-border) bg-(--btn-bg) text-(--btn-text) transition-colors hover:bg-(--card) hover:text-(--fg)"
+                        className="inline-flex items-center gap-1.5 rounded-sm px-4 py-2 text-sm font-medium border border-(--card-border) bg-(--btn-bg) text-(--btn-text) transition-colors hover:bg-(--card) hover:text-(--fg)"
                     >
                         <Icon icon="mdi:plus" className="size-4" />
                         上传工程

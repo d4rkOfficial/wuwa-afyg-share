@@ -95,7 +95,7 @@ export default async function SharePage({ params }: { params: Promise<{ code: st
                             <span className="mg-num">{formatDate(project.created_at)}</span>
                             {project.game_version && <span className="mg-num">v{project.game_version}</span>}
                             {grace ? (
-                                <span className="inline-flex items-center gap-1 rounded-none border border-(--warning) px-2 py-0.5 text-xs text-(--warning)">
+                                <span className="inline-flex items-center gap-1 rounded-sm border border-(--warning) px-2 py-0.5 text-xs text-(--warning)">
                                     <Icon icon="mdi:clock-alert-outline" className="size-3.5" />
                                     宽限期中
                                 </span>
@@ -120,7 +120,7 @@ export default async function SharePage({ params }: { params: Promise<{ code: st
                         {project.tags.map((tag) => (
                             <span
                                 key={tag}
-                                className="rounded-none border border-(--card-border) bg-(--card-hover) px-2 py-0.5 text-xs text-(--muted)"
+                                className="rounded-sm border border-(--card-border) bg-(--card-hover) px-2 py-0.5 text-xs text-(--muted)"
                             >
                                 #{tag}
                             </span>
@@ -131,7 +131,7 @@ export default async function SharePage({ params }: { params: Promise<{ code: st
                 <div className="flex flex-wrap items-center gap-2 border-t pt-4 mg-hairline">
                     <a
                         href={`/share/${project.code}/download`}
-                        className="inline-flex items-center gap-1.5 rounded-none border border-(--card-border) bg-(--btn-bg) px-4 py-2 text-sm font-medium text-(--btn-text) transition-colors hover:bg-(--card) hover:text-(--fg)"
+                        className="inline-flex items-center gap-1.5 rounded-sm border border-(--card-border) bg-(--btn-bg) px-4 py-2 text-sm font-medium text-(--btn-text) transition-colors hover:bg-(--card) hover:text-(--fg)"
                     >
                         <Icon icon="mdi:download" className="size-4" />
                         下载工程 JSON
@@ -140,7 +140,7 @@ export default async function SharePage({ params }: { params: Promise<{ code: st
                     {isOwner && (
                         <Link
                             href="/me"
-                            className="inline-flex items-center gap-1.5 rounded-none border border-(--card-border) bg-(--card) px-3 py-1.5 text-sm text-(--muted) transition-colors hover:border-(--accent) hover:text-(--fg)"
+                            className="inline-flex items-center gap-1.5 rounded-sm border border-(--card-border) bg-(--card) px-3 py-1.5 text-sm text-(--muted) transition-colors hover:border-(--accent) hover:text-(--fg)"
                         >
                             <Icon icon="mdi:account-cog-outline" className="size-4" />
                             管理

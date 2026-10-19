@@ -187,7 +187,7 @@ export default function BuffSetsAdmin({ rows, isAdmin }: Props) {
                             <Icon icon="mdi:cog-outline" className="size-4" />
                             连接配置
                             {false && (
-                                <span className="ml-1 rounded-none border border-(--warning) px-1 py-0.5 text-[9px] text-(--warning)">未配置</span>
+                                <span className="ml-1 rounded-sm border border-(--warning) px-1 py-0.5 text-[9px] text-(--warning)">未配置</span>
                             )}
                         </span>
                         <Icon icon="mdi:cog" className="size-4" />
@@ -241,7 +241,7 @@ export default function BuffSetsAdmin({ rows, isAdmin }: Props) {
                                     <Icon icon="mdi:cog-outline" className="size-4 shrink-0 text-(--accent-text)" />
                                     连接配置
                                 </span>
-                                <button onClick={() => setShowConfig(false)} className="rounded-none p-1 text-(--muted) hover:text-(--fg)">
+                                <button onClick={() => setShowConfig(false)} className="rounded-sm p-1 text-(--muted) hover:text-(--fg)">
                                     <Icon icon="mdi:close" className="size-5" />
                                 </button>
                             </div>
@@ -256,7 +256,7 @@ export default function BuffSetsAdmin({ rows, isAdmin }: Props) {
                                         value={aiDraft.baseUrl}
                                         onChange={(e) => setAiDraft((d) => ({ ...d, baseUrl: e.target.value }))}
                                         placeholder="https://api.deepseek.com"
-                                        className="w-full rounded-none border border-(--card-border) bg-(--input-bg) px-2 py-1.5 text-sm outline-none focus:border-(--accent)"
+                                        className="w-full rounded-sm border border-(--card-border) bg-(--input-bg) px-2 py-1.5 text-sm outline-none focus:border-(--accent)"
                                     />
                                     <p className="text-[10px] text-(--muted)">支持任意 OpenAI 兼容端点（需支持 POST /chat/completions）</p>
                                 </label>
@@ -269,7 +269,7 @@ export default function BuffSetsAdmin({ rows, isAdmin }: Props) {
                                         value={aiDraft.model}
                                         onChange={(e) => setAiDraft((d) => ({ ...d, model: e.target.value }))}
                                         placeholder="deepseek-v4-flash"
-                                        className="w-full rounded-none border border-(--card-border) bg-(--input-bg) px-2 py-1.5 text-sm outline-none focus:border-(--accent)"
+                                        className="w-full rounded-sm border border-(--card-border) bg-(--input-bg) px-2 py-1.5 text-sm outline-none focus:border-(--accent)"
                                     />
                                 </label>
                                 <label className="flex flex-col gap-1 text-xs text-(--muted)">
@@ -279,7 +279,7 @@ export default function BuffSetsAdmin({ rows, isAdmin }: Props) {
                                         value={aiDraft.apiKey}
                                         onChange={(e) => setAiDraft((d) => ({ ...d, apiKey: e.target.value }))}
                                         placeholder="sk-..."
-                                        className="w-full rounded-none border border-(--card-border) bg-(--input-bg) px-2 py-1.5 text-sm outline-none focus:border-(--accent)"
+                                        className="w-full rounded-sm border border-(--card-border) bg-(--input-bg) px-2 py-1.5 text-sm outline-none focus:border-(--accent)"
                                     />
                                     <p className="text-[10px] text-(--muted)">
                                         填所选提供商的 API Key（格式 / 获取方式按其官方文档）
@@ -292,7 +292,7 @@ export default function BuffSetsAdmin({ rows, isAdmin }: Props) {
                                             <button
                                                 key={level}
                                                 onClick={() => setAiDraft((d) => ({ ...d, reasoningEffort: level }))}
-                                                className={`rounded-none px-2 py-1 text-[11px] transition-colors ${
+                                                className={`rounded-sm px-2 py-1 text-[11px] transition-colors ${
                                                     aiDraft.reasoningEffort === level
                                                         ? 'bg-(--accent) text-(--accent-fg)'
                                                         : 'text-(--muted) hover:text-(--fg)'
@@ -310,7 +310,7 @@ export default function BuffSetsAdmin({ rows, isAdmin }: Props) {
                                     <button
                                         onClick={handleSaveAi}
                                         disabled={aiSaving}
-                                        className="inline-flex items-center gap-1.5 rounded-none px-4 py-1.5 text-xs font-medium border border-(--card-border) bg-(--btn-bg) text-(--btn-text) transition-colors hover:bg-(--card) hover:text-(--fg) transition-all  disabled:opacity-50"
+                                        className="inline-flex items-center gap-1.5 rounded-sm px-4 py-1.5 text-xs font-medium border border-(--card-border) bg-(--btn-bg) text-(--btn-text) transition-colors hover:bg-(--card) hover:text-(--fg) transition-all  disabled:opacity-50"
                                     >
                                         <Icon icon="mdi:content-save-outline" className="size-3.5" />
                                         {aiSaving ? '保存中…' : '保存 AI 配置'}
@@ -321,7 +321,7 @@ export default function BuffSetsAdmin({ rows, isAdmin }: Props) {
                                     return (
                                         <div
                                             key={editor.key}
-                                            className="flex items-center gap-2 rounded-none border border-(--card-border) bg-(--input-bg) px-2.5 py-2"
+                                            className="flex items-center gap-2 rounded-sm border border-(--card-border) bg-(--input-bg) px-2.5 py-2"
                                         >
                                             <div className="min-w-0 flex-1">
                                                 <div className="flex items-center justify-between gap-2">
@@ -339,7 +339,7 @@ export default function BuffSetsAdmin({ rows, isAdmin }: Props) {
                                             </div>
                                             <button
                                                 onClick={() => openPromptEditor(editor.key)}
-                                                className="inline-flex shrink-0 items-center gap-1 rounded-none px-2.5 py-1 text-xs font-medium border border-(--card-border) bg-(--btn-bg) text-(--btn-text) transition-colors hover:bg-(--card) hover:text-(--fg) transition-all "
+                                                className="inline-flex shrink-0 items-center gap-1 rounded-sm px-2.5 py-1 text-xs font-medium border border-(--card-border) bg-(--btn-bg) text-(--btn-text) transition-colors hover:bg-(--card) hover:text-(--fg) transition-all "
                                             >
                                                 <Icon icon="mdi:pencil-outline" className="size-3.5" />
                                                 编辑
@@ -352,7 +352,7 @@ export default function BuffSetsAdmin({ rows, isAdmin }: Props) {
                                         <span className="text-xs text-(--muted)">跨实体共享会话</span>
                                         <button
                                             onClick={() => persistSessionShare(!sessionShare)}
-                                            className={`flex items-center gap-1.5 rounded-none px-2 py-1 text-[11px] transition-colors ${
+                                            className={`flex items-center gap-1.5 rounded-sm px-2 py-1 text-[11px] transition-colors ${
                                                 sessionShare
                                                     ? 'bg-(--accent) text-(--accent-fg)'
                                                     : 'text-(--muted) hover:text-(--fg)'
@@ -377,7 +377,7 @@ export default function BuffSetsAdmin({ rows, isAdmin }: Props) {
                              <div className="mt-3 flex justify-end border-t border-(--card-border) pt-3">
                                 <button
                                     onClick={() => setShowConfig(false)}
-                                    className="rounded-none px-4 py-1.5 text-sm font-medium border border-(--card-border) bg-(--btn-bg) text-(--btn-text) transition-colors hover:bg-(--card) hover:text-(--fg) transition-all "
+                                    className="rounded-sm px-4 py-1.5 text-sm font-medium border border-(--card-border) bg-(--btn-bg) text-(--btn-text) transition-colors hover:bg-(--card) hover:text-(--fg) transition-all "
                                 >
                                     完成
                                 </button>
@@ -401,7 +401,7 @@ export default function BuffSetsAdmin({ rows, isAdmin }: Props) {
                                 </span>
                                 <button
                                     onClick={() => setEditingPrompt(null)}
-                                    className="rounded-none p-1 text-(--muted) transition-colors hover:text-(--fg)"
+                                    className="rounded-sm p-1 text-(--muted) transition-colors hover:text-(--fg)"
                                 >
                                     <Icon icon="mdi:close" className="size-5" />
                                 </button>
@@ -413,7 +413,7 @@ export default function BuffSetsAdmin({ rows, isAdmin }: Props) {
                                     onChange={(e) => setDraftText(e.target.value)}
                                     autoFocus
                                     placeholder={activePromptEditor.hint}
-                                    className="w-full rounded-none border border-(--card-border) bg-(--input-bg) px-2.5 py-2 font-mono text-[11px] leading-relaxed outline-none focus:border-(--accent)"
+                                    className="w-full rounded-sm border border-(--card-border) bg-(--input-bg) px-2.5 py-2 font-mono text-[11px] leading-relaxed outline-none focus:border-(--accent)"
                                     style={{ minHeight: `${activePromptEditor.minHeight}px` }}
                                 />
                             </div>
@@ -430,13 +430,13 @@ export default function BuffSetsAdmin({ rows, isAdmin }: Props) {
                                 <div className="flex items-center gap-2">
                                     <button
                                         onClick={() => setEditingPrompt(null)}
-                                        className="rounded-none px-3 py-1.5 text-xs text-(--muted) transition-colors hover:text-(--fg)"
+                                        className="rounded-sm px-3 py-1.5 text-xs text-(--muted) transition-colors hover:text-(--fg)"
                                     >
                                         取消
                                     </button>
                                     <button
                                         onClick={savePromptEditor}
-                                        className="rounded-none px-4 py-1.5 text-sm font-medium border border-(--card-border) bg-(--btn-bg) text-(--btn-text) transition-colors hover:bg-(--card) hover:text-(--fg) transition-all "
+                                        className="rounded-sm px-4 py-1.5 text-sm font-medium border border-(--card-border) bg-(--btn-bg) text-(--btn-text) transition-colors hover:bg-(--card) hover:text-(--fg) transition-all "
                                     >
                                         保存
                                     </button>

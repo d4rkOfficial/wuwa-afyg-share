@@ -21,7 +21,7 @@ interface Props {
 }
 
 const FIELD_CLASS =
-    'w-full rounded-none border border-(--card-border) bg-(--input-bg) px-2.5 py-1.5 text-sm outline-none transition-colors focus:border-(--accent)'
+    'w-full rounded-sm border border-(--card-border) bg-(--input-bg) px-2.5 py-1.5 text-sm outline-none transition-colors focus:border-(--accent)'
 
 export default function SubstatSetsAdmin({ rows }: Props) {
     const router = useRouter()
@@ -217,7 +217,7 @@ export default function SubstatSetsAdmin({ rows }: Props) {
                         <button
                             onClick={() => onDelete(loadedName)}
                             disabled={pending}
-                            className="inline-flex items-center gap-1 rounded-none border border-(--danger) bg-(--card) px-2.5 py-1.5 text-xs font-medium text-(--danger) transition-colors hover:bg-(--danger) hover:text-(--danger-fg) disabled:opacity-50"
+                            className="inline-flex items-center gap-1 rounded-sm border border-(--danger) bg-(--card) px-2.5 py-1.5 text-xs font-medium text-(--danger) transition-colors hover:bg-(--danger) hover:text-(--danger-fg) disabled:opacity-50"
                         >
                             <Icon icon="mdi:trash-can-outline" className="size-3.5" />
                             删除当前
@@ -227,7 +227,7 @@ export default function SubstatSetsAdmin({ rows }: Props) {
             </div>
 
             {/* 校验状态条 */}
-            <div className="flex flex-wrap items-center gap-x-4 gap-y-1 rounded-none border border-(--card-border) bg-(--card-hover) px-3 py-2 text-[11px]">
+            <div className="flex flex-wrap items-center gap-x-4 gap-y-1 rounded-sm border border-(--card-border) bg-(--card-hover) px-3 py-2 text-[11px]">
                 <span className={substatTotal === SUBSTAT_TOTAL_COUNT ? 'text-(--success)' : 'text-(--danger)'}>
                     副词条合计 <span className="mg-num">{substatTotal}</span> /{' '}
                     <span className="mg-num">{SUBSTAT_TOTAL_COUNT}</span>
@@ -288,7 +288,7 @@ export default function SubstatSetsAdmin({ rows }: Props) {
                                 <div className="flex flex-wrap items-center gap-2">
                                     <span className="font-medium text-(--fg)">{row.character_name}</span>
                                     <span
-                                        className={`rounded-none px-1.5 py-0.5 text-[10px] ${
+                                        className={`rounded-sm px-1.5 py-0.5 text-[10px] ${
                                             total === SUBSTAT_TOTAL_COUNT
                                                 ? 'bg-(--accent) text-(--accent-fg)'
                                                 : 'border border-(--danger) text-(--danger)'
@@ -297,7 +297,7 @@ export default function SubstatSetsAdmin({ rows }: Props) {
                                         副词条 <span className="mg-num">{total}</span>
                                     </span>
                                     {isLoaded && (
-                                        <span className="rounded-none bg-(--card-hover) px-1.5 py-0.5 text-[10px] text-(--muted)">
+                                        <span className="rounded-sm bg-(--card-hover) px-1.5 py-0.5 text-[10px] text-(--muted)">
                                             编辑中
                                         </span>
                                     )}
@@ -321,7 +321,7 @@ export default function SubstatSetsAdmin({ rows }: Props) {
                                     <button
                                         onClick={() => onDelete(row.character_name)}
                                         disabled={pending}
-                                        className="rounded-none border border-(--danger) bg-(--danger) px-3 py-1.5 text-xs text-(--danger-fg) transition-colors hover:bg-(--card) hover:text-(--danger) disabled:opacity-50"
+                                        className="rounded-sm border border-(--danger) bg-(--danger) px-3 py-1.5 text-xs text-(--danger-fg) transition-colors hover:bg-(--card) hover:text-(--danger) disabled:opacity-50"
                                     >
                                         确认删除
                                     </button>
@@ -330,7 +330,7 @@ export default function SubstatSetsAdmin({ rows }: Props) {
                                         onClick={() => setConfirmDelete(row.id)}
                                         onBlur={() => setTimeout(() => setConfirmDelete(null), 2500)}
                                         disabled={pending}
-                                        className="rounded-none border border-(--danger) bg-(--card) px-3 py-1.5 text-xs text-(--danger) transition-colors hover:bg-(--danger) hover:text-(--danger-fg) disabled:opacity-50"
+                                        className="rounded-sm border border-(--danger) bg-(--card) px-3 py-1.5 text-xs text-(--danger) transition-colors hover:bg-(--danger) hover:text-(--danger-fg) disabled:opacity-50"
                                     >
                                         删除
                                     </button>

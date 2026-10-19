@@ -5,9 +5,9 @@ import ToyHeaderAuth from '@/lib/bilibili-toy/components/toy-header-auth'
 import ToyIdentityBadge from '@/lib/bilibili-toy/components/toy-identity-badge'
 import { createClient, hasEnv } from '@/lib/supabase/server'
 
-// 导航项统一样式：图标 + 中文文字（无英文大写小标），直角，层次靠 hover 实色底
+// 导航项统一样式：图标 + 中文文字（无英文大写小标），小圆角，层次靠 hover 实色底
 const navItemClass =
-    'inline-flex size-9 shrink-0 items-center justify-center gap-1.5 text-sm text-(--muted) transition-colors hover:bg-(--card-hover) hover:text-(--fg) lg:w-auto lg:px-2.5'
+    'inline-flex size-9 shrink-0 items-center justify-center gap-1.5 rounded-sm text-sm text-(--muted) transition-colors hover:bg-(--card-hover) hover:text-(--fg) lg:w-auto lg:px-2.5'
 
 export default async function Header() {
     let user: { id?: string; email?: string | null; user_metadata?: Record<string, unknown> } | null = null
@@ -43,10 +43,10 @@ export default async function Header() {
                     href="/"
                     aria-label="椰果工坊首页"
                     title="椰果工坊首页"
-                    className="mr-2 inline-flex size-9 shrink-0 items-center justify-center gap-2 text-sm transition-colors hover:bg-(--card-hover) lg:mr-3 lg:w-auto lg:border-r lg:border-(--card-border) lg:px-2"
+                    className="mr-2 inline-flex size-9 shrink-0 items-center justify-center gap-2 rounded-sm text-sm transition-colors hover:bg-(--card-hover) lg:mr-3 lg:w-auto lg:border-r lg:border-(--card-border) lg:px-2"
                 >
                     {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img src="/favicon.svg" alt="" className="size-7 shrink-0 rounded-none" />
+                    <img src="/favicon.svg" alt="" className="size-7 shrink-0 rounded-sm" />
                     <span className="mg-title hidden text-sm lg:inline">椰果工坊</span>
                 </AppLink>
 
@@ -83,7 +83,7 @@ export default async function Header() {
                                 href="/upload"
                                 aria-label="上传工程"
                                 title="上传工程"
-                                className="inline-flex size-9 shrink-0 items-center justify-center gap-1.5 whitespace-nowrap border border-(--card-border) bg-(--btn-bg) text-sm font-black tracking-tight text-(--btn-text) transition-colors hover:bg-(--card) hover:text-(--fg) md:w-auto md:px-3"
+                                className="inline-flex size-9 shrink-0 items-center justify-center gap-1.5 rounded-sm whitespace-nowrap border border-(--card-border) bg-(--btn-bg) text-sm font-black tracking-tight text-(--btn-text) transition-colors hover:bg-(--card) hover:text-(--fg) md:w-auto md:px-3"
                             >
                                 <Icon icon="mdi:plus" className="size-4 shrink-0" />
                                 <span className="hidden md:inline">上传工程</span>
@@ -92,14 +92,14 @@ export default async function Header() {
                                 href="/me"
                                 aria-label={displayName || '我的工程'}
                                 title={displayName || '我的工程'}
-                                className="inline-flex size-9 min-w-0 shrink-0 items-center justify-center gap-2 whitespace-nowrap border border-(--card-border) bg-(--card) text-sm transition-colors hover:bg-(--fg) hover:text-(--bg) xl:w-auto xl:max-w-52 xl:px-3"
+                                className="inline-flex size-9 min-w-0 shrink-0 items-center justify-center gap-2 rounded-sm whitespace-nowrap border border-(--card-border) bg-(--card) text-sm transition-colors hover:bg-(--fg) hover:text-(--bg) xl:w-auto xl:max-w-52 xl:px-3"
                             >
                                 <Icon icon="mdi:account-circle-outline" className="size-4 shrink-0 text-(--muted)" />
                                 <span className="mg-title hidden min-w-0 truncate text-sm xl:inline">
                                     {displayName || '我的工程'}
                                 </span>
                                 {isAdmin && (
-                                    <span className="hidden shrink-0 border border-(--accent) bg-(--accent) px-1.5 py-0.5 text-[10px] leading-none font-black tracking-tight text-(--accent-fg) 2xl:inline">
+                                    <span className="hidden shrink-0 rounded-sm border border-(--accent) bg-(--accent) px-1.5 py-0.5 text-[10px] leading-none font-black tracking-tight text-(--accent-fg) 2xl:inline">
                                         管理员
                                     </span>
                                 )}

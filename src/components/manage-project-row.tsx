@@ -128,12 +128,12 @@ export default function ManageProjectRow({ project }: Props) {
                             {project.title}
                         </Link>
                         {expired ? (
-                            <span className="inline-flex items-center gap-1 rounded-none border border-(--danger) px-2 py-0.5 text-xs text-(--danger)">
+                            <span className="inline-flex items-center gap-1 rounded-sm border border-(--danger) px-2 py-0.5 text-xs text-(--danger)">
                                 <Icon icon="mdi:alert-decagram-outline" className="size-3.5" />
                                 已过期
                             </span>
                         ) : grace ? (
-                            <span className="inline-flex items-center gap-1 rounded-none border border-(--warning) px-2 py-0.5 text-xs text-(--warning)">
+                            <span className="inline-flex items-center gap-1 rounded-sm border border-(--warning) px-2 py-0.5 text-xs text-(--warning)">
                                 <Icon icon="mdi:clock-alert-outline" className="size-3.5" />
                                 宽限中
                             </span>
@@ -142,7 +142,7 @@ export default function ManageProjectRow({ project }: Props) {
                         )}
                         {project.protected && (
                             <span
-                                className="inline-flex items-center gap-1 rounded-none bg-(--accent) px-2 py-0.5 text-xs text-(--accent-fg)"
+                                className="inline-flex items-center gap-1 rounded-sm bg-(--accent) px-2 py-0.5 text-xs text-(--accent-fg)"
                                 title="保护工程：批量删除、单条删除与过期清理均豁免，需先解除保护才能删除"
                             >
                                 <Icon icon="mdi:shield-lock-outline" className="size-3.5" />
@@ -153,7 +153,7 @@ export default function ManageProjectRow({ project }: Props) {
                             <button
                                 onClick={() => setConfirmDelete(true)}
                                 disabled={pending}
-                                className="inline-flex items-center gap-1 rounded-none border border-(--danger) bg-(--card) px-2 py-0.5 text-xs text-(--danger) transition-colors hover:bg-(--danger) hover:text-(--danger-fg) disabled:opacity-50"
+                                className="inline-flex items-center gap-1 rounded-sm border border-(--danger) bg-(--card) px-2 py-0.5 text-xs text-(--danger) transition-colors hover:bg-(--danger) hover:text-(--danger-fg) disabled:opacity-50"
                                 title="删除该工程"
                             >
                                 <Icon icon="mdi:trash-can-outline" className="size-3.5" />
@@ -179,7 +179,7 @@ export default function ManageProjectRow({ project }: Props) {
                     <ShareLinkPicker code={project.code} label="链接" />
                     <button
                         onClick={() => setEditing((v) => !v)}
-                        className="inline-flex items-center gap-1 rounded-none border border-(--card-border) bg-(--card) px-2.5 py-1.5 text-xs text-(--muted) transition-colors hover:text-(--fg)"
+                        className="inline-flex items-center gap-1 rounded-sm border border-(--card-border) bg-(--card) px-2.5 py-1.5 text-xs text-(--muted) transition-colors hover:text-(--fg)"
                     >
                         <Icon icon="mdi:pencil-outline" className="size-4" />
                         编辑
@@ -188,7 +188,7 @@ export default function ManageProjectRow({ project }: Props) {
                         onClick={() => run(() => regenerateCode(project.id))}
                         disabled={pending}
                         title="重新生成分享码"
-                        className="inline-flex items-center gap-1 rounded-none border border-(--card-border) bg-(--card) px-2.5 py-1.5 text-xs text-(--muted) transition-colors hover:text-(--fg) disabled:opacity-50"
+                        className="inline-flex items-center gap-1 rounded-sm border border-(--card-border) bg-(--card) px-2.5 py-1.5 text-xs text-(--muted) transition-colors hover:text-(--fg) disabled:opacity-50"
                     >
                         <Icon icon="mdi:refresh" className="size-4" />
                         换码
@@ -197,7 +197,7 @@ export default function ManageProjectRow({ project }: Props) {
                         onClick={() => setShowReplace(true)}
                         disabled={pending}
                         title="换源（替换工程文件）"
-                        className="inline-flex items-center gap-1 rounded-none border border-(--card-border) bg-(--card) px-2.5 py-1.5 text-xs text-(--muted) transition-colors hover:text-(--fg) disabled:opacity-50"
+                        className="inline-flex items-center gap-1 rounded-sm border border-(--card-border) bg-(--card) px-2.5 py-1.5 text-xs text-(--muted) transition-colors hover:text-(--fg) disabled:opacity-50"
                     >
                         <Icon icon="mdi:swap-horizontal" className="size-4" />
                         换源
@@ -208,7 +208,7 @@ export default function ManageProjectRow({ project }: Props) {
                         }
                         disabled={pending}
                         title={project.protected ? '解除保护后可删除' : '保护工程：批量删除、单条删除与过期清理均豁免'}
-                        className="inline-flex items-center gap-1 rounded-none border border-(--card-border) bg-(--card) px-2.5 py-1.5 text-xs text-(--muted) transition-colors hover:text-(--fg) disabled:opacity-50"
+                        className="inline-flex items-center gap-1 rounded-sm border border-(--card-border) bg-(--card) px-2.5 py-1.5 text-xs text-(--muted) transition-colors hover:text-(--fg) disabled:opacity-50"
                     >
                         <Icon icon={project.protected ? 'mdi:shield-lock-outline' : 'mdi:shield-outline'} className="size-4" />
                         {project.protected ? '解除保护' : '保护'}
@@ -222,7 +222,7 @@ export default function ManageProjectRow({ project }: Props) {
                         value={title}
                         onChange={(e) => setTitle(e.target.value)}
                         maxLength={60}
-                        className="w-full rounded-none border border-(--card-border) bg-(--input-bg) px-3 py-2 text-sm outline-none transition-colors focus:border-(--accent)"
+                        className="w-full rounded-sm border border-(--card-border) bg-(--input-bg) px-3 py-2 text-sm outline-none transition-colors focus:border-(--accent)"
                     />
                     <textarea
                         value={description}
@@ -230,13 +230,13 @@ export default function ManageProjectRow({ project }: Props) {
                         rows={2}
                         maxLength={500}
                         placeholder="简介"
-                        className="w-full rounded-none border border-(--card-border) bg-(--input-bg) px-3 py-2 text-sm outline-none transition-colors placeholder:text-(--muted) focus:border-(--accent)"
+                        className="w-full rounded-sm border border-(--card-border) bg-(--input-bg) px-3 py-2 text-sm outline-none transition-colors placeholder:text-(--muted) focus:border-(--accent)"
                     />
                     <input
                         value={tagsText}
                         onChange={(e) => setTagsText(e.target.value)}
                         placeholder="标签（逗号分隔）"
-                        className="w-full rounded-none border border-(--card-border) bg-(--input-bg) px-3 py-2 text-sm outline-none transition-colors placeholder:text-(--muted) focus:border-(--accent)"
+                        className="w-full rounded-sm border border-(--card-border) bg-(--input-bg) px-3 py-2 text-sm outline-none transition-colors placeholder:text-(--muted) focus:border-(--accent)"
                     />
                     <div className="flex flex-wrap items-center gap-2">
                         <span className="text-xs text-(--muted)">过期日期：</span>
@@ -244,24 +244,24 @@ export default function ManageProjectRow({ project }: Props) {
                             type="date"
                             value={expireDate}
                             onChange={(e) => setExpireDate(e.target.value)}
-                            className="rounded-none border border-(--card-border) bg-(--input-bg) px-2 py-1 text-xs outline-none transition-colors focus:border-(--accent)"
+                            className="rounded-sm border border-(--card-border) bg-(--input-bg) px-2 py-1 text-xs outline-none transition-colors focus:border-(--accent)"
                         />
                         <button
                             onClick={onSetExpireDate}
                             disabled={pending || !expireDate}
-                            className="rounded-none border border-(--card-border) bg-(--card-hover) px-2.5 py-1 text-xs text-(--muted) transition-colors hover:text-(--fg) disabled:opacity-50"
+                            className="rounded-sm border border-(--card-border) bg-(--card-hover) px-2.5 py-1 text-xs text-(--muted) transition-colors hover:text-(--fg) disabled:opacity-50"
                         >
                             设为过期日期
                         </button>
                         <button
                             onClick={() => run(() => setExpiry(project.id, null), '已设为永久')}
-                            className="rounded-none border border-(--card-border) bg-(--card-hover) px-2.5 py-1 text-xs text-(--muted) transition-colors hover:text-(--fg)"
+                            className="rounded-sm border border-(--card-border) bg-(--card-hover) px-2.5 py-1 text-xs text-(--muted) transition-colors hover:text-(--fg)"
                         >
                             永久
                         </button>
                         <button
                             onClick={() => run(() => setExpiry(project.id, new Date().toISOString()), '已设为立即过期')}
-                            className="rounded-none border border-(--danger) bg-(--card) px-2.5 py-1 text-xs text-(--danger) transition-colors hover:bg-(--danger) hover:text-(--danger-fg)"
+                            className="rounded-sm border border-(--danger) bg-(--card) px-2.5 py-1 text-xs text-(--danger) transition-colors hover:bg-(--danger) hover:text-(--danger-fg)"
                         >
                             立即过期
                         </button>
@@ -269,14 +269,14 @@ export default function ManageProjectRow({ project }: Props) {
                     <div className="flex justify-end gap-2">
                         <button
                             onClick={() => setEditing(false)}
-                            className="rounded-none border border-(--card-border) bg-(--card) px-3 py-1.5 text-sm text-(--muted) hover:text-(--fg)"
+                            className="rounded-sm border border-(--card-border) bg-(--card) px-3 py-1.5 text-sm text-(--muted) hover:text-(--fg)"
                         >
                             取消
                         </button>
                         <button
                             onClick={onSave}
                             disabled={pending}
-                            className="rounded-none px-4 py-1.5 text-sm font-medium border border-(--card-border) bg-(--btn-bg) text-(--btn-text) transition-colors hover:bg-(--card) hover:text-(--fg) disabled:opacity-50"
+                            className="rounded-sm px-4 py-1.5 text-sm font-medium border border-(--card-border) bg-(--btn-bg) text-(--btn-text) transition-colors hover:bg-(--card) hover:text-(--fg) disabled:opacity-50"
                         >
                             保存
                         </button>
@@ -298,7 +298,7 @@ export default function ManageProjectRow({ project }: Props) {
                         <div className="mt-3 flex flex-col gap-2">
                             <button
                                 onClick={() => replaceFileRef.current?.click()}
-                                className="flex items-center justify-center gap-2 rounded-none border border-dashed border-(--card-border) bg-(--card-hover) px-4 py-4 text-sm text-(--muted) transition-colors hover:border-(--accent) hover:text-(--fg)"
+                                className="flex items-center justify-center gap-2 rounded-sm border border-dashed border-(--card-border) bg-(--card-hover) px-4 py-4 text-sm text-(--muted) transition-colors hover:border-(--accent) hover:text-(--fg)"
                             >
                                 <Icon icon="mdi:file-upload-outline" className="size-5" />
                                 点击选择导出的 .json 文件
@@ -315,7 +315,7 @@ export default function ManageProjectRow({ project }: Props) {
                                 onChange={(e) => onReplaceTextChange(e.target.value)}
                                 rows={5}
                                 placeholder="……或直接粘贴工程 JSON 内容"
-                                className="w-full rounded-none border border-(--card-border) bg-(--input-bg) px-3 py-2 font-mono text-xs outline-none transition-colors placeholder:text-(--muted) focus:border-(--accent)"
+                                className="w-full rounded-sm border border-(--card-border) bg-(--input-bg) px-3 py-2 font-mono text-xs outline-none transition-colors placeholder:text-(--muted) focus:border-(--accent)"
                             />
                         </div>
                         {replacePreview && (
@@ -331,14 +331,14 @@ export default function ManageProjectRow({ project }: Props) {
                                     setReplaceText('')
                                     setReplacePreview(null)
                                 }}
-                                className="rounded-none border border-(--card-border) bg-(--card) px-3 py-1.5 text-sm text-(--muted) hover:text-(--fg)"
+                                className="rounded-sm border border-(--card-border) bg-(--card) px-3 py-1.5 text-sm text-(--muted) hover:text-(--fg)"
                             >
                                 取消
                             </button>
                             <button
                                 onClick={onReplaceSubmit}
                                 disabled={pending || !replaceText.trim()}
-                                className="inline-flex items-center gap-1 rounded-none px-4 py-1.5 text-sm font-medium border border-(--card-border) bg-(--btn-bg) text-(--btn-text) transition-colors hover:bg-(--card) hover:text-(--fg) disabled:opacity-50"
+                                className="inline-flex items-center gap-1 rounded-sm px-4 py-1.5 text-sm font-medium border border-(--card-border) bg-(--btn-bg) text-(--btn-text) transition-colors hover:bg-(--card) hover:text-(--fg) disabled:opacity-50"
                             >
                                 <Icon icon={pending ? 'mdi:loading' : 'mdi:swap-horizontal'} className={`size-4 ${pending ? 'animate-spin' : ''}`} />
                                 确认换源
@@ -362,14 +362,14 @@ export default function ManageProjectRow({ project }: Props) {
                         <div className="mt-4 flex justify-end gap-2">
                             <button
                                 onClick={() => setConfirmDelete(false)}
-                                className="rounded-none border border-(--card-border) bg-(--card) px-3 py-1.5 text-sm text-(--muted) hover:text-(--fg)"
+                                className="rounded-sm border border-(--card-border) bg-(--card) px-3 py-1.5 text-sm text-(--muted) hover:text-(--fg)"
                             >
                                 取消
                             </button>
                             <button
                                 onClick={() => run(() => deleteProject(project.id), '已删除')}
                                 disabled={pending}
-                                className="inline-flex items-center gap-1 rounded-none border border-(--danger) bg-(--danger) transition-colors hover:bg-(--card) hover:text-(--danger) px-3 py-1.5 text-sm text-(--danger-fg) disabled:opacity-50"
+                                className="inline-flex items-center gap-1 rounded-sm border border-(--danger) bg-(--danger) transition-colors hover:bg-(--card) hover:text-(--danger) px-3 py-1.5 text-sm text-(--danger-fg) disabled:opacity-50"
                             >
                                 <Icon icon={pending ? 'mdi:loading' : 'mdi:trash-can-outline'} className={`size-4 ${pending ? 'animate-spin' : ''}`} />
                                 确认删除

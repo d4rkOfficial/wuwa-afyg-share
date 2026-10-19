@@ -57,7 +57,7 @@ export default async function BuffSetsPage() {
             <div className="flex flex-wrap items-center justify-center gap-2 border-t pt-4 mg-hairline">
                 <a
                     href="/api/buff-sets/export"
-                    className="inline-flex items-center gap-1.5 rounded-none border border-(--card-border) bg-(--card) px-4 py-2 text-sm text-(--muted) transition-colors hover:text-(--fg)"
+                    className="inline-flex items-center gap-1.5 rounded-sm border border-(--card-border) bg-(--card) px-4 py-2 text-sm text-(--muted) transition-colors hover:text-(--fg)"
                     title="下载最新快照（无快照时为当前数据）的全量 SQL，可在 PostgreSQL / Supabase 直接执行"
                 >
                     <Icon icon="mdi:database-export-outline" className="size-4" />
@@ -66,7 +66,7 @@ export default async function BuffSetsPage() {
                 {isAdmin && (
                     <Link
                         href="/admin/buff-sets"
-                        className="inline-flex items-center gap-1.5 rounded-none px-4 py-2 text-sm font-medium border border-(--card-border) bg-(--btn-bg) text-(--btn-text) transition-colors hover:bg-(--card) hover:text-(--fg)"
+                        className="inline-flex items-center gap-1.5 rounded-sm px-4 py-2 text-sm font-medium border border-(--card-border) bg-(--btn-bg) text-(--btn-text) transition-colors hover:bg-(--card) hover:text-(--fg)"
                     >
                         <Icon icon="mdi:shield-edit-outline" className="size-4" />
                         Buff 集管理

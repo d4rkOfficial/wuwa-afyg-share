@@ -104,7 +104,7 @@ export default function SelectMenu({
         <div
             ref={panelRef}
             role="listbox"
-            className="overflow-y-auto rounded-none border p-1"
+            className="overflow-y-auto rounded-sm border p-1"
             style={{
                 position: 'fixed',
                 left: pos?.left ?? 0,
@@ -149,7 +149,7 @@ export default function SelectMenu({
                 aria-haspopup="listbox"
                 aria-expanded={open}
                 aria-label={ariaLabel}
-                className="flex h-full w-full min-w-0 items-center gap-1.5 rounded-none border border-(--card-border) bg-(--input-bg) px-2.5 text-sm font-medium text-(--fg) outline-none transition-[border-color,box-shadow] duration-200 focus:border-(--accent) "
+                className="flex h-full w-full min-w-0 items-center gap-1.5 rounded-sm border border-(--card-border) bg-(--input-bg) px-2.5 text-sm font-medium text-(--fg) outline-none transition-[border-color,box-shadow] duration-200 focus:border-(--accent) "
             >
                 {icon && <Icon icon={icon} className="size-4 shrink-0 text-(--muted)" />}
                 <span className={`min-w-0 flex-1 truncate text-left ${current ? '' : 'text-(--muted)'}`}>
@@ -181,7 +181,7 @@ function SelectItem({
             role="option"
             aria-selected={selected}
             onClick={() => onSelect(opt.value)}
-            className={`flex w-full items-center gap-2 rounded-none px-2.5 py-1.5 text-left text-xs transition-colors ${
+            className={`flex w-full items-center gap-2 rounded-sm px-2.5 py-1.5 text-left text-xs transition-colors ${
                 selected ? 'bg-(--accent) font-medium text-(--accent-fg)' : 'text-(--fg) hover:bg-(--card-hover)'
             }`}
         >

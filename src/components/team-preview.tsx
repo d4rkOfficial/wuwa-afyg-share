@@ -61,7 +61,7 @@ export default function TeamPreview({ slots, locked, icons }: Props) {
                                 </div>
                             )}
                             <div className="mg-section relative z-10">
-                                <span className="mg-num flex size-7 shrink-0 items-center justify-center rounded-none border border-(--card-border) bg-(--card-hover) text-xs text-(--muted)">
+                                <span className="mg-num flex size-7 shrink-0 items-center justify-center rounded-sm border border-(--card-border) bg-(--card-hover) text-xs text-(--muted)">
                                     {i + 1}
                                 </span>
                                 {slot.character ? (
@@ -92,7 +92,7 @@ export default function TeamPreview({ slots, locked, icons }: Props) {
                                             {sets.map((s) => (
                                                 <span
                                                     key={s}
-                                                    className="mg-num rounded-none border border-(--card-border) bg-(--card-hover) px-1.5 py-0.5 text-xs"
+                                                    className="mg-num rounded-sm border border-(--card-border) bg-(--card-hover) px-1.5 py-0.5 text-xs"
                                                 >
                                                     {s}
                                                 </span>
@@ -107,7 +107,7 @@ export default function TeamPreview({ slots, locked, icons }: Props) {
                                             {echoNames.map((name) => (
                                                 <span
                                                     key={name}
-                                                    className="rounded-none border border-(--card-border) bg-(--card-hover) px-1.5 py-0.5 text-xs"
+                                                    className="rounded-sm border border-(--card-border) bg-(--card-hover) px-1.5 py-0.5 text-xs"
                                                 >
                                                     {name}
                                                 </span>

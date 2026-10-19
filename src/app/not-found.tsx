@@ -9,7 +9,7 @@ export default function NotFound() {
             <p className="text-sm leading-relaxed text-(--muted)">该分享链接可能已过期、被作者删除或从未存在。</p>
             <Link
                 href="/"
-                className="mt-2 inline-flex items-center gap-1.5 rounded-none border border-(--card-border) bg-(--btn-bg) px-4 py-2 text-sm font-medium text-(--btn-text) transition-colors hover:bg-(--card) hover:text-(--fg)"
+                className="mt-2 inline-flex items-center gap-1.5 rounded-sm border border-(--card-border) bg-(--btn-bg) px-4 py-2 text-sm font-medium text-(--btn-text) transition-colors hover:bg-(--card) hover:text-(--fg)"
             >
                 <Icon icon="mdi:arrow-left" className="size-4" />
                 返回广场

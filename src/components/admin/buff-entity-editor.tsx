@@ -782,7 +782,7 @@ export default function BuffEntityEditor({
             {/* 实体信息头 */}
             <div className="flex items-center justify-between border-b border-(--card-border) px-4 py-3">
                 <div className="flex items-center gap-2">
-                    <span className="rounded-none bg-(--accent) px-2 py-0.5 text-xs font-medium text-(--accent-fg)">
+                    <span className="rounded-sm bg-(--accent) px-2 py-0.5 text-xs font-medium text-(--accent-fg)">
                         {BUFF_ENTITY_LABELS[entityType]}
                     </span>
                     <h2 className="mg-title truncate text-lg">{entityName}</h2>
@@ -794,7 +794,7 @@ export default function BuffEntityEditor({
                     {onclose && (
                         <button
                             onClick={onclose}
-                            className="rounded-none p-1 text-(--muted) transition-colors hover:bg-(--card-hover) hover:text-(--fg)"
+                            className="rounded-sm p-1 text-(--muted) transition-colors hover:bg-(--card-hover) hover:text-(--fg)"
                             title="关闭"
                         >
                             <Icon icon="mdi:close" className="size-5" />
@@ -830,7 +830,7 @@ export default function BuffEntityEditor({
                                         setActiveBuffIdx(idx)
                                         setExpandedZoneIdx(null)
                                     }}
-                                    className={`w-full rounded-none px-2 py-1.5 text-left transition-colors ${
+                                    className={`w-full rounded-sm px-2 py-1.5 text-left transition-colors ${
                                         idx === activeBuffIdx
                                             ? 'bg-(--accent) text-(--accent-fg)'
                                             : 'text-(--fg) hover:bg-(--card-hover)'
@@ -864,9 +864,9 @@ export default function BuffEntityEditor({
                                     value={activeBuff.buffName}
                                     onChange={(e) => updateActiveBuff({ buffName: e.target.value })}
                                     placeholder="Buff 名"
-                                    className="min-w-0 flex-1 rounded-none border border-(--card-border) bg-(--input-bg) px-2 py-1 text-sm outline-none focus:border-(--accent)"
+                                    className="min-w-0 flex-1 rounded-sm border border-(--card-border) bg-(--input-bg) px-2 py-1 text-sm outline-none focus:border-(--accent)"
                                 />
-                                <div className="flex shrink-0 overflow-hidden rounded-none border border-(--card-border)">
+                                <div className="flex shrink-0 overflow-hidden rounded-sm border border-(--card-border)">
                                     {SCOPE_TABS.map((t) => (
                                         <button
                                             key={t.value}
@@ -884,7 +884,7 @@ export default function BuffEntityEditor({
                                 </div>
                                 <button
                                     onClick={() => removeBuffAt(activeBuffIdx)}
-                                    className="shrink-0 rounded-none p-1 text-(--muted) transition-colors hover:text-(--danger)"
+                                    className="shrink-0 rounded-sm p-1 text-(--muted) transition-colors hover:text-(--danger)"
                                     title="删除该 Buff"
                                 >
                                     <Icon icon="mdi:delete-outline" className="size-4" />
@@ -912,9 +912,9 @@ export default function BuffEntityEditor({
                                 {condPanelOpen && (
                                     <div className="flex flex-wrap items-center gap-2 px-3 pb-2.5">
                                         {canChain ? (
-                                            <div className="flex items-center gap-2 rounded-none border border-(--card-border) bg-(--input-bg) px-2 py-1">
+                                            <div className="flex items-center gap-2 rounded-sm border border-(--card-border) bg-(--input-bg) px-2 py-1">
                                                 <span className="text-[11px] text-(--fg)">共鸣链</span>
-                                                <div className="flex overflow-hidden rounded-none border border-(--card-border)">
+                                                <div className="flex overflow-hidden rounded-sm border border-(--card-border)">
                                                     {Array.from({ length: CHAIN_MAX + 1 }, (_, k) => k).map((n) => (
                                                         <button
                                                             key={n}
@@ -939,9 +939,9 @@ export default function BuffEntityEditor({
                                             </span>
                                         )}
                                         {canRefinement && (
-                                            <div className="flex items-center gap-2 rounded-none border border-(--card-border) bg-(--input-bg) px-2 py-1">
+                                            <div className="flex items-center gap-2 rounded-sm border border-(--card-border) bg-(--input-bg) px-2 py-1">
                                                 <span className="text-[11px] text-(--fg)">精炼</span>
-                                                <div className="flex overflow-hidden rounded-none border border-(--card-border)">
+                                                <div className="flex overflow-hidden rounded-sm border border-(--card-border)">
                                                     {Array.from({ length: REFINE_MAX }, (_, k) => k + 1).map((n) => (
                                                         <button
                                                             key={n}
@@ -962,7 +962,7 @@ export default function BuffEntityEditor({
                                         )}
                                         <button
                                             onClick={clearBuffCondition}
-                                            className="flex h-6 items-center gap-1 rounded-none border border-(--card-border) px-2 text-[10px] text-(--muted) transition-colors hover:border-(--danger) hover:text-(--danger)"
+                                            className="flex h-6 items-center gap-1 rounded-sm border border-(--card-border) px-2 text-[10px] text-(--muted) transition-colors hover:border-(--danger) hover:text-(--danger)"
                                         >
                                             <Icon icon="mdi:close-circle-outline" className="size-3" />
                                             清除
@@ -986,7 +986,7 @@ export default function BuffEntityEditor({
                                         return (
                                             <div key={`${z.zoneId}-${idx}`} className="space-y-1">
                                                 <div
-                                                    className="flex items-center gap-1.5 rounded-none px-2.5 py-1.5"
+                                                    className="flex items-center gap-1.5 rounded-sm px-2.5 py-1.5"
                                                     style={{ background: 'var(--input-bg)' }}
                                                 >
                                                     <span className="shrink-0 truncate text-[11px]">
@@ -994,7 +994,7 @@ export default function BuffEntityEditor({
                                                     </span>
                                                     {badge && (
                                                         <span
-                                                            className="shrink-0 max-w-32 truncate rounded-none border border-transparent px-1.5 py-0.5 text-[10px]"
+                                                            className="shrink-0 max-w-32 truncate rounded-sm border border-transparent px-1.5 py-0.5 text-[10px]"
                                                             style={{
                                                                 background: 'color-mix(in srgb, var(--accent) 18%, transparent)',
                                                                 color: 'var(--accent-text)'
@@ -1046,7 +1046,7 @@ export default function BuffEntityEditor({
                                                                 type="number"
                                                                 value={z.value}
                                                                 onChange={(e) => patchZoneAt(idx, { value: e.target.value })}
-                                                                className="w-16 rounded-none border border-(--card-border) bg-(--input-bg) px-1.5 py-1 text-xs text-right outline-none focus:border-(--accent) mg-num"
+                                                                className="w-16 rounded-sm border border-(--card-border) bg-(--input-bg) px-1.5 py-1 text-xs text-right outline-none focus:border-(--accent) mg-num"
                                                             />
                                                             <span className="w-3 text-[10px] text-(--muted)">
                                                                 {def?.unit === '%' ? '%' : ''}
@@ -1056,7 +1056,7 @@ export default function BuffEntityEditor({
                                                     {!noOverride && (
                                                         <button
                                                             onClick={() => setZoneOverride(idx, !z.override)}
-                                                            className={`shrink-0 rounded-none border px-1.5 py-1 text-[10px] transition-colors ${
+                                                            className={`shrink-0 rounded-sm border px-1.5 py-1 text-[10px] transition-colors ${
                                                                 z.override
                                                                     ? 'border-(--accent) text-(--accent-text)'
                                                                     : 'border-transparent text-(--muted) hover:text-(--fg)'
@@ -1069,7 +1069,7 @@ export default function BuffEntityEditor({
                                                     {!noRef && (
                                                         <button
                                                             onClick={() => setRefTargetIdx(idx)}
-                                                            className={`shrink-0 rounded-none border px-1.5 py-1 text-[10px] transition-colors ${
+                                                            className={`shrink-0 rounded-sm border px-1.5 py-1 text-[10px] transition-colors ${
                                                                 z.ref
                                                                     ? 'border-(--accent) text-(--accent-text)'
                                                                     : 'border-transparent text-(--muted) hover:text-(--fg)'
@@ -1089,7 +1089,7 @@ export default function BuffEntityEditor({
                                                     )}
                                                     <button
                                                         onClick={() => toggleZoneCondition(idx)}
-                                                        className={`shrink-0 rounded-none border px-1.5 py-1 text-[10px] transition-colors ${
+                                                        className={`shrink-0 rounded-sm border px-1.5 py-1 text-[10px] transition-colors ${
                                                             z.condition
                                                                 ? 'border-(--accent) text-(--accent-text)'
                                                                 : 'border-transparent text-(--muted) hover:text-(--fg)'
@@ -1108,7 +1108,7 @@ export default function BuffEntityEditor({
                                                     </button>
                                                     <button
                                                         onClick={() => removeZoneAt(idx)}
-                                                        className="shrink-0 rounded-none p-1 text-(--muted) transition-colors hover:text-(--danger)"
+                                                        className="shrink-0 rounded-sm p-1 text-(--muted) transition-colors hover:text-(--danger)"
                                                         title="移除该乘区条目"
                                                     >
                                                         <Icon icon="mdi:close" className="size-3.5" />
@@ -1129,7 +1129,7 @@ export default function BuffEntityEditor({
                                                                         key={dt}
                                                                         onClick={() => toggleZoneConditionDamageType(idx, dt)}
                                                                         title={dt}
-                                                                        className={`rounded-none border px-1.5 py-0.5 text-[10px] transition-colors ${
+                                                                        className={`rounded-sm border px-1.5 py-0.5 text-[10px] transition-colors ${
                                                                             on
                                                                                 ? 'border-(--accent) bg-(--accent) text-(--accent-fg)'
                                                                                 : 'border-(--card-border) text-(--muted) hover:text-(--fg)'
@@ -1150,7 +1150,7 @@ export default function BuffEntityEditor({
                                                                     <button
                                                                         key={el}
                                                                         onClick={() => toggleZoneConditionElement(idx, el)}
-                                                                        className={`rounded-none border px-1.5 py-0.5 text-[10px] transition-colors ${
+                                                                        className={`rounded-sm border px-1.5 py-0.5 text-[10px] transition-colors ${
                                                                             on
                                                                                 ? 'border-(--accent) bg-(--accent) text-(--accent-fg)'
                                                                                 : 'border-(--card-border) text-(--muted) hover:text-(--fg)'
@@ -1207,7 +1207,7 @@ export default function BuffEntityEditor({
                                                 onClick={() => addZone(def.id)}
                                                 disabled={activeBuffIdx === null}
                                                 title={`添加「${def.label}」${count > 0 ? `（已有 ${count} 条）` : ''}`}
-                                                className={`flex w-full items-center gap-1.5 rounded-none px-2 py-1.5 text-left text-[11px] font-medium transition-colors disabled:opacity-40 ${
+                                                className={`flex w-full items-center gap-1.5 rounded-sm px-2 py-1.5 text-left text-[11px] font-medium transition-colors disabled:opacity-40 ${
                                                     count > 0
                                                         ? 'text-(--accent-text) hover:bg-(--card-hover)'
                                                         : 'text-(--muted) hover:bg-(--card-hover) hover:text-(--fg)'
@@ -1264,7 +1264,7 @@ export default function BuffEntityEditor({
                             <button
                                 onClick={resetConversation}
                                 disabled={aiBusy}
-                                className="rounded-none p-1 text-(--muted) transition-colors hover:text-(--danger) disabled:opacity-50"
+                                className="rounded-sm p-1 text-(--muted) transition-colors hover:text-(--danger) disabled:opacity-50"
                                 title="清空对话"
                             >
                                 <Icon icon="mdi:restart" className="size-3.5" />
@@ -1277,13 +1277,13 @@ export default function BuffEntityEditor({
                         {aiHistory.map((m, i) =>
                             m.role === 'user' ? (
                                 <div key={i} className="flex justify-end">
-                                    <div className="max-w-[85%] whitespace-pre-wrap break-words rounded-none bg-(--accent) px-3 py-2 text-xs leading-relaxed text-(--accent-fg)">
+                                    <div className="max-w-[85%] whitespace-pre-wrap break-words rounded-sm bg-(--accent) px-3 py-2 text-xs leading-relaxed text-(--accent-fg)">
                                         {m.content}
                                     </div>
                                 </div>
                             ) : (
                                 <div key={i} className="flex justify-start">
-                                    <div className="max-w-[85%] whitespace-pre-wrap break-words rounded-none bg-(--card-hover) px-3 py-2 text-xs leading-relaxed text-(--fg)">
+                                    <div className="max-w-[85%] whitespace-pre-wrap break-words rounded-sm bg-(--card-hover) px-3 py-2 text-xs leading-relaxed text-(--fg)">
                                         {m.content}
                                     </div>
                                 </div>
@@ -1294,7 +1294,7 @@ export default function BuffEntityEditor({
                         {(aiBusy && (aiOutput || aiReasoning || aiTools.length > 0)) ||
                         (!aiBusy && (aiRawContent || aiError)) ? (
                             <div className="flex justify-start">
-                                <div className="max-w-[85%] rounded-none bg-(--card-hover) px-3 py-2 text-xs leading-relaxed break-words text-(--fg)">
+                                <div className="max-w-[85%] rounded-sm bg-(--card-hover) px-3 py-2 text-xs leading-relaxed break-words text-(--fg)">
                                     {/* 思考过程（默认展开，可收起） */}
                                     {aiReasoning && (
                                         <div className="mb-1.5">
@@ -1359,18 +1359,18 @@ export default function BuffEntityEditor({
                                             {aiResult.map((b) => (
                                                 <div
                                                     key={b.buffName}
-                                                    className="flex items-center gap-2 rounded-none border border-(--card-border) bg-(--card) px-2.5 py-2"
+                                                    className="flex items-center gap-2 rounded-sm border border-(--card-border) bg-(--card) px-2.5 py-2"
                                                 >
                                                     <span className="min-w-0 flex-1">
                                                         <span className="flex flex-wrap items-center gap-1.5">
                                                             <span className="truncate text-xs font-medium text-(--fg)">
                                                                 {b.buffName}
                                                             </span>
-                                                            <span className="rounded-none bg-(--accent) px-1 py-0.5 text-[9px] text-(--accent-fg)">
+                                                            <span className="rounded-sm bg-(--accent) px-1 py-0.5 text-[9px] text-(--accent-fg)">
                                                                 {BUFF_SCOPE_LABELS[b.scope ?? 'team']}
                                                             </span>
                                                             {b.exclusive && (
-                                                                <span className="rounded-none border border-(--warning) px-1 py-0.5 text-[9px] text-(--warning)">
+                                                                <span className="rounded-sm border border-(--warning) px-1 py-0.5 text-[9px] text-(--warning)">
                                                                     效应专属
                                                                 </span>
                                                             )}
@@ -1433,7 +1433,7 @@ export default function BuffEntityEditor({
                                         </div>
                                     )}
                                     {aiDebug && aiShowDebug && (
-                                        <pre className="mt-1 whitespace-pre-wrap break-words rounded-none bg-(--code-bg-strong) p-1.5 font-mono text-[10px] leading-relaxed text-(--danger)">
+                                        <pre className="mt-1 whitespace-pre-wrap break-words rounded-sm bg-(--code-bg-strong) p-1.5 font-mono text-[10px] leading-relaxed text-(--danger)">
                                             {aiDebug}
                                         </pre>
                                     )}
@@ -1458,7 +1458,7 @@ export default function BuffEntityEditor({
                                         )}
                                     </div>
                                     {showLogs && logs.length > 0 && (
-                                        <div className="mt-1 max-h-32 overflow-auto whitespace-pre-wrap break-words rounded-none bg-(--code-bg) p-1.5 font-mono text-[10px] leading-relaxed">
+                                        <div className="mt-1 max-h-32 overflow-auto whitespace-pre-wrap break-words rounded-sm bg-(--code-bg) p-1.5 font-mono text-[10px] leading-relaxed">
                                             {logs.map((l, i) => (
                                                 <div
                                                     key={i}
@@ -1482,7 +1482,7 @@ export default function BuffEntityEditor({
                                             {prompts.map((p, i) => (
                                                 <pre
                                                     key={i}
-                                                    className={`max-h-32 overflow-auto whitespace-pre-wrap break-words rounded-none bg-(--code-bg) p-1.5 font-mono text-[10px] leading-relaxed ${
+                                                    className={`max-h-32 overflow-auto whitespace-pre-wrap break-words rounded-sm bg-(--code-bg) p-1.5 font-mono text-[10px] leading-relaxed ${
                                                         p.kind === 'system'
                                                             ? 'text-(--info)'
                                                             : p.kind === 'history'
@@ -1514,12 +1514,12 @@ export default function BuffEntityEditor({
                             }}
                             disabled={aiBusy}
                             placeholder="追问，或直接提需求…"
-                            className="min-w-0 flex-1 rounded-none border border-(--card-border) bg-(--input-bg) px-2 py-1.5 text-xs outline-none focus:border-(--accent) disabled:opacity-50"
+                            className="min-w-0 flex-1 rounded-sm border border-(--card-border) bg-(--input-bg) px-2 py-1.5 text-xs outline-none focus:border-(--accent) disabled:opacity-50"
                         />
                         <button
                             onClick={onFollowUp}
                             disabled={aiBusy || !followUp.trim()}
-                            className="shrink-0 rounded-none px-3 py-1.5 text-xs font-medium border border-(--card-border) bg-(--btn-bg) text-(--btn-text) transition-colors hover:bg-(--card) hover:text-(--fg) transition-all  disabled:opacity-50"
+                            className="shrink-0 rounded-sm px-3 py-1.5 text-xs font-medium border border-(--card-border) bg-(--btn-bg) text-(--btn-text) transition-colors hover:bg-(--card) hover:text-(--fg) transition-all  disabled:opacity-50"
                         >
                             <Icon icon={aiBusy ? 'mdi:loading' : 'mdi:send'} className={aiBusy ? 'size-3.5 animate-spin' : 'size-3.5'} />
                         </button>
@@ -1546,7 +1546,7 @@ export default function BuffEntityEditor({
                             <button
                                 onClick={onDeleteEntity}
                                 disabled={pending}
-                                className="rounded-none border border-(--danger) bg-(--danger) transition-colors hover:bg-(--card) hover:text-(--danger) px-3 py-1.5 text-xs text-(--danger-fg)  disabled:opacity-50"
+                                className="rounded-sm border border-(--danger) bg-(--danger) transition-colors hover:bg-(--card) hover:text-(--danger) px-3 py-1.5 text-xs text-(--danger-fg)  disabled:opacity-50"
                             >
                                 确认删除该实体全部 Buff
                             </button>

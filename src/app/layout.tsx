@@ -1,6 +1,7 @@
 import type { Metadata } from 'next'
 import { Space_Grotesk } from 'next/font/google'
 import './globals.css'
+import { Icon } from '@iconify/react'
 import Header from '@/components/header'
 import { Toaster } from '@/components/ui/toast'
 
@@ -52,8 +53,19 @@ export default function RootLayout({
             <body className="flex min-h-dvh flex-col bg-(--bg) text-(--fg)">
                 <Header />
                 <main className="mx-auto w-full max-w-6xl flex-1 px-4 py-10 md:px-8 md:py-14">{children}</main>
-                <footer className="border-t mg-hairline py-8 text-center text-xs leading-relaxed text-(--muted)">
-                    椰果工坊 · 配合 椰果工具箱 使用
+                <footer className="border-t mg-hairline py-8">
+                    <div className="mx-auto flex w-full max-w-6xl flex-col items-center gap-1.5 px-4 text-xs leading-relaxed text-(--muted) md:px-8">
+                        <a
+                            href="/download"
+                            download
+                            title="下载椰果工具箱启动器：断网可用、随时拉表、白嫖免费AI模型"
+                            className="inline-flex items-center gap-1.5 rounded-sm px-2 py-1 transition-colors hover:bg-(--card-hover) hover:text-(--fg)"
+                        >
+                            <Icon icon="mdi:download-box-outline" className="size-3.5" />
+                            下载椰果工具箱启动器
+                        </a>
+                        <p>椰果工坊 · 与 椰果工具箱 搭配使用</p>
+                    </div>
                 </footer>
                 <Toaster />
             </body>
