@@ -68,12 +68,12 @@ export default function LoginForm({ redirect, error }: Props) {
                             autoComplete="one-time-code"
                             autoFocus
                             required
-                            className="mg-num flex-1 rounded-sm border border-(--card-border) bg-(--input-bg) px-3 py-2.5 text-center text-lg tracking-widest outline-none transition-colors placeholder:text-sm placeholder:tracking-normal focus:border-(--accent)"
+                            className="mg-num min-w-0 flex-1 rounded-sm border border-(--card-border) bg-(--input-bg) px-3 py-2.5 text-center text-base tracking-widest outline-none transition-colors placeholder:text-sm placeholder:tracking-normal focus:border-(--accent) sm:text-lg"
                         />
                         <button
                             type="submit"
                             disabled={pending || !code.trim()}
-                            className="inline-flex items-center gap-1.5 rounded-sm border border-(--card-border) bg-(--btn-bg) px-4 py-2.5 text-sm font-medium text-(--btn-text) transition-colors hover:bg-(--card) hover:text-(--fg) disabled:opacity-50"
+                            className="inline-flex shrink-0 items-center gap-1.5 whitespace-nowrap rounded-sm border border-(--card-border) bg-(--btn-bg) px-3 py-2.5 text-sm font-medium text-(--btn-text) transition-colors hover:bg-(--card) hover:text-(--fg) disabled:opacity-50 sm:px-4"
                         >
                             <Icon icon="mdi:login" className="size-4" />
                             登录
@@ -114,12 +114,12 @@ export default function LoginForm({ redirect, error }: Props) {
                     onChange={(e) => setEmail(e.target.value)}
                     placeholder="name@example.com"
                     required
-                    className="flex-1 rounded-sm border border-(--card-border) bg-(--input-bg) px-3 py-2.5 text-sm outline-none transition-colors placeholder:text-(--muted) focus:border-(--accent)"
+                    className="min-w-0 flex-1 rounded-sm border border-(--card-border) bg-(--input-bg) px-3 py-2.5 text-sm outline-none transition-colors placeholder:text-(--muted) focus:border-(--accent)"
                 />
                 <button
                     type="submit"
                     disabled={pending || !email}
-                    className="inline-flex items-center gap-1.5 rounded-sm border border-(--card-border) bg-(--btn-bg) px-4 py-2.5 text-sm font-medium text-(--btn-text) transition-colors hover:bg-(--card) hover:text-(--fg) disabled:opacity-50"
+                    className="inline-flex shrink-0 items-center gap-1.5 whitespace-nowrap rounded-sm border border-(--card-border) bg-(--btn-bg) px-3 py-2.5 text-sm font-medium text-(--btn-text) transition-colors hover:bg-(--card) hover:text-(--fg) disabled:opacity-50 sm:px-4"
                 >
                     <Icon icon="mdi:send-outline" className="size-4" />
                     发送
