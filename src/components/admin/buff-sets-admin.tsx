@@ -3,7 +3,7 @@
 import { useState, useEffect, useTransition } from 'react'
 import { useRouter } from 'next/navigation'
 import { Icon } from '@iconify/react'
-import BuffEntityGrid from '@/components/admin/buff-entity-grid'
+import BuffEntitySidebar from '@/components/admin/buff-entity-sidebar'
 import BuffEntityEditor from '@/components/admin/buff-entity-editor'
 import BuffSnapshotPanel from '@/components/admin/buff-snapshot-panel'
 import { DEFAULT_SYSTEM_PROMPT, DEFAULT_INITIAL_TASK_PROMPT, DEFAULT_SLANG_DICT } from '@/lib/ai/prompts'
@@ -199,12 +199,12 @@ export default function BuffSetsAdmin({ rows, isAdmin, buffLocks }: Props) {
         : null
 
     return (
-        <div className="flex h-[calc(100vh-8rem)] flex-col gap-3">
+        <div className="space-y-4">
             {/* 顶部工具栏 */}
             <div className="flex shrink-0 items-center justify-between mg-card px-4 py-2.5">
                 <span className="flex items-center gap-2">
                     <Icon icon="mdi:view-grid-outline" className="size-4 shrink-0 text-(--accent-text)" />
-                    <span className="mg-title text-sm">实体列表</span>
+                    <span className="mg-title text-sm">Buff 集编辑</span>
                 </span>
                 <span className="flex items-center gap-2">
                     {/* 快照（根 + 版本链）严格仅管理员：普通用户无权动快照 */}
@@ -213,59 +213,67 @@ export default function BuffSetsAdmin({ rows, isAdmin, buffLocks }: Props) {
                         <span className="flex items-center gap-1.5">
                             <Icon icon="mdi:cog-outline" className="size-4" />
                             连接配置
-                            {false && (
-                                <span className="ml-1 rounded-sm border border-(--warning) px-1 py-0.5 text-[9px] text-(--warning)">未配置</span>
-                            )}
                         </span>
-                        <Icon icon="mdi:cog" className="size-4" />
                     </button>
                 </span>
             </div>
 
-            {/* 实体网格 */}
-            <div className="min-h-0 flex-1">
-                <BuffEntityGrid
+            {/* 工作台：左侧实体 sidebar + 右侧就地编辑器（不再用弹窗） */}
+            <div className="workbench">
+                <BuffEntitySidebar
                     existingCountMap={existingCountMap}
+                    selectedKey={editingKey}
                     onSelect={handleSelect}
                     isAdmin={isAdmin}
                     locks={buffLocks}
                     lockPending={lockPending}
                     onToggleLock={toggleEntityLock}
                 />
-            </div>
 
-            {/* 编辑弹窗 */}
-            {selected && initial && (
-                <div className="buff-editor-modal-shell fixed inset-0 z-50 flex items-center justify-center p-4">
-                    <div className="absolute inset-0 bg-(--overlay) " onClick={() => setSelected(null)} />
-                    <div className="buff-editor-modal relative flex h-[92vh] w-[min(98vw,1500px)] flex-col overflow-hidden mg-card ">
-                        <BuffEntityEditor
-                            key={editingKey ?? 'new'}
-                            initial={initial}
-                            
-                            apiKey={ai?.apiKey ?? ''}
-                            aiBaseUrl={ai?.baseUrl ?? ''}
-                            aiModel={ai?.model ?? ''}
-                            aiDirect={ai?.direct ?? false}
-                            systemPrompt={systemPrompt}
-                            initialTaskPrompt={initialTaskPrompt}
-                            toolPrompts={{}}
-                            slangDict={slangDict}
-                            reasoningEffort={ai?.reasoningEffort ?? 'medium'}
-                            isAdmin={isAdmin}
-                            canEdit={isAdmin || !buffLocks[entityKey(selected.entityType, selected.entityName)]}
-                            sessionSeed={sessionShare ? shareSessions[selected.entityType] : undefined}
-                            onSessionUpdate={(msgs) => handleSessionUpdate(selected.entityType, msgs)}
-                            sessionShareEnabled={sessionShare}
-                            onEntityDeleted={() => {
-                                setSelected(null)
-                                setEditingKey(null)
-                            }}
-                            onclose={() => setSelected(null)}
-                        />
-                    </div>
-                </div>
-            )}
+                <section className="workbench-main">
+                    {selected && initial ? (
+                        <div className="h-[calc(100dvh-13rem)] min-h-[32rem]">
+                            <BuffEntityEditor
+                                key={editingKey ?? 'new'}
+                                initial={initial}
+                                apiKey={ai?.apiKey ?? ''}
+                                aiBaseUrl={ai?.baseUrl ?? ''}
+                                aiModel={ai?.model ?? ''}
+                                aiDirect={ai?.direct ?? false}
+                                systemPrompt={systemPrompt}
+                                initialTaskPrompt={initialTaskPrompt}
+                                toolPrompts={{}}
+                                slangDict={slangDict}
+                                reasoningEffort={ai?.reasoningEffort ?? 'medium'}
+                                isAdmin={isAdmin}
+                                canEdit={
+                                    isAdmin ||
+                                    !buffLocks[entityKey(selected.entityType, selected.entityName)]
+                                }
+                                sessionSeed={sessionShare ? shareSessions[selected.entityType] : undefined}
+                                onSessionUpdate={(msgs) => handleSessionUpdate(selected.entityType, msgs)}
+                                sessionShareEnabled={sessionShare}
+                                onEntityDeleted={() => {
+                                    setSelected(null)
+                                    setEditingKey(null)
+                                }}
+                                onclose={() => {
+                                    setSelected(null)
+                                    setEditingKey(null)
+                                }}
+                            />
+                        </div>
+                    ) : (
+                        <div className="flex min-h-[28rem] flex-col items-center justify-center gap-3 rounded-sm border border-dashed border-(--card-border) p-8 text-center">
+                            <Icon icon="mdi:cursor-default-click-outline" className="size-9 text-(--muted)" />
+                            <p className="text-sm text-(--muted)">从左侧选择一个实体开始编辑</p>
+                            <p className="text-xs text-(--muted)">
+                                还没有条目的实体：切「全部实体」后点选，即可新建
+                            </p>
+                        </div>
+                    )}
+                </section>
+            </div>
 
             {/* 连接配置弹窗（整个弹窗随内容滚动） */}
             {showConfig && (

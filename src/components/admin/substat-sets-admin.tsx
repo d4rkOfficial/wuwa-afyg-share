@@ -191,169 +191,67 @@ export default function SubstatSetsAdmin({ rows, isAdmin, substatLocks }: Props)
     }
 
     return (
-        <div className="space-y-4">
-            {/* 工具栏：角色名 + 备注 + 操作 */}
-            <div className="flex flex-wrap items-end justify-between gap-3 mg-card p-3">
-                <div className="flex min-w-0 flex-1 flex-wrap items-end gap-3">
-                    <label className="flex min-w-52 flex-1 flex-col gap-1 text-xs text-(--muted)">
-                        角色名
-                        <input
-                            value={characterName}
-                            onChange={(e) => setCharacterName(e.target.value)}
-                            list="substat-character-options"
-                            placeholder="输入或选择角色名（如：布兰特）"
-                            className={FIELD_CLASS}
-                        />
-                        <datalist id="substat-character-options">
-                            {characterList.map((n) => (
-                                <option key={n} value={n} />
-                            ))}
-                        </datalist>
-                    </label>
-                    <label className="flex min-w-52 flex-1 flex-col gap-1 text-xs text-(--muted)">
-                        备注（仅管理页可见，不入公开 API）
-                        <input
-                            value={note}
-                            onChange={(e) => setNote(e.target.value)}
-                            placeholder="例如：特殊词条配置来源 / 说明"
-                            className={FIELD_CLASS}
-                        />
-                    </label>
-                </div>
-                <div className="flex shrink-0 items-center gap-2">
-                    <button onClick={onNew} disabled={pending} className="toolbar-btn toolbar-btn-ghost">
-                        <Icon icon="mdi:file-plus-outline" className="size-3.5" />
-                        新建
-                    </button>
-                    <button
-                        onClick={onSave}
-                        disabled={pending || !characterName.trim() || (!isAdmin && !!substatLocks[characterName.trim()])}
-                        title={
-                            !isAdmin && substatLocks[characterName.trim()]
-                                ? '该方案已被管理员锁定，仅管理员可修改'
-                                : undefined
-                        }
-                        className="toolbar-btn toolbar-btn-primary"
-                    >
-                        <Icon
-                            icon={pending ? 'mdi:loading' : 'mdi:content-save-outline'}
-                            className={`size-3.5 ${pending ? 'animate-spin' : ''}`}
-                        />
-                        {pending ? '保存中…' : '保存'}
-                    </button>
-                    {isAdmin && loadedName && (
-                        <button
-                            onClick={() => onDelete(loadedName)}
-                            disabled={pending}
-                            className="inline-flex items-center gap-1 rounded-sm border border-(--danger) bg-(--card) px-2.5 py-1.5 text-xs font-medium text-(--danger) transition-colors hover:bg-(--danger) hover:text-(--danger-fg) disabled:opacity-50"
-                        >
-                            <Icon icon="mdi:trash-can-outline" className="size-3.5" />
-                            删除当前
-                        </button>
-                    )}
-                </div>
-            </div>
-
-            {/* 校验状态条 */}
-            <div className="flex flex-wrap items-center gap-x-4 gap-y-1 rounded-sm border border-(--card-border) bg-(--card-hover) px-3 py-2 text-[11px]">
-                <span className={substatTotal === SUBSTAT_TOTAL_COUNT ? 'text-(--success)' : 'text-(--danger)'}>
-                    副词条合计 <span className="mg-num">{substatTotal}</span> /{' '}
-                    <span className="mg-num">{SUBSTAT_TOTAL_COUNT}</span>
-                </span>
-                <span className={totalCost <= ECHO_MAX_TOTAL_COST ? 'text-(--muted)' : 'text-(--danger)'}>
-                    cost：<span className="mg-num">{costCombo || '—'}</span>（合计{' '}
-                    <span className="mg-num">{totalCost}</span> / 上限{' '}
-                    <span className="mg-num">{ECHO_MAX_TOTAL_COST}</span>）
-                </span>
-                {planCheck.ok ? (
-                    <span className="text-(--success)">✓ plan 校验通过，可保存</span>
-                ) : (
-                    <span className="text-(--danger)">✕ {planCheck.error}</span>
-                )}
-                {catalogError && <span className="text-(--muted)">{catalogError}</span>}
-            </div>
-
-            {/* 5 个部位编辑器 */}
-            <div key={planVersion} className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
-                {plan.slots.map((slot, i) => (
-                    <SubstatSlotEditor key={i} index={i} slot={slot} onChange={(s) => updateSlot(i, s)} />
-                ))}
-            </div>
-
-            {/* JSON 导入 / 导出 */}
-            <SubstatPlanJson
-                value={jsonText}
-                onChange={setJsonText}
-                status={jsonStatus}
-                onExport={onExportJson}
-                onImport={onImportJson}
-            />
-
-            {/* 已保存方案列表 */}
-            <div className="overflow-hidden mg-card">
-                <div className="flex items-center justify-between border-b border-(--card-border) px-4 py-2.5">
-                    <span className="flex items-center gap-2">
-                        <Icon icon="mdi:database-outline" className="size-4 shrink-0 text-(--accent-text)" />
-                        <span className="mg-title text-sm">已保存方案</span>
-                        <span className="text-[11px] text-(--muted)">
-                            共 <span className="mg-num text-(--fg)">{rows.length}</span> 个角色
-                        </span>
+        <div className="workbench">
+            {/* ── sidebar：已保存方案 ── */}
+            <aside className="workbench-sidebar" aria-label="已保存方案">
+                <div className="flex items-center gap-1.5">
+                    <span className="flex min-w-0 flex-1 items-center gap-1.5 px-0.5 text-[11px] tracking-[0.16em] text-(--muted)">
+                        <Icon icon="mdi:database-outline" className="size-3.5" />
+                        已保存 <span className="mg-num text-(--fg)">{rows.length}</span>
                     </span>
-                    <span className="mg-note">工具箱通过 /api/substat-sets 拉取</span>
+                    <button
+                        onClick={onNew}
+                        disabled={pending}
+                        className="toolbar-btn toolbar-btn-ghost px-1.5 py-1"
+                        title="新建空方案"
+                    >
+                        <Icon icon="mdi:file-plus-outline" className="size-3.5" />
+                    </button>
                 </div>
-                {rows.length === 0 && (
-                    <p className="px-4 py-8 text-center text-sm text-(--muted)">暂无已保存方案</p>
-                )}
-                {rows.map((row) => {
-                    const total = countPlanSubstats(row.plan)
-                    const isLoaded = loadedName === row.character_name
-                    const locked = !!substatLocks[row.character_name]
-                    const lockedForMe = locked && !isAdmin
-                    return (
-                        <div
-                            key={row.id}
-                            className="flex flex-wrap items-center justify-between gap-3 border-b border-(--card-border) px-4 py-3 last:border-0"
-                        >
-                            <div className="min-w-0">
-                                <div className="flex flex-wrap items-center gap-2">
-                                    <span className="font-medium text-(--fg)">{row.character_name}</span>
+                <div className="workbench-list">
+                    {rows.length === 0 && (
+                        <p className="px-2 py-8 text-center text-xs text-(--muted)">暂无已保存方案</p>
+                    )}
+                    {rows.map((row) => {
+                        const total = countPlanSubstats(row.plan)
+                        const locked = !!substatLocks[row.character_name]
+                        const lockedForMe = locked && !isAdmin
+                        const isLoaded = loadedName === row.character_name
+                        return (
+                            <div key={row.id} className="flex items-center gap-0.5">
+                                <button
+                                    onClick={() => onLoad(row)}
+                                    disabled={pending || lockedForMe}
+                                    data-active={isLoaded}
+                                    className="workbench-item min-w-0 flex-1 disabled:opacity-50"
+                                    title={
+                                        lockedForMe
+                                            ? '该方案已被管理员锁定，仅管理员可编辑'
+                                            : `更新于 ${formatDate(row.updated_at)}（${timeAgo(row.updated_at)}）${
+                                                  row.note ? ` · ${row.note}` : ''
+                                              }`
+                                    }
+                                >
+                                    <span className="min-w-0 flex-1 truncate">{row.character_name}</span>
                                     <span
-                                        className={`rounded-sm px-1.5 py-0.5 text-[10px] ${
-                                            total === SUBSTAT_TOTAL_COUNT
-                                                ? 'bg-(--accent) text-(--accent-fg)'
-                                                : 'border border-(--danger) text-(--danger)'
+                                        className={`workbench-item-meta ${
+                                            total === SUBSTAT_TOTAL_COUNT ? '' : 'text-(--warning)'
                                         }`}
                                     >
-                                        副词条 <span className="mg-num">{total}</span>
+                                        {total}
                                     </span>
-                                    {isLoaded && (
-                                        <span className="rounded-sm bg-(--card-hover) px-1.5 py-0.5 text-[10px] text-(--muted)">
-                                            编辑中
-                                        </span>
-                                    )}
                                     {locked && (
-                                        <span className="inline-flex items-center gap-1 rounded-sm border border-(--warning) px-1.5 py-0.5 text-[10px] text-(--warning)">
-                                            <Icon icon="mdi:lock" className="size-3" />
-                                            已锁定
-                                        </span>
+                                        <Icon icon="mdi:lock" className="size-3 shrink-0 text-(--warning)" />
                                     )}
-                                </div>
-                                <p className="mt-0.5 truncate text-xs text-(--muted)" title={row.updated_at}>
-                                    更新于 <span className="mg-num">{formatDate(row.updated_at)}</span>（
-                                    <span className="mg-num">{timeAgo(row.updated_at)}</span>）
-                                    {row.note ? ` · ${row.note}` : ''}
-                                </p>
-                            </div>
-                            <div className="flex shrink-0 items-center gap-2">
-                                {/* 条目级锁：仅管理员可切换 */}
+                                </button>
                                 {isAdmin && (
                                     <button
                                         onClick={() => onToggleLock(row.character_name)}
                                         disabled={pending}
-                                        className={`rounded-sm p-1.5 transition-colors disabled:opacity-50 ${
+                                        className={`shrink-0 rounded-sm p-1 transition-colors disabled:opacity-50 ${
                                             locked
                                                 ? 'text-(--warning) hover:text-(--fg)'
-                                                : 'text-(--muted) hover:text-(--fg)'
+                                                : 'text-(--muted) opacity-45 hover:opacity-100 hover:text-(--fg)'
                                         }`}
                                         title={locked ? '解锁：允许登录用户编辑' : '锁定：仅管理员可编辑'}
                                     >
@@ -363,40 +261,122 @@ export default function SubstatSetsAdmin({ rows, isAdmin, substatLocks }: Props)
                                         />
                                     </button>
                                 )}
-                                <button
-                                    onClick={() => onLoad(row)}
-                                    disabled={pending || lockedForMe}
-                                    title={lockedForMe ? '该方案已被管理员锁定，仅管理员可编辑' : undefined}
-                                    className="toolbar-btn toolbar-btn-ghost"
-                                >
-                                    <Icon icon="mdi:pencil-outline" className="size-3.5" />
-                                    载入编辑
-                                </button>
-                                {/* 删除整份方案 = 破坏性操作，仅管理员 */}
-                                {isAdmin &&
-                                    (confirmDelete === row.id ? (
-                                        <button
-                                            onClick={() => onDelete(row.character_name)}
-                                            disabled={pending}
-                                            className="rounded-sm border border-(--danger) bg-(--danger) px-3 py-1.5 text-xs text-(--danger-fg) transition-colors hover:bg-(--card) hover:text-(--danger) disabled:opacity-50"
-                                        >
-                                            确认删除
-                                        </button>
-                                    ) : (
-                                        <button
-                                            onClick={() => setConfirmDelete(row.id)}
-                                            onBlur={() => setTimeout(() => setConfirmDelete(null), 2500)}
-                                            disabled={pending}
-                                            className="rounded-sm border border-(--danger) bg-(--card) px-3 py-1.5 text-xs text-(--danger) transition-colors hover:bg-(--danger) hover:text-(--danger-fg) disabled:opacity-50"
-                                        >
-                                            删除
-                                        </button>
-                                    ))}
                             </div>
-                        </div>
-                    )
-                })}
-            </div>
+                        )
+                    })}
+                </div>
+                <p className="px-1 pb-0.5 text-[10px] text-(--muted)">工具箱经 /api/substat-sets 拉取</p>
+            </aside>
+
+            {/* ── 主内容区：编辑当前方案 ── */}
+            <section className="workbench-main space-y-3">
+                <div className="flex flex-wrap items-end justify-between gap-3 mg-card p-3">
+                    <div className="flex min-w-0 flex-1 flex-wrap items-end gap-3">
+                        <label className="flex min-w-44 flex-1 flex-col gap-1 text-xs text-(--muted)">
+                            角色名
+                            <input
+                                value={characterName}
+                                onChange={(e) => setCharacterName(e.target.value)}
+                                list="substat-character-options"
+                                placeholder="输入或选择角色名（如：布兰特）"
+                                className={FIELD_CLASS}
+                            />
+                            <datalist id="substat-character-options">
+                                {characterList.map((n) => (
+                                    <option key={n} value={n} />
+                                ))}
+                            </datalist>
+                        </label>
+                        <label className="flex min-w-44 flex-1 flex-col gap-1 text-xs text-(--muted)">
+                            备注（仅管理页可见，不入公开 API）
+                            <input
+                                value={note}
+                                onChange={(e) => setNote(e.target.value)}
+                                placeholder="例如：特殊词条配置来源 / 说明"
+                                className={FIELD_CLASS}
+                            />
+                        </label>
+                    </div>
+                    <div className="flex shrink-0 items-center gap-2">
+                        <button onClick={onNew} disabled={pending} className="toolbar-btn toolbar-btn-ghost">
+                            <Icon icon="mdi:file-plus-outline" className="size-3.5" />
+                            新建
+                        </button>
+                        <button
+                            onClick={onSave}
+                            disabled={pending || !characterName.trim() || (!isAdmin && !!substatLocks[characterName.trim()])}
+                            title={
+                                !isAdmin && substatLocks[characterName.trim()]
+                                    ? '该方案已被管理员锁定，仅管理员可修改'
+                                    : undefined
+                            }
+                            className="toolbar-btn toolbar-btn-primary"
+                        >
+                            <Icon
+                                icon={pending ? 'mdi:loading' : 'mdi:content-save-outline'}
+                                className={`size-3.5 ${pending ? 'animate-spin' : ''}`}
+                            />
+                            {pending ? '保存中…' : '保存'}
+                        </button>
+                        {isAdmin && loadedName && (
+                            confirmDelete === loadedName ? (
+                                <button
+                                    onClick={() => onDelete(loadedName)}
+                                    disabled={pending}
+                                    className="rounded-sm border border-(--danger) bg-(--danger) px-2.5 py-1.5 text-xs font-medium text-(--danger-fg) transition-colors hover:opacity-90 disabled:opacity-50"
+                                >
+                                    确认删除
+                                </button>
+                            ) : (
+                                <button
+                                    onClick={() => setConfirmDelete(loadedName)}
+                                    onBlur={() => setTimeout(() => setConfirmDelete(null), 2500)}
+                                    disabled={pending}
+                                    className="rounded-sm border border-(--danger) bg-(--card) px-2.5 py-1.5 text-xs font-medium text-(--danger) transition-colors hover:bg-(--danger) hover:text-(--danger-fg) disabled:opacity-50"
+                                >
+                                    <Icon icon="mdi:trash-can-outline" className="mr-1 inline size-3.5" />
+                                    删除当前
+                                </button>
+                            )
+                        )}
+                    </div>
+                </div>
+
+                {/* 校验状态条 */}
+                <div className="flex flex-wrap items-center gap-x-4 gap-y-1 rounded-sm border border-(--card-border) bg-(--card-hover) px-3 py-2 text-[11px]">
+                    <span className={substatTotal === SUBSTAT_TOTAL_COUNT ? 'text-(--success)' : 'text-(--danger)'}>
+                        副词条合计 <span className="mg-num">{substatTotal}</span> /{' '}
+                        <span className="mg-num">{SUBSTAT_TOTAL_COUNT}</span>
+                    </span>
+                    <span className={totalCost <= ECHO_MAX_TOTAL_COST ? 'text-(--muted)' : 'text-(--danger)'}>
+                        cost：<span className="mg-num">{costCombo || '—'}</span>（合计{' '}
+                        <span className="mg-num">{totalCost}</span> / 上限{' '}
+                        <span className="mg-num">{ECHO_MAX_TOTAL_COST}</span>）
+                    </span>
+                    {planCheck.ok ? (
+                        <span className="text-(--success)">✓ plan 校验通过，可保存</span>
+                    ) : (
+                        <span className="text-(--danger)">✕ {planCheck.error}</span>
+                    )}
+                    {catalogError && <span className="text-(--muted)">{catalogError}</span>}
+                </div>
+
+                {/* 5 个部位编辑器 */}
+                <div key={planVersion} className="grid gap-3 md:grid-cols-2 2xl:grid-cols-3">
+                    {plan.slots.map((slot, i) => (
+                        <SubstatSlotEditor key={i} index={i} slot={slot} onChange={(s) => updateSlot(i, s)} />
+                    ))}
+                </div>
+
+                {/* JSON 导入 / 导出 */}
+                <SubstatPlanJson
+                    value={jsonText}
+                    onChange={setJsonText}
+                    status={jsonStatus}
+                    onExport={onExportJson}
+                    onImport={onImportJson}
+                />
+            </section>
         </div>
     )
 }
