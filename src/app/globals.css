@@ -361,8 +361,12 @@ html.light .theme-icon-light {
     }
 }
 
-/* 竖屏 Buff 编辑器：列表是稳定锚点，编辑与 AI 在右侧上下分区。 */
-@media (orientation: portrait) {
+/* ──────────────────────────────────────────────────────────────
+   窄屏 Buff 编辑器（≤ 900px 或竖屏）：四栏改为「页签 + 单栏」。
+   宽屏仍是四栏并排（列表 / 编辑 / 乘区 / AI），页签由 .buff-editor-mobile-tabs 在宽屏隐藏。
+   为什么不继续用「窄列 + 上下分区」：手机上四栏各剩几十像素，输入框和长 Buff 名都不可用。
+   ────────────────────────────────────────────────────────────── */
+@media (max-width: 900px), (orientation: portrait) {
     .buff-editor-modal-shell {
         padding: 0.5rem;
     }
@@ -372,66 +376,57 @@ html.light .theme-icon-light {
         border-radius: var(--radius-sm);
     }
     .buff-editor-layout {
-        display: grid;
-        grid-template-columns: clamp(11rem, 24vw, 14rem) minmax(0, 1fr) clamp(9.5rem, 18vw, 11rem);
-        grid-template-rows: minmax(0, 3fr) minmax(13rem, 2fr);
+        display: flex;
+        flex-direction: column;
+        overflow: hidden;
     }
-    .buff-editor-buff-list {
-        grid-column: 1;
-        grid-row: 1 / 3;
-        width: auto;
-    }
-    .buff-editor-main {
-        grid-column: 2;
-        grid-row: 1;
-    }
-    .buff-editor-zones {
-        grid-column: 3;
-        grid-row: 1;
-        width: auto;
-        border-right: 0;
-        border-left: 2px solid var(--card-border);
-    }
-    .buff-editor-ai {
-        grid-column: 2 / 4;
-        grid-row: 2;
-        width: auto;
-        min-width: 0;
-        border-top: 2px solid var(--card-border);
+    /* 单栏：所有面包满宽度，边框改成上下分隔 */
+    .buff-editor-layout > * {
+        width: auto !important;
+        height: auto !important;
+        min-width: 0 !important;
+        flex: 1 1 auto;
+        min-height: 0;
         border-left: 0;
+        border-right: 0;
+    }
+    /* 只显示当前页签对应的面板（data-mobile-pane 由编辑器写入） */
+    .buff-editor-layout:not([data-mobile-pane='list']) .buff-editor-buff-list,
+    .buff-editor-layout:not([data-mobile-pane='edit']) .buff-editor-main,
+    .buff-editor-layout:not([data-mobile-pane='zones']) .buff-editor-zones,
+    .buff-editor-layout:not([data-mobile-pane='ai']) .buff-editor-ai {
+        display: none;
+    }
+    /* 触屏点按目标放大一档（原 11px 文字在手机上太小） */
+    .buff-editor-layout button,
+    .buff-editor-layout input,
+    .buff-editor-layout select {
+        min-height: 2rem;
+    }
+    .buff-editor-layout .toolbar-btn {
+        padding: 0.375rem 0.625rem;
+        font-size: 0.75rem;
     }
 }
 
-/* 极窄竖屏仍保留左侧 Buff 导航，右侧改为编辑 / 乘区 / AI 三段。 */
-@media (orientation: portrait) and (max-width: 640px) {
+/* 宽屏：页签不占位（四栏并排时用不上） */
+@media (min-width: 901px) and (orientation: landscape) {
+    .buff-editor-mobile-tabs {
+        display: none;
+    }
+}
+
+/* 极窄竖屏：再收紧一点边距，保证输入行和底部操作条放得下 */
+@media (max-width: 480px) {
     .buff-editor-modal-shell {
         padding: 0.25rem;
     }
     .buff-editor-modal {
         width: calc(100vw - 0.5rem);
         height: calc(100dvh - 0.5rem);
-        border-radius: var(--radius-sm);
     }
-    .buff-editor-layout {
-        grid-template-columns: clamp(7.25rem, 34vw, 8.5rem) minmax(0, 1fr);
-        grid-template-rows: minmax(0, 3fr) minmax(7rem, 1fr) minmax(11rem, 2fr);
-    }
-    .buff-editor-buff-list {
-        grid-row: 1 / 4;
-    }
-    .buff-editor-main {
-        grid-column: 2;
-        grid-row: 1;
-    }
-    .buff-editor-zones {
-        grid-column: 2;
-        grid-row: 2;
-        border-top: 2px solid var(--card-border);
-        border-left: 0;
-    }
-    .buff-editor-ai {
-        grid-column: 2;
-        grid-row: 3;
+    .buff-editor-modal .mg-title {
+        font-size: 1rem;
     }
 }
 

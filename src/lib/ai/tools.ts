@@ -21,6 +21,8 @@ import {
 } from '@/lib/ai/prompts.config'
 import { renderConditionRules } from '@/lib/ai/prompts'
 import { analyzeCharacterTerms } from '@/lib/ai/terms'
+import { sanitizeBuffs } from '@/lib/ai/client'
+import type { GeneratedBuff } from '@/lib/ai/types'
 import type { BuffEntityType, BuffSetRow } from '@/lib/types/db'
 
 export interface ToolDefinition {
@@ -278,13 +280,143 @@ const BASE_TOOLS: ToolDefinition[] = [
             description: '获取 few-shot 示例（声骸套装/武器叠层/角色引用属性的输入输出对照），用于理解格式与判定。',
             parameters: { type: 'object', properties: {} }
         }
+    },
+    // ── 管理员编辑工具：直接改「编辑中的 Buff 草稿」/ 写入数据库 ──
+    {
+        type: 'function',
+        function: {
+            name: 'rename_buff',
+            description:
+                '给当前编辑实体下的一条 Buff 改名（保留它的作用域 / 条件 / 乘区数值不变）。用于微调命名、统一命名规范。仅管理员编辑器内可用。',
+            parameters: {
+                type: 'object',
+                properties: {
+                    oldName: { type: 'string', description: '改名前的 buffName（精确匹配现有条目）' },
+                    newName: { type: 'string', description: '改名后的 buffName（不能与其它条目重名）' }
+                },
+                required: ['oldName', 'newName']
+            }
+        }
+    },
+    {
+        type: 'function',
+        function: {
+            name: 'update_buff',
+            description:
+                '修改当前编辑实体下一条 Buff 的细节：改名（newName）、受影响者（scope）、效应专属、实例级条件、乘区贡献条目列表。只传需要改的字段，其余保持不变。仅管理员编辑器内可用。',
+            parameters: {
+                type: 'object',
+                properties: {
+                    buffName: { type: 'string', description: '要修改的 buffName（精确匹配现有条目）' },
+                    newName: { type: 'string', description: '可选：改名' },
+                    scope: { type: 'string', enum: ['self', 'self_except', 'team', 'effect_only'], description: '可选：受影响者' },
+                    exclusive: { type: 'boolean', description: '可选：是否效应专属' },
+                    condition: {
+                        type: 'object',
+                        description:
+                            '可选：实例级生效条件；传 null 表示清除条件。{"chains":[{"charIdx":0,"min":3}]} / {"refinements":[{"charIdx":0,"min":3}]}（链阶互斥），兼容 {"chain":3} / {"refinement":3}',
+                        properties: {}
+                    },
+                    zones: {
+                        type: 'array',
+                        description:
+                            '可选：**整份替换**的乘区贡献条目列表（不传则保留原值）。同一乘区可多条，各带自己的条件 / 引用 / 覆盖',
+                        items: {
+                            type: 'object',
+                            properties: {
+                                zoneId: { type: 'string' },
+                                value: { type: 'number' },
+                                override: { type: 'boolean' },
+                                condition: {
+                                    type: 'object',
+                                    description: '乘区级生效条件：{"damageTypes":["共鸣技能伤害"]} / {"elements":["导电"]}',
+                                    properties: {
+                                        elements: { type: 'array', items: { type: 'string' } },
+                                        damageTypes: { type: 'array', items: { type: 'string' } }
+                                    }
+                                },
+                                ref: {
+                                    type: 'object',
+                                    description: '引用 / 转模（不确定字段时先调用 get_ref_rules）',
+                                    properties: {
+                                        targetZoneId: { type: 'string' },
+                                        pct: { type: 'number' },
+                                        threshold: { type: 'number' },
+                                        lower: { type: 'number' },
+                                        upper: { type: 'number' },
+                                        discrete: { type: 'boolean' },
+                                        divisor: { type: 'number' },
+                                        multiplier: { type: 'number' },
+                                        refOwner: { type: 'string', enum: ['self', 'owner'] }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                },
+                required: ['buffName']
+            }
+        }
+    },
+    {
+        type: 'function',
+        function: {
+            name: 'add_buff',
+            description: '在当前编辑实体的 Buff 草稿里新增一条 Buff（同名字条已存在时会被拒绝，请先改用 update_buff）。仅管理员编辑器内可用。',
+            parameters: {
+                type: 'object',
+                properties: {
+                    buffName: { type: 'string' },
+                    scope: { type: 'string', enum: ['self', 'self_except', 'team', 'effect_only'] },
+                    exclusive: { type: 'boolean' },
+                    condition: { type: 'object', description: '实例级生效条件（可选）', properties: {} },
+                    zones: { type: 'array', description: '乘区贡献条目列表（至少一条）', items: { type: 'object' } }
+                },
+                required: ['buffName', 'zones']
+            }
+        }
+    },
+    {
+        type: 'function',
+        function: {
+            name: 'remove_buff',
+            description: '从当前编辑实体的 Buff 草稿里删除一条 Buff（只改草稿，不落库）。仅管理员编辑器内可用。',
+            parameters: {
+                type: 'object',
+                properties: { buffName: { type: 'string', description: '要删除的 buffName（精确匹配）' } },
+                required: ['buffName']
+            }
+        }
+    },
+    {
+        type: 'function',
+        function: {
+            name: 'save_buff_set',
+            description:
+                '把当前编辑中的 Buff 草稿**直接写入数据库**（整体替换该实体的全部 Buff 行）。会弹出管理员确认，确认后才执行。仅在用户明确要求「保存 / 直接写入」时调用。',
+            parameters: { type: 'object', properties: {} }
+        }
     }
 ]
 
-// 按前端配置覆盖 description；未配置则用默认
-export function buildTools(toolPrompts?: Record<string, string>): ToolDefinition[] {
-    if (!toolPrompts) return BASE_TOOLS
-    return BASE_TOOLS.map((t) => {
+/** @desc 只能在「管理员 Buff 编辑器」里用的工具（依赖编辑中的草稿） */
+export const DRAFT_TOOL_NAMES = new Set<string>([
+    'rename_buff',
+    'update_buff',
+    'add_buff',
+    'remove_buff',
+    'save_buff_set'
+])
+
+/**
+ * @desc 工具清单（按前端配置覆盖 description；未配置则用默认）。
+ * @param toolPrompts 工具名 → 自定义 description
+ * @param opts.draft 是否存在可编辑草稿；`false` 时草稿类工具不上清单，避免模型调用必失败的工具
+ */
+export function buildTools(toolPrompts?: Record<string, string>, opts?: { draft?: boolean }): ToolDefinition[] {
+    const available = opts?.draft === false ? BASE_TOOLS.filter((t) => !DRAFT_TOOL_NAMES.has(t.function.name)) : BASE_TOOLS
+    if (!toolPrompts) return available
+    return available.map((t) => {
         const custom = toolPrompts[t.function.name]
         if (!custom || !custom.trim()) return t
         return {
@@ -298,17 +430,63 @@ export interface GetBuffSetsFn {
     (entityType?: string, entityName?: string, query?: string): Promise<unknown>
 }
 
-// 当前编辑上下文（由 route 注入）
+// 当前编辑上下文（由面板注入）
 export interface ToolContext {
     entityType: BuffEntityType
     entityName: string
     getBuffSets?: GetBuffSetsFn
     slangDict?: string
+    /** @desc 管理员编辑中的 Buff 草稿（改名 / 改细节 / 增删 / 直接落库都改它；无管理员编辑器时缺席） */
+    draft?: BuffDraftApi
+    /** @desc 危险操作的确认回调（如直接写入数据库）；未注入则危险工具一律拒绝 */
+    onConfirm?: (toolName: string, message: string) => Promise<boolean>
 }
 
+/** @desc 管理员编辑中的 Buff 草稿接口（由编辑器实现，AI 工具只经它读写） */
+export interface BuffDraftApi {
+    get(): GeneratedBuff[]
+    /** @desc 整份替换草稿（编辑器会重新渲染列表） */
+    set(list: GeneratedBuff[]): void
+    /**
+     * @desc 直接写入数据库（管理员才有实现）。
+     * @param list 可选：写入这份内容而不是编辑器当前状态
+     *   （同一轮里模型先改了草稿再保存时，React state 可能还没刷新，传它才写得准）
+     */
+    save(list?: GeneratedBuff[]): Promise<{ ok: boolean; error?: string; saved?: number }>
+}
+
+/** @desc 会**落库**的危险工具：执行前必须经用户确认（只改草稿的工具不在此列，管理员仍可手动撤销） */
+const DANGEROUS_TOOLS = new Set<string>(['save_buff_set'])
+
 // ── 执行器 ───────────────────────────────────────────────────
+/** @desc 确认卡里给管理员看的一行摘要（工具名 + 关键参数） */
+function describeArgs(args: Record<string, unknown>): string {
+    const parts = Object.entries(args ?? {})
+        .filter(([, v]) => v !== undefined && v !== null && v !== '')
+        .map(([k, v]) => `${k}=${typeof v === 'object' ? JSON.stringify(v) : String(v)}`)
+    return parts.length > 0 ? parts.join('，') : ''
+}
+
+/** @desc 危险操作确认文案：说明**会改动什么**，而不是只列参数（保存类操作没有参数） */
+function describeDangerousCall(ctx: ToolContext, name: string, args: Record<string, unknown>): string {
+    if (name === 'save_buff_set') {
+        const count = ctx.draft?.get().length ?? 0
+        return `把「${ctx.entityType} / ${ctx.entityName}」当前的 ${count} 条 Buff 草稿直接写入数据库（整体替换该实体的全部 Buff 行）`
+    }
+    return describeArgs(args) || '执行该操作'
+}
+
 export async function executeTool(ctx: ToolContext, name: string, args: Record<string, unknown>): Promise<string> {
     const { entityType: curType, entityName: curName, getBuffSets, slangDict } = ctx
+
+    // 落库类工具：必须经管理员确认（未注入确认入口时一律拒绝，避免「静默写库」）
+    if (DANGEROUS_TOOLS.has(name)) {
+        if (!ctx.onConfirm) {
+            return JSON.stringify({ error: '当前界面未提供操作确认，已拒绝写入数据库' })
+        }
+        const approved = await ctx.onConfirm(name, describeDangerousCall(ctx, name, args))
+        if (!approved) return JSON.stringify({ error: '用户取消了该操作', cancelled: true })
+    }
 
     switch (name) {
         case 'list_entities': {
@@ -385,6 +563,18 @@ export async function executeTool(ctx: ToolContext, name: string, args: Record<s
             return JSON.stringify(data)
         }
         case 'get_editing_context': {
+            // 有管理员草稿时以草稿为准：那才是用户眼前看到的（可能还没保存）
+            if (ctx.draft) {
+                const draft = ctx.draft.get()
+                return JSON.stringify({
+                    target: 'draft',
+                    entityType: curType,
+                    entityName: curName,
+                    total: draft.length,
+                    saved: false,
+                    buffs: draft
+                })
+            }
             if (!getBuffSets) return JSON.stringify({ error: '无法查询数据库' })
             const data = await getBuffSets(curType, curName)
             return JSON.stringify({
@@ -394,12 +584,30 @@ export async function executeTool(ctx: ToolContext, name: string, args: Record<s
             })
         }
         case 'diff_buffs': {
-            if (!getBuffSets) return JSON.stringify({ error: '无法查询数据库' })
             const entityType = validEntityType(args.entityType) ? (args.entityType as BuffEntityType) : curType
             const entityName = typeof args.entityName === 'string' && args.entityName.trim()
                 ? args.entityName.trim()
                 : curName
             const proposed = Array.isArray(args.buffs) ? (args.buffs as ProposedBuff[]) : []
+            // 对比基准优先用编辑中的草稿（用户眼前的状态），其次是数据库
+            const draftRows: BuffSetRow[] | null = ctx.draft
+                ? ctx.draft.get().map((b) => ({
+                      entity_type: curType,
+                      entity_name: curName,
+                      buff_name: b.buffName,
+                      scope: b.scope ?? 'team',
+                      exclusive: !!b.exclusive,
+                      condition: b.condition ?? null,
+                      buff_set: b.zones
+                  } as unknown as BuffSetRow))
+                : null
+            if (draftRows) {
+                return JSON.stringify({
+                    target: 'draft',
+                    ...(buildDiff(entityType, entityName, draftRows, proposed) as object)
+                })
+            }
+            if (!getBuffSets) return JSON.stringify({ error: '无法查询数据库' })
             const existingRaw = await getBuffSets(entityType, entityName)
             const existing = ((existingRaw as { buffSets?: BuffSetRow[] }).buffSets ?? []) as BuffSetRow[]
 
@@ -430,9 +638,108 @@ export async function executeTool(ctx: ToolContext, name: string, args: Record<s
         case 'get_examples':
             // 示例按实体类型过滤：示例7（chain）仅角色、示例8（refinement）仅武器
             return filterExamples(curType)
-        default:
+        // ── 管理员编辑工具：改草稿（改名 / 改细节 / 增删） ──
+        case 'rename_buff': {
+            const draftErr = requireDraft(ctx)
+            if (typeof draftErr === 'string') return draftErr
+            const oldName = str(args.oldName)
+            const newName = str(args.newName)
+            if (!oldName || !newName) return JSON.stringify({ error: 'oldName / newName 都不能为空' })
+            const list = ctx.draft!.get()
+            const index = list.findIndex((b) => b.buffName.trim() === oldName)
+            if (index < 0) return JSON.stringify({ error: notFoundMessage(oldName, list) })
+            if (list.some((b, i) => i !== index && b.buffName.trim() === newName)) {
+                return JSON.stringify({ error: `已存在同名 Buff「${newName}」，请换一个名字` })
+            }
+            ctx.draft!.set(list.map((b, i) => (i === index ? { ...b, buffName: newName } : b)))
+            return JSON.stringify({ ok: true, renamed: { from: oldName, to: newName }, total: list.length })
+        }
+        case 'update_buff': {
+            const draftErr = requireDraft(ctx)
+            if (typeof draftErr === 'string') return draftErr
+            const buffName = str(args.buffName)
+            if (!buffName) return JSON.stringify({ error: '缺少 buffName' })
+            const list = ctx.draft!.get()
+            const index = list.findIndex((b) => b.buffName.trim() === buffName)
+            if (index < 0) return JSON.stringify({ error: notFoundMessage(buffName, list) })
+            const target = list[index]
+            const newName = args.newName === undefined ? target.buffName : str(args.newName)
+            if (!newName) return JSON.stringify({ error: 'newName 不能为空' })
+            if (list.some((b, i) => i !== index && b.buffName.trim() === newName)) {
+                return JSON.stringify({ error: `已存在同名 Buff「${newName}」，请换一个名字` })
+            }
+            const merged = {
+                buffName: newName,
+                scope: args.scope === undefined ? target.scope : str(args.scope),
+                exclusive: args.exclusive === undefined ? target.exclusive : !!args.exclusive,
+                // condition 显式传 null → 清除；不传 → 保留
+                condition: args.condition === undefined ? target.condition : (args.condition as never),
+                zones: args.zones === undefined ? target.zones : (args.zones as never)
+            }
+            const clean = sanitizeBuffs([merged as never])[0]
+            if (!clean) {
+                return JSON.stringify({ error: '修改后的 Buff 不合法（乘区白名单 / 数值 / 条件校验失败），请检查 zoneId 与 value' })
+            }
+            ctx.draft!.set(list.map((b, i) => (i === index ? clean : b)))
+            return JSON.stringify({ ok: true, bufferName: clean.buffName, total: list.length })
+        }
+        case 'add_buff': {
+            const draftErr = requireDraft(ctx)
+            if (typeof draftErr === 'string') return draftErr
+            const buffName = str(args.buffName)
+            if (!buffName) return JSON.stringify({ error: '缺少 buffName' })
+            const list = ctx.draft!.get()
+            if (list.some((b) => b.buffName.trim() === buffName)) {
+                return JSON.stringify({ error: `已存在同名 Buff「${buffName}」，请改用 update_buff` })
+            }
+            const clean = sanitizeBuffs([
+                {
+                    buffName,
+                    scope: args.scope === undefined ? 'team' : str(args.scope),
+                    exclusive: !!args.exclusive,
+                    ...(args.condition === undefined ? {} : { condition: args.condition }),
+                    zones: (args.zones ?? []) as never
+                } as never
+            ])[0]
+            if (!clean) return JSON.stringify({ error: '新增的 Buff 不合法（需要至少一个白名单乘区且数值合法）' })
+            ctx.draft!.set([...list, clean])
+            return JSON.stringify({ ok: true, added: clean.buffName, total: list.length + 1 })
+        }
+        case 'remove_buff': {
+            const draftErr = requireDraft(ctx)
+            if (typeof draftErr === 'string') return draftErr
+            const buffName = str(args.buffName)
+            if (!buffName) return JSON.stringify({ error: '缺少 buffName' })
+            const list = ctx.draft!.get()
+            if (!list.some((b) => b.buffName.trim() === buffName)) {
+                return JSON.stringify({ error: notFoundMessage(buffName, list) })
+            }
+            const next = list.filter((b) => b.buffName.trim() !== buffName)
+            ctx.draft!.set(next)
+            return JSON.stringify({ ok: true, removed: buffName, total: next.length })
+        }
+        case 'save_buff_set': {
+            const draftErr = requireDraft(ctx)
+            if (typeof draftErr === 'string') return draftErr
+            const res = await ctx.draft!.save()
+            if (!res.ok) return JSON.stringify({ error: res.error ?? '写入数据库失败' })
+            return JSON.stringify({ ok: true, saved: res.saved ?? ctx.draft!.get().length, entity: `${curType}/${curName}` })
+        }        default:
             return JSON.stringify({ error: `未知工具：${name}` })
     }
+}
+
+const str = (v: unknown): string => (typeof v === 'string' ? v.trim() : '')
+
+/** @desc 草稿工具的可用性检查（没有管理员编辑器时工具不应出现，直接调用也给出可读原因） */
+function requireDraft(ctx: ToolContext): true | string {
+    if (!ctx.draft) return JSON.stringify({ error: '当前界面没有可编辑的 Buff 草稿（仅管理员编辑器内可用）' })
+    return true
+}
+
+function notFoundMessage(name: string, list: GeneratedBuff[]): string {
+    const names = list.map((b) => b.buffName).slice(0, 40)
+    return `未找到 Buff「${name}」；现有条目：${names.length > 0 ? names.join(' / ') : '（空）'}`
 }
 
 // 从 EXAMPLES_TEXT 中按实体类型过滤条件相关示例（示例7=chain 仅角色；示例8=refinement 仅武器）

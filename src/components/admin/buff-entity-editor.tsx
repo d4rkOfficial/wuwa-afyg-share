@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useTransition, useRef, useEffect } from 'react'
+import { useState, useTransition } from 'react'
 import { useRouter } from 'next/navigation'
 import { Icon } from '@iconify/react'
 import { upsertBuffEntity, deleteBuffEntity } from '@/lib/actions/buff-sets'
@@ -11,7 +11,6 @@ import {
     ZONE_NO_REF_IDS,
     ZONE_NO_OVERRIDE_IDS,
     BUFF_ZONE_SECTION_VIEWS,
-    BUFF_REF_ZONES,
     BUFF_REF_ZONE_MAP,
     BUFF_SCOPE_LABELS,
     BUFF_ELEMENTS,
@@ -27,15 +26,10 @@ import {
 } from '@/lib/consts/buff-zones'
 import type { BuffEntityType, BuffScope, BuffSetRow, BuffCondition } from '@/lib/types/db'
 import type { GeneratedBuff } from '@/lib/ai/types'
-import { generateBuffSet, type GenerateEvent } from '@/lib/ai/generate'
-import { AiClientError, type ChatMessage } from '@/lib/ai/client'
-import { createClient } from '@/lib/supabase/client'
+import type { ChatMessage } from '@/lib/ai/client'
+import type { BuffDraftApi } from '@/lib/ai/tools'
 import BuffRefModal from '@/components/admin/buff-ref-modal'
-
-interface LogEntry {
-    level: 'info' | 'success' | 'error' | 'debug'
-    text: string
-}
+import BuffAiAssistant from '@/components/admin/buff-ai-assistant'
 
 function gcd(a: number, b: number): number {
     a = Math.abs(a)
@@ -77,6 +71,8 @@ interface Props {
     toolPrompts: Record<string, string>
     slangDict: string
     reasoningEffort?: 'off' | 'low' | 'medium' | 'high'
+    /** @desc AI 浏览器直连（不经站点转发代理） */
+    aiDirect?: boolean
     isAdmin: boolean
     // 跨实体共享会话（省 token / 缓存命中）
     sessionSeed?: ChatMessage[]
@@ -130,6 +126,7 @@ export default function BuffEntityEditor({
     toolPrompts,
     slangDict,
     reasoningEffort,
+    aiDirect,
     isAdmin,
     sessionSeed,
     onSessionUpdate,
@@ -140,6 +137,11 @@ export default function BuffEntityEditor({
     const router = useRouter()
     const [pending, startTransition] = useTransition()
     const [confirmDeleteEntity, setConfirmDeleteEntity] = useState(false)
+    /**
+     * @desc 窄屏 / 竖屏下的当前面板（列表 / 编辑 / 乘区 / AI）。
+     *  宽屏不显示页签，四栏并排；窄屏用页签避免四栏被压成几十像素。
+     */
+    const [mobilePane, setMobilePane] = useState<'list' | 'edit' | 'zones' | 'ai'>('edit')
 
     const entityType = initial.entityType
     const entityName = initial.entityName
@@ -171,203 +173,8 @@ export default function BuffEntityEditor({
         }))
     )
 
-    // AI 辅助（迷你对话）
-    const [aiBusy, setAiBusy] = useState(false)
-    const [aiError, setAiError] = useState<string | null>(null)
-    const [aiDebug, setAiDebug] = useState<string | null>(null)
-    const [aiShowDebug, setAiShowDebug] = useState(false)
-    const [aiResult, setAiResult] = useState<GeneratedBuff[] | null>(null)
-    const [aiRawContent, setAiRawContent] = useState<string>('')
-    const [aiParseError, setAiParseError] = useState<string | null>(null)
-    const [aiOutput, setAiOutput] = useState('')
-    const [aiReasoning, setAiReasoning] = useState('')
-    const [showReasoning, setShowReasoning] = useState(false)
-    const [aiHistory, setAiHistory] = useState<{ role: 'user' | 'assistant'; content: string }[]>([])
-    const [followUp, setFollowUp] = useState('')
-    const [prompts, setPrompts] = useState<{ kind: 'system' | 'user' | 'history'; text: string }[]>([])
-    const [showPrompts, setShowPrompts] = useState(false)
-    const [aiTools, setAiTools] = useState<{ name: string; args: Record<string, unknown>; resultLen?: number; running?: boolean }[]>([])
-    const [showTools, setShowTools] = useState(false)
-    const [logs, setLogs] = useState<LogEntry[]>([])
-    const [showLogs, setShowLogs] = useState(false)
-    // 主体滚动容器 + 用户是否打断了自动滚动（向上滚动查看历史）
-    const bodyRef = useRef<HTMLDivElement>(null)
-    const autoScrollPaused = useRef(false)
-    const scrollRaf = useRef<number | null>(null)
-
-    // AI 内容更新时自动滚到底部（rAF 节流 + 平滑滚动）；用户向上滚动过则暂停自动滚
-    useEffect(() => {
-        const el = bodyRef.current
-        if (!el) return
-        if (!autoScrollPaused.current) {
-            if (scrollRaf.current !== null) cancelAnimationFrame(scrollRaf.current)
-            scrollRaf.current = requestAnimationFrame(() => {
-                el.scrollTo({ top: el.scrollHeight, behavior: 'smooth' })
-                scrollRaf.current = null
-            })
-        }
-        return () => {
-            if (scrollRaf.current !== null) cancelAnimationFrame(scrollRaf.current)
-        }
-    }, [aiOutput, aiReasoning, aiTools, logs, aiHistory])
-
-    function onBodyScroll() {
-        const el = bodyRef.current
-        if (!el) return
-        const distFromBottom = el.scrollHeight - el.scrollTop - el.clientHeight
-        // 偏离底部超过 12px 视为用户主动上滚 → 暂停自动滚；回到底部 2px 内恢复
-        if (distFromBottom > 12) autoScrollPaused.current = true
-        else if (distFromBottom <= 2) autoScrollPaused.current = false
-    }
 
     const canSave = entityName.trim().length > 0
-
-    // 前端直连 AI 查询已收录 buff 集（供 get_buff_sets 等工具）
-    async function getBuffSets(queryType?: string, queryName?: string, query?: string) {
-        const supabase = createClient()
-        let q = supabase
-            .from('buff_sets')
-            .select('entity_type, entity_name, buff_name, scope, exclusive, condition, buff_set')
-            .order('entity_type', { ascending: true })
-            .order('entity_name', { ascending: true })
-        if (queryType) q = q.eq('entity_type', queryType)
-        if (queryName) q = q.eq('entity_name', queryName)
-        if (query) q = q.or(`entity_name.ilike.%${query.replace(/[%_\\]/g, '\\$&')}%,buff_name.ilike.%${query.replace(/[%_\\]/g, '\\$&')}%`)
-        const { data, error } = await q.limit(200)
-        if (error) return { error: error.message }
-        return { total: (data ?? []).length, buffSets: data ?? [] }
-    }
-
-    // 统一 AI 请求（首轮或追问），浏览器直连配置的服务端点
-    async function runAiRequest(newUserMessage: string, history: { role: 'user' | 'assistant'; content: string }[]) {
-        // 新一轮强制滚到底部（即使之前在看历史）
-        autoScrollPaused.current = false
-        requestAnimationFrame(() => {
-            bodyRef.current?.scrollTo({ top: bodyRef.current.scrollHeight, behavior: 'smooth' })
-        })
-        setAiBusy(true)
-        setAiError(null)
-        setAiDebug(null)
-        setAiShowDebug(false)
-        setAiResult(null)
-        setAiRawContent('')
-        setAiParseError(null)
-        setAiOutput('')
-        setAiReasoning('')
-        setPrompts([])
-        setShowPrompts(false)
-        setAiTools([])
-        setShowTools(true)
-        setLogs([])
-        setShowLogs(false)
-        try {
-            await generateBuffSet({
-                apiKey: apiKey.trim(),
-          
-                entityType,
-                entityName: entityName.trim(),
-                baseUrl: aiBaseUrl.trim() || undefined,
-                model: aiModel.trim() || undefined,
-                systemPrompt,
-                initialTaskPrompt,
-                toolPrompts,
-                slangDict,
-                reasoningEffort,
-                history: history as ChatMessage[],
-                newUserMessage,
-                getBuffSets,
-                seedMessages: sessionShareEnabled ? sessionSeed : undefined,
-                onMessages: sessionShareEnabled ? onSessionUpdate : undefined,
-                onEvent: (evt: GenerateEvent) => {
-                    if (evt.type === 'log') {
-                        setLogs((prev) => [...prev, { level: evt.level ?? 'info', text: evt.text ?? '' }])
-                    } else if (evt.type === 'prompt') {
-                        setPrompts((prev) => [...prev, { kind: evt.kind ?? 'user', text: evt.text ?? '' }])
-                    } else if (evt.type === 'ai') {
-                        setAiOutput((prev) => prev + (evt.text ?? ''))
-                    } else if (evt.type === 'reasoning') {
-                        setAiReasoning((prev) => prev + (evt.text ?? ''))
-                        setShowReasoning(true)
-                    } else if (evt.type === 'tool') {
-                        setAiTools((prev) => [
-                            ...prev,
-                            { name: evt.name ?? 'unknown', args: evt.args ?? {}, resultLen: evt.resultLen, running: evt.running }
-                        ])
-                    } else if (evt.type === 'result') {
-                        if (Array.isArray(evt.data)) {
-                            if (polishActive.current) {
-                                // 一键润色：自动应用到列表，记录一次 assistant 轮
-                                const list = evt.data as GeneratedBuff[]
-                                setAiHistory((prev) => [
-                                    ...prev,
-                                    { role: 'assistant', content: evt.rawContent ?? JSON.stringify(list) }
-                                ])
-                                applyBuffList(list)
-                                setAiResult(null)
-                            } else {
-                                setAiResult(evt.data as GeneratedBuff[])
-                            }
-                        }
-                        setAiRawContent(evt.rawContent ?? '')
-                        setAiParseError(evt.parseError ?? null)
-                    } else if (evt.type === 'error') {
-                        setAiError(evt.message ?? 'AI 生成请求失败')
-                        if (evt.debug) setAiDebug(evt.debug)
-                    }
-                }
-            })
-        } catch (e) {
-            if (e instanceof AiClientError) {
-                setAiError(e.message)
-                setAiDebug(e.debug)
-            } else {
-                setAiError(e instanceof Error ? e.message : 'AI 生成请求失败')
-            }
-        } finally {
-            setAiBusy(false)
-            polishActive.current = false
-        }
-    }
-
-    function onAiGenerate() {
-        const name = entityName.trim()
-        if (!name) {
-            setAiError('请先选择实体名')
-            return
-        }
-        if (!apiKey.trim()) {
-            setAiError('请先在上方侧栏填入 AI API Key')
-            return
-        }
-        setAiHistory([])
-        runAiRequest('', [])
-    }
-
-    function onFollowUp() {
-        const msg = followUp.trim()
-        if (!msg || aiBusy) return
-        const nextHistory = [...aiHistory, { role: 'user' as const, content: msg }]
-        setAiHistory(nextHistory)
-        setFollowUp('')
-        // 新消息走 newUserMessage，history 只传旧轮，避免与 route 首轮任务指令重复
-        runAiRequest(msg, aiHistory)
-    }
-
-    function resetConversation() {
-        setAiHistory([])
-        setAiResult(null)
-        setAiRawContent('')
-        setAiParseError(null)
-        setAiOutput('')
-        setAiReasoning('')
-        setPrompts([])
-        setShowPrompts(false)
-        setAiTools([])
-        setShowTools(false)
-        setAiError(null)
-        setLogs([])
-        setShowLogs(false)
-    }
 
     function run(fn: () => Promise<unknown>): Promise<boolean> {
         return new Promise((resolve) => {
@@ -565,13 +372,13 @@ export default function BuffEntityEditor({
         setRefTargetIdx(null)
     }
 
-    function onSave() {
-        const name = entityName.trim()
-        if (!name) {
-            toast('请先选择实体名', 'error')
-            return
-        }
-        const payload = buffs.map((b) => {
+    /**
+     * @desc 把编辑中的草稿行转成写入数据库的载荷（「保存」按钮与 AI 的「直接写入」共用）。
+     *  非法乘区条目（空 zoneId / 数值非数字）在这一步被剔除，与历史行为一致。
+     * @param rows 可选：按这份行数据生成载荷（AI 在同一轮里改了草稿但 React state 可能还没刷新）
+     */
+    function buildSavePayload(rows: BuffRow[] = buffs) {
+        return rows.map((b) => {
             const zones = b.zones
                 .map(
                     (z): { zoneId: string; value: number; override?: boolean; condition?: BuffCondition; ref?: unknown } | null => {
@@ -621,6 +428,15 @@ export default function BuffEntityEditor({
                 zones
             }
         })
+    }
+
+    function onSave() {
+        const name = entityName.trim()
+        if (!name) {
+            toast('请先选择实体名', 'error')
+            return
+        }
+        const payload = buildSavePayload()
         const savedCount = payload.filter((b) => b.zones.length > 0).length
         run(() =>
             upsertBuffEntity({
@@ -633,6 +449,31 @@ export default function BuffEntityEditor({
                 toast(`已保存 ${savedCount} 条 Buff`, 'success')
             }
         })
+    }
+
+    /**
+     * @desc AI 的「直接写入数据库」：与「保存」按钮同一条服务端链路（同样要管理员权限）。
+     *  返回结构化结果而不是弹 toast，AI 才能知道成功 / 失败原因。
+     * @param list 可选：写这份内容（AI 回合内的工作副本），缺省写编辑器当前状态
+     */
+    async function saveDraftDirect(
+        list?: GeneratedBuff[]
+    ): Promise<{ ok: boolean; error?: string; saved?: number }> {
+        const name = entityName.trim()
+        if (!name) return { ok: false, error: '实体名不能为空' }
+        if (!isAdmin) return { ok: false, error: '仅管理员可写入数据库' }
+        const payload = buildSavePayload(list ? list.map(toBuffRow) : buffs)
+        const savedCount = payload.filter((b) => b.zones.length > 0).length
+        const res = await upsertBuffEntity({
+            entityType,
+            entityName: name,
+            buffs: payload as Parameters<typeof upsertBuffEntity>[0]['buffs']
+        })
+        const error = (res as { error?: string } | undefined)?.error
+        if (error) return { ok: false, error }
+        toast(`AI 已直接写入 ${savedCount} 条 Buff`, 'success')
+        router.refresh()
+        return { ok: true, saved: savedCount }
     }
 
     function onDeleteEntity() {
@@ -703,39 +544,14 @@ export default function BuffEntityEditor({
         })
     }
 
-    function applyAiResult() {
-        if (!aiResult) return
-        // 把本次 AI 输出存入历史（assistant 轮），供后续追问
-        setAiHistory((prev) => [...prev, { role: 'assistant', content: aiRawContent || JSON.stringify(aiResult) }])
-        applyBuffList(aiResult)
-        setAiResult(null)
-    }
-
-    function mergeAiResult() {
-        if (!aiResult) return
-        setAiHistory((prev) => [...prev, { role: 'assistant', content: aiRawContent || JSON.stringify(aiResult) }])
-        mergeBuffList(aiResult)
-        setAiResult(null)
-    }
-
-    // 一键润色：仅润色 buffName，保留 zones/scope/condition/exclusive
-    const polishActive = useRef(false)
-
-    function onAiPolish() {
-        const name = entityName.trim()
-        if (!name) {
-            setAiError('请先选择实体名')
-            return
-        }
-        if (!apiKey.trim()) {
-            setAiError('请先在上方侧栏填入 AI API Key')
-            return
-        }
-        if (buffs.length === 0) {
-            setAiError('当前没有 Buff 可润色')
-            return
-        }
-        const zonePayload = (z: ZoneRow) => ({
+    /**
+     * @desc 当前编辑中的 Buff 集 → AI 结构（数字从草稿字符串还原）。
+     *
+     * 两个用途：AI 面板「润色」的请求体，以及「应用 / 追加」写回列表时的同一口径
+     * （写回走 `toBuffRow`，这里只负责反向序列化）。
+     */
+    function getCurrentBuffs(): GeneratedBuff[] {
+        const zonePayload = (z: ZoneRow): GeneratedBuff['zones'][number] => ({
             zoneId: z.zoneId,
             value: Number(z.value) || 0,
             ...(sanitizeZoneCondition(z.condition) ? { condition: sanitizeZoneCondition(z.condition) } : {}),
@@ -762,20 +578,40 @@ export default function BuffEntityEditor({
                 : {}),
             ...(z.override ? { override: true } : {})
         })
-        const currentJson = JSON.stringify(
-            buffs.map((b) => ({
-                buffName: b.buffName,
-                scope: b.scope,
-                exclusive: !!b.exclusive,
-                ...(sanitizeCondition(b.condition, 'buff') ? { condition: sanitizeCondition(b.condition, 'buff') } : {}),
-                zones: b.zones.map(zonePayload)
-            }))
-        )
-        const msg = `请按命名规范润色以下 Buff 集内每个 buff 的 buffName（格式：[条件]<触发,附加条件>乘区1+乘区2+…+层数；条件标注归属者与所需链/阶，仅叠层>1 时带 N 层，单层不带）。\n要求：保留每个 buff 的 zones/scope/condition/exclusive 完全不变，只重写 buffName；不要增删乘区、不要改数值或条件；不确定规范时调用 get_naming_rules。\n输出完整 buffs JSON。\n\n当前 Buff 集：\n${currentJson}`
-        polishActive.current = true
-        setAiHistory([])
-        runAiRequest(msg, [])
+        return buffs.map((b) => ({
+            buffName: b.buffName,
+            scope: b.scope,
+            exclusive: !!b.exclusive,
+            ...(sanitizeCondition(b.condition, 'buff') ? { condition: sanitizeCondition(b.condition, 'buff') } : {}),
+            zones: b.zones.map(zonePayload)
+        }))
     }
+
+    /**
+     * @desc AI 工具可读写的 Buff 草稿接口。
+     *  改草稿的工具（改名 / 改细节 / 增删）直接落到编辑器列表上 —— 管理员看得见、也能继续手改；
+     *  「直接写入数据库」走 `saveDraftDirect`（与保存按钮同一条服务端链路 + 管理员确认）。
+     */
+    const draftApi: BuffDraftApi = {
+        get: getCurrentBuffs,
+        // 保留当前选中项（AI 改的是同一条时不该把选择跳回第一条）
+        set: (list) => {
+            const keepName = activeBuff?.buffName?.trim()
+            setBuffs(list.map(toBuffRow))
+            const nextIdx = keepName ? list.findIndex((b) => b.buffName.trim() === keepName) : 0
+            setActiveBuffIdx(nextIdx >= 0 ? nextIdx : 0)
+            setExpandedZoneIdx(null)
+        },
+        save: saveDraftDirect
+    }
+
+    /** @desc 窄屏页签（宽屏不渲染；CSS 只在小屏隐藏非当前面板） */
+    const MOBILE_PANES = [
+        { key: 'list' as const, label: '条目', icon: 'mdi:format-list-bulleted' },
+        { key: 'edit' as const, label: '编辑', icon: 'mdi:pencil-outline' },
+        { key: 'zones' as const, label: '乘区', icon: 'mdi:view-grid-outline' },
+        { key: 'ai' as const, label: 'AI', icon: 'mdi:robot-outline' }
+    ]
 
     return (
         <div className="flex h-full flex-col mg-card">
@@ -803,8 +639,29 @@ export default function BuffEntityEditor({
                 </div>
             </div>
 
-            {/* 四栏主体：横屏并排；竖屏为左侧 Buff 导航 + 右侧上下工作区 */}
-            <div className="buff-editor-layout flex min-h-0 flex-1 overflow-hidden">
+            {/* 窄屏页签：四栏在手机上改为一次看一栏（宽屏由 CSS 隐藏） */}
+            <div className="buff-editor-mobile-tabs flex shrink-0 items-center gap-1 border-b border-(--card-border) px-2 py-1.5">
+                {MOBILE_PANES.map((pane) => (
+                    <button
+                        key={pane.key}
+                        onClick={() => setMobilePane(pane.key)}
+                        className={`flex flex-1 items-center justify-center gap-1 rounded-sm px-2 py-1 text-[11px] transition-colors ${
+                            mobilePane === pane.key
+                                ? 'bg-(--accent) text-(--accent-fg)'
+                                : 'text-(--muted) hover:text-(--fg)'
+                        }`}
+                    >
+                        <Icon icon={pane.icon} className="size-3.5" />
+                        {pane.label}
+                    </button>
+                ))}
+            </div>
+
+            {/* 四栏主体：横屏并排；窄屏按上面页签单栏显示 */}
+            <div
+                className="buff-editor-layout flex min-h-0 flex-1 overflow-hidden"
+                data-mobile-pane={mobilePane}
+            >
 
                 {/* ① 左：Buff 列表 */}
                 <div className="buff-editor-buff-list flex w-56 shrink-0 flex-col border-r border-(--card-border)">
@@ -829,6 +686,8 @@ export default function BuffEntityEditor({
                                     onClick={() => {
                                         setActiveBuffIdx(idx)
                                         setExpandedZoneIdx(null)
+                                        // 窄屏：选条目后直接进编辑栏（宽屏无副作用）
+                                        setMobilePane('edit')
                                     }}
                                     className={`w-full rounded-sm px-2 py-1.5 text-left transition-colors ${
                                         idx === activeBuffIdx
@@ -1235,296 +1094,27 @@ export default function BuffEntityEditor({
                     </div>
                 </div>
 
-                {/* ④ AI 协作区（OpenAI 兼容端点聊天式） */}
-                <div className="buff-editor-ai flex w-80 shrink-0 flex-col border-l border-(--card-border)">
-                    {/* 头部 */}
-                    <div className="flex shrink-0 flex-wrap items-center gap-1.5 border-b border-(--card-border) px-3 py-2">
-                        <span className="flex items-center gap-1 mg-title text-xs text-(--accent-text)">
-                            <Icon icon="mdi:robot-outline" className="size-4" />
-                            AI 辅助
-                        </span>
-                        <button
-                            onClick={onAiGenerate}
-                            disabled={aiBusy || !entityName.trim()}
-                            className="toolbar-btn toolbar-btn-primary px-2 py-1 text-[11px]"
-                        >
-                            <Icon icon={aiBusy ? 'mdi:loading' : 'mdi:auto-fix'} className={aiBusy ? 'size-3.5 animate-spin' : 'size-3.5'} />
-                            {aiBusy ? '生成中…' : '一键生成'}
-                        </button>
-                        <button
-                            onClick={onAiPolish}
-                            disabled={aiBusy || !entityName.trim() || buffs.length === 0}
-                            title="按命名规范润色当前 Buff 集的 buff 名（保留乘区/数值/条件不变）"
-                            className="toolbar-btn toolbar-btn-ghost px-2 py-1 text-[11px]"
-                        >
-                            <Icon icon={aiBusy ? 'mdi:loading' : 'mdi:brush-variant'} className={aiBusy ? 'size-3.5 animate-spin' : 'size-3.5'} />
-                            润色
-                        </button>
-                        {(aiHistory.length > 0 || aiOutput || aiResult) && (
-                            <button
-                                onClick={resetConversation}
-                                disabled={aiBusy}
-                                className="rounded-sm p-1 text-(--muted) transition-colors hover:text-(--danger) disabled:opacity-50"
-                                title="清空对话"
-                            >
-                                <Icon icon="mdi:restart" className="size-3.5" />
-                            </button>
-                        )}
-                    </div>
-
-                    {/* 消息列表（自动向下滚动） */}
-                    <div ref={bodyRef} onScroll={onBodyScroll} className="min-h-0 flex-1 space-y-2 overflow-y-auto p-3">
-                        {aiHistory.map((m, i) =>
-                            m.role === 'user' ? (
-                                <div key={i} className="flex justify-end">
-                                    <div className="max-w-[85%] whitespace-pre-wrap break-words rounded-sm bg-(--accent) px-3 py-2 text-xs leading-relaxed text-(--accent-fg)">
-                                        {m.content}
-                                    </div>
-                                </div>
-                            ) : (
-                                <div key={i} className="flex justify-start">
-                                    <div className="max-w-[85%] whitespace-pre-wrap break-words rounded-sm bg-(--card-hover) px-3 py-2 text-xs leading-relaxed text-(--fg)">
-                                        {m.content}
-                                    </div>
-                                </div>
-                            )
-                        )}
-
-                        {/* 当前 AI 发言气泡（思考/工具/文本/结果/错误/日志/提示词 合并） */}
-                        {(aiBusy && (aiOutput || aiReasoning || aiTools.length > 0)) ||
-                        (!aiBusy && (aiRawContent || aiError)) ? (
-                            <div className="flex justify-start">
-                                <div className="max-w-[85%] rounded-sm bg-(--card-hover) px-3 py-2 text-xs leading-relaxed break-words text-(--fg)">
-                                    {/* 思考过程（默认展开，可收起） */}
-                                    {aiReasoning && (
-                                        <div className="mb-1.5">
-                                            <div className="flex items-center gap-1">
-                                                <Icon icon="mdi:head-lightbulb-outline" className="size-3 text-(--muted)" />
-                                                <button
-                                                    onClick={() => setShowReasoning((v) => !v)}
-                                                    className="text-[10px] text-(--muted) hover:text-(--fg)"
-                                                >
-                                                    {showReasoning ? '收起思考' : '展开思考'}
-                                                </button>
-                                            </div>
-                                            {showReasoning && (
-                                                <div className="mt-0.5 whitespace-pre-wrap break-words font-mono text-[10px] italic leading-relaxed text-(--muted)">
-                                                    {aiReasoning}
-                                                </div>
-                                            )}
-                                        </div>
-                                    )}
-
-                                    {/* 工具调用（默认显示，底部按钮可收起） */}
-                                    {showTools && aiTools.length > 0 && (
-                                        <div className="mb-1.5 space-y-0.5">
-                                            {aiTools.map((t, i) => (
-                                                <div key={i} className="flex items-start gap-1.5 font-mono text-[10px]">
-                                                    <Icon
-                                                        icon={t.running ? 'mdi:loading' : 'mdi:toolbox-outline'}
-                                                        className={`mt-0.5 size-3 shrink-0 ${
-                                                            t.running ? 'animate-spin text-(--info)' : 'text-(--warning)'
-                                                        }`}
-                                                    />
-                                                    <div className="min-w-0 flex-1 text-(--muted)">
-                                                        <span className="text-(--fg)">{t.name}</span>
-                                                        {t.resultLen !== undefined && (
-                                                            <span className="ml-1">
-                                                                → <span className="mg-num">{t.resultLen}</span> 字符
-                                                            </span>
-                                                        )}
-                                                    </div>
-                                                </div>
-                                            ))}
-                                        </div>
-                                    )}
-
-                                    {/* AI 文本：流式 or 结果纯文本 */}
-                                    {aiBusy && aiOutput ? (
-                                        <div className="whitespace-pre-wrap break-words">
-                                            {aiOutput}
-                                            <span className="ml-0.5 inline-block animate-pulse">▍</span>
-                                        </div>
-                                    ) : !aiBusy && aiRawContent && (!aiResult || aiResult.length === 0) ? (
-                                        <div className="whitespace-pre-wrap break-words">{aiRawContent}</div>
-                                    ) : null}
-
-                                    {/* 结果 buff 卡片 + 应用 */}
-                                    {!aiBusy && aiResult !== null && aiResult.length > 0 && (
-                                        <div className="space-y-1.5">
-                                            <div className="text-[10px] text-(--muted)">
-                                                共 <span className="mg-num text-(--fg)">{aiResult.length}</span> 条，点击「应用」将整体替换当前
-                                                Buff 列表
-                                            </div>
-                                            {aiResult.map((b) => (
-                                                <div
-                                                    key={b.buffName}
-                                                    className="flex items-center gap-2 rounded-sm border border-(--card-border) bg-(--card) px-2.5 py-2"
-                                                >
-                                                    <span className="min-w-0 flex-1">
-                                                        <span className="flex flex-wrap items-center gap-1.5">
-                                                            <span className="truncate text-xs font-medium text-(--fg)">
-                                                                {b.buffName}
-                                                            </span>
-                                                            <span className="rounded-sm bg-(--accent) px-1 py-0.5 text-[9px] text-(--accent-fg)">
-                                                                {BUFF_SCOPE_LABELS[b.scope ?? 'team']}
-                                                            </span>
-                                                            {b.exclusive && (
-                                                                <span className="rounded-sm border border-(--warning) px-1 py-0.5 text-[9px] text-(--warning)">
-                                                                    效应专属
-                                                                </span>
-                                                            )}
-                                                        </span>
-                                                        <span className="block truncate text-[10px] text-(--muted)">
-                                                            {b.zones
-                                                                .map(
-                                                                    (z) =>
-                                                                        `${BUFF_ZONE_MAP.get(z.zoneId)?.label ?? z.zoneId} ${
-                                                                            z.override ? '覆盖+' : '+'
-                                                                        }${z.ref ? `引用${BUFF_REF_ZONES.find((r) => r.id === z.ref!.targetZoneId)?.label ?? z.ref!.targetZoneId}×${z.ref.pct}%` : z.value}${
-                                                                            !z.ref && BUFF_ZONE_MAP.get(z.zoneId)?.unit === '%' ? '%' : ''
-                                                                        }${zoneConditionBadge(sanitizeZoneCondition(z.condition) ?? null) ? `[${zoneConditionBadge(sanitizeZoneCondition(z.condition) ?? null)}]` : ''}`
-                                                                )
-                                                                .join(' · ')}
-                                                        </span>
-                                                    </span>
-                                                </div>
-                                            ))}
-                                            <div className="flex gap-1.5">
-                                                <button
-                                                    onClick={applyAiResult}
-                                                    className="toolbar-btn toolbar-btn-primary flex-1 justify-center"
-                                                    title="整体替换当前 Buff 列表"
-                                                >
-                                                    <Icon icon="mdi:content-save-outline" className="size-3.5" />
-                                                    应用（<span className="mg-num">{aiResult.length}</span> 条）
-                                                </button>
-                                                <button
-                                                    onClick={mergeAiResult}
-                                                    className="toolbar-btn toolbar-btn-ghost flex-1 justify-center"
-                                                    title="同名覆盖、无同名追加"
-                                                >
-                                                    <Icon icon="mdi:plus-box-outline" className="size-3.5" />
-                                                    追加（<span className="mg-num">{aiResult.length}</span> 条）
-                                                </button>
-                                            </div>
-                                        </div>
-                                    )}
-
-                                    {/* 解析失败提示 */}
-                                    {!aiBusy && aiParseError && (
-                                        <div className="mt-1 text-[11px] text-(--warning)">
-                                            AI 回复不是可解析的 Buff JSON（{aiParseError}），已作为文本显示，可追问修正。
-                                        </div>
-                                    )}
-
-                                    {/* 错误（红字内联） */}
-                                    {aiError && (
-                                        <div className="mt-1 text-(--danger)">
-                                            {aiError}
-                                            {aiDebug && (
-                                                <button
-                                                    onClick={() => setAiShowDebug((v) => !v)}
-                                                    className="ml-1 text-[10px] underline"
-                                                >
-                                                    {aiShowDebug ? '收起调试' : '调试'}
-                                                </button>
-                                            )}
-                                        </div>
-                                    )}
-                                    {aiDebug && aiShowDebug && (
-                                        <pre className="mt-1 whitespace-pre-wrap break-words rounded-sm bg-(--code-bg-strong) p-1.5 font-mono text-[10px] leading-relaxed text-(--danger)">
-                                            {aiDebug}
-                                        </pre>
-                                    )}
-
-                                    {/* 日志 / 提示词 折叠按钮 */}
-                                    <div className="mt-1.5 flex items-center gap-1.5">
-                                        {logs.length > 0 && (
-                                            <button
-                                                onClick={() => setShowLogs((v) => !v)}
-                                                className="text-[10px] text-(--muted) hover:text-(--fg)"
-                                            >
-                                                日志（<span className="mg-num">{logs.length}</span>）
-                                            </button>
-                                        )}
-                                        {prompts.length > 0 && (
-                                            <button
-                                                onClick={() => setShowPrompts((v) => !v)}
-                                                className="text-[10px] text-(--muted) hover:text-(--fg)"
-                                            >
-                                                提示词（<span className="mg-num">{prompts.length}</span>）
-                                            </button>
-                                        )}
-                                    </div>
-                                    {showLogs && logs.length > 0 && (
-                                        <div className="mt-1 max-h-32 overflow-auto whitespace-pre-wrap break-words rounded-sm bg-(--code-bg) p-1.5 font-mono text-[10px] leading-relaxed">
-                                            {logs.map((l, i) => (
-                                                <div
-                                                    key={i}
-                                                    className={
-                                                        l.level === 'error'
-                                                            ? 'text-(--danger)'
-                                                            : l.level === 'success'
-                                                              ? 'text-(--success)'
-                                                              : l.level === 'debug'
-                                                                ? 'text-(--info)'
-                                                                : 'text-(--muted)'
-                                                    }
-                                                >
-                                                    {l.text}
-                                                </div>
-                                            ))}
-                                        </div>
-                                    )}
-                                    {showPrompts && prompts.length > 0 && (
-                                        <div className="mt-1 space-y-1">
-                                            {prompts.map((p, i) => (
-                                                <pre
-                                                    key={i}
-                                                    className={`max-h-32 overflow-auto whitespace-pre-wrap break-words rounded-sm bg-(--code-bg) p-1.5 font-mono text-[10px] leading-relaxed ${
-                                                        p.kind === 'system'
-                                                            ? 'text-(--info)'
-                                                            : p.kind === 'history'
-                                                              ? 'text-(--warning)'
-                                                              : 'text-(--success)'
-                                                    }`}
-                                                >
-                                                    {p.text}
-                                                </pre>
-                                            ))}
-                                        </div>
-                                    )}
-                                </div>
-                            </div>
-                        ) : null}
-
-            </div>
-
-                    {/* 底部输入行（常驻） */}
-                    <div className="flex shrink-0 items-center gap-1.5 border-t border-(--card-border) p-2">
-                        <input
-                            value={followUp}
-                            onChange={(e) => setFollowUp(e.target.value)}
-                            onKeyDown={(e) => {
-                                if (e.key === 'Enter' && !e.shiftKey) {
-                                    e.preventDefault()
-                                    onFollowUp()
-                                }
-                            }}
-                            disabled={aiBusy}
-                            placeholder="追问，或直接提需求…"
-                            className="min-w-0 flex-1 rounded-sm border border-(--card-border) bg-(--input-bg) px-2 py-1.5 text-xs outline-none focus:border-(--accent) disabled:opacity-50"
-                        />
-                        <button
-                            onClick={onFollowUp}
-                            disabled={aiBusy || !followUp.trim()}
-                            className="shrink-0 rounded-sm px-3 py-1.5 text-xs font-medium border border-(--card-border) bg-(--btn-bg) text-(--btn-text) transition-colors hover:bg-(--card) hover:text-(--fg) transition-all  disabled:opacity-50"
-                        >
-                            <Icon icon={aiBusy ? 'mdi:loading' : 'mdi:send'} className={aiBusy ? 'size-3.5 animate-spin' : 'size-3.5'} />
-                        </button>
-                    </div>
-                </div>
+                {/* ④ AI 生成面板（工具箱式活动流：实时显示轮次 / 工具 / 流式输出） */}
+                <BuffAiAssistant
+                    entityType={entityType}
+                    entityName={entityName}
+                    apiKey={apiKey}
+                    aiBaseUrl={aiBaseUrl}
+                    aiModel={aiModel}
+                    aiDirect={aiDirect}
+                    systemPrompt={systemPrompt}
+                    initialTaskPrompt={initialTaskPrompt}
+                    toolPrompts={toolPrompts}
+                    slangDict={slangDict}
+                    reasoningEffort={reasoningEffort}
+                    sessionSeed={sessionSeed}
+                    onSessionUpdate={onSessionUpdate}
+                    sessionShareEnabled={sessionShareEnabled}
+                    getCurrentBuffs={getCurrentBuffs}
+                    draft={draftApi}
+                    onApply={applyBuffList}
+                    onMerge={mergeBuffList}
+                />
             </div>
 
             {refTargetIdx !== null && (

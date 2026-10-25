@@ -212,6 +212,7 @@ export default function BuffSetsAdmin({ rows, isAdmin }: Props) {
                             apiKey={ai?.apiKey ?? ''}
                             aiBaseUrl={ai?.baseUrl ?? ''}
                             aiModel={ai?.model ?? ''}
+                            aiDirect={ai?.direct ?? false}
                             systemPrompt={systemPrompt}
                             initialTaskPrompt={initialTaskPrompt}
                             toolPrompts={{}}
@@ -304,6 +305,29 @@ export default function BuffSetsAdmin({ rows, isAdmin }: Props) {
                                     </div>
                                     <p className="text-[10px] text-(--muted)">
                                         不传=不发送 reasoning_effort 参数（严格模式的 OpenAI 兼容服务建议选此项）
+                                    </p>
+                                </div>
+                                <div className="flex flex-col gap-1">
+                                    <div className="flex items-center justify-between">
+                                        <span className="text-xs text-(--muted)">浏览器直连</span>
+                                        <button
+                                            onClick={() => setAiDraft((d) => ({ ...d, direct: !d.direct }))}
+                                            className={`flex items-center gap-1.5 rounded-sm px-2 py-1 text-[11px] transition-colors ${
+                                                aiDraft.direct
+                                                    ? 'bg-(--accent) text-(--accent-fg)'
+                                                    : 'text-(--muted) hover:text-(--fg)'
+                                            }`}
+                                        >
+                                            <Icon
+                                                icon={aiDraft.direct ? 'mdi:check-circle' : 'mdi:circle-outline'}
+                                                className="size-3.5"
+                                            />
+                                            {aiDraft.direct ? '直连' : '经站点代理'}
+                                        </button>
+                                    </div>
+                                    <p className="text-[10px] text-(--muted)">
+                                        直连不经 `/api/ai/stream` 转发（少一跳、不受平台时长限制），但端点必须自己允许 CORS；
+                                        失败时改回代理即可。也可在编辑面板右上角快速切换。
                                     </p>
                                 </div>
                                 <div className="flex justify-end">

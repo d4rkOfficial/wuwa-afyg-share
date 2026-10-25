@@ -17,13 +17,20 @@ export interface AiConfig {
     apiKey: string
     /** 'off' = 不发送 reasoning_effort 参数（兼容严格模式的 OpenAI 兼容提供商） */
     reasoningEffort: 'off' | 'low' | 'medium' | 'high'
+    /**
+     * @desc 浏览器直连（`true` = 不经站点 `/api/ai/stream` 转发）。
+     *  工具箱同款开关：转发多一跳、且受平台请求体 / 时长限制；端点自己支持 CORS 时直连更稳。
+     *  端点不支持 CORS 时浏览器会在预检阶段拦下 —— 这是用户可感知的选择，不静默回退到代理。
+     */
+    direct: boolean
 }
 
 export const DEFAULT_AI_CONFIG: AiConfig = {
     baseUrl: 'https://opencode.ai/zen/go/v1',
     model: 'deepseek-v4-flash',
     apiKey: '',
-    reasoningEffort: 'medium'
+    reasoningEffort: 'medium',
+    direct: false
 }
 
 let _config: AiConfig = { ...DEFAULT_AI_CONFIG }
@@ -91,7 +98,8 @@ export async function loadAiConfig(): Promise<AiConfig> {
                 baseUrl: legacyBase || DEFAULT_AI_CONFIG.baseUrl,
                 model: legacyModel || DEFAULT_AI_CONFIG.model,
                 apiKey: legacyKey ?? '',
-                reasoningEffort: legacyEffort === 'low' || legacyEffort === 'high' ? legacyEffort : 'medium'
+                reasoningEffort: legacyEffort === 'low' || legacyEffort === 'high' ? legacyEffort : 'medium',
+                direct: false
             }
             await idbSet(AI_CONFIG_KEY, _config)
         }

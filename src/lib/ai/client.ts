@@ -1,5 +1,7 @@
 // AI 流式客户端（OpenAI 兼容的 chat/completions；浏览器直连，无 CORS 的端点自动走站点 /api/ai/stream 转发代理）
 // 不绑定服务商：baseUrl / model 由「连接配置」决定，这里只提供默认值。
+// 与椰果工具箱的 src/lib/ai/client.ts 同口径：支持取消、直连开关、单次输出上限、
+// 思考字段兜底（reasoning_content / reasoning）、流尾残留解析与截断判定。
 import type { GeneratedBuff, GeneratedZone, GeneratedZoneRef } from '@/lib/ai/types'
 import {
     BUFF_ZONE_MAP,
@@ -61,7 +63,14 @@ interface StreamChunk {
     choices?: Array<{
         delta?: {
             content?: string | null
+            /** @desc DeepSeek / 通义 等用 `reasoning_content` */
             reasoning_content?: string | null
+            /**
+             * @desc 思考内容的另一种写法（Ollama、OpenRouter 等）。
+             * 两种字段名在「OpenAI 兼容」阵营里并存，只认前一个会让本地模型的
+             * 思考链永远不显示（表现为「有思考但界面空白」）。
+             */
+            reasoning?: string | null
             tool_calls?: Array<{
                 index?: number
                 id?: string
@@ -93,11 +102,29 @@ export interface StreamOptions {
     reasoningEffort?: 'low' | 'medium' | 'high'
     baseUrl?: string
     model?: string
+    /** @desc 取消信号（用户按停止）；与超时信号合并成一次请求的 signal */
+    signal?: AbortSignal
+    /**
+     * @desc 浏览器直连（`true` = 不经站点 /api/ai/stream 转发）。
+     * 站点转发多一跳、且受平台请求体 / 时长限制；端点自己支持 CORS 时直连更稳。
+     * 端点不支持 CORS 时浏览器会在预检阶段拦下 —— 这是用户可感知的选择，不静默回退到代理。
+     */
+    direct?: boolean
+    /** @desc 单次请求的最大输出 token（缺省用内置默认值） */
+    maxOutputTokens?: number
 }
 
-function needsProxy(base: string): boolean {
+/** @desc 响应是否因输出 token 上限被截断（`length` = Chat Completions 的标准值） */
+export const isOutputTruncated = (finishReason?: string): boolean => finishReason === 'length'
+
+function needsProxy(base: string, direct = false): boolean {
+    // 用户显式选择浏览器直连：无条件直连（本地 / 公网都走这条路）
+    if (direct) return false
     try {
-        return !DIRECT_BASE_HOSTS.includes(new URL(base).host)
+        const u = new URL(base)
+        // 本地服务（Ollama/LM Studio/vLLM 等）默认开放 CORS，浏览器直连即可
+        if (u.hostname === 'localhost' || u.hostname === '127.0.0.1') return false
+        return !DIRECT_BASE_HOSTS.includes(u.host)
     } catch {
         return true
     }
@@ -110,7 +137,7 @@ export async function chatCompletionStream(
 ): Promise<ChatResult> {
     if (!apiKey.trim()) throw new Error('未提供 API Key')
 
-    const maxTokens = options.maxTokens ?? MAX_TOKENS
+    const maxTokens = options.maxTokens ?? options.maxOutputTokens ?? MAX_TOKENS
     const body: Record<string, unknown> = {
         model: options.model?.trim() || DEFAULT_MODEL,
         messages,
@@ -128,16 +155,19 @@ export async function chatCompletionStream(
     }
 
     const base = (options.baseUrl ?? DEFAULT_BASE).trim().replace(/\/+$/, '')
+    const signal = options.signal
+        ? AbortSignal.any([AbortSignal.timeout(TIMEOUT_MS), options.signal])
+        : AbortSignal.timeout(TIMEOUT_MS)
 
     let res: Response
     try {
-        if (needsProxy(base)) {
+        if (needsProxy(base, options.direct)) {
             // 无 CORS 的提供商：经站点 /api/ai/stream 转发（同源，绕过浏览器预检）
             res = await fetch('/api/ai/stream', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ baseUrl: base, apiKey, body }),
-                signal: AbortSignal.timeout(TIMEOUT_MS)
+                signal
             })
         } else {
             res = await fetch(`${base}/chat/completions`, {
@@ -147,12 +177,15 @@ export async function chatCompletionStream(
                     Authorization: `Bearer ${apiKey}`
                 },
                 body: JSON.stringify(body),
-                signal: AbortSignal.timeout(TIMEOUT_MS)
+                signal
             })
         }
     } catch (e) {
         const err = e instanceof Error ? e.message : String(e)
         if (err.includes('AbortError') || err.includes('TimeoutError')) {
+            if (options.signal?.aborted) {
+                throw new AiClientError('已停止生成', 'aborted')
+            }
             throw new AiClientError('AI 请求超时', '请求超时，请重试或换模型')
         }
         throw new AiClientError(`无法连接 AI 服务（${base}）：${err}`, err)
@@ -181,6 +214,44 @@ export async function chatCompletionStream(
     // tool_calls：index → 累积片段
     const toolCalls = new Map<number, { id: string; name: string; args: string }>()
 
+    /** @desc 处理一行 SSE（抽成函数是为了让「流结束后缓冲里剩下的最后一行」走同一条解析路径） */
+    const handleLine = (line: string): void => {
+        const trimmed = line.trim()
+        if (!trimmed.startsWith('data:')) return
+        const payload = trimmed.slice(5).trim()
+        if (payload === '[DONE]') return
+        let chunk: StreamChunk
+        try {
+            chunk = JSON.parse(payload)
+        } catch {
+            return
+        }
+        if (chunk.error?.message) throw new AiClientError(`AI 流错误：${chunk.error.message}`, payload)
+        const delta = chunk.choices?.[0]?.delta
+        if (delta?.content) {
+            content += delta.content
+            options.onDelta?.({ content: delta.content })
+        }
+        // 思考增量：字段名按 `reasoning_content` → `reasoning` 依次回退（见 StreamChunk 的说明）
+        const reasoningDelta = delta?.reasoning_content ?? delta?.reasoning
+        if (reasoningDelta) {
+            reasoning += reasoningDelta
+            options.onDelta?.({ reasoning: reasoningDelta })
+        }
+        if (delta?.tool_calls) {
+            for (const tc of delta.tool_calls) {
+                const idx = tc.index ?? 0
+                const cur = toolCalls.get(idx) ?? { id: '', name: '', args: '' }
+                if (tc.id) cur.id += tc.id
+                if (tc.function?.name) cur.name += tc.function.name
+                if (tc.function?.arguments) cur.args += tc.function.arguments
+                toolCalls.set(idx, cur)
+            }
+        }
+        if (chunk.choices?.[0]?.finish_reason) finishReason = chunk.choices[0].finish_reason
+        if (chunk.usage) usage = chunk.usage
+    }
+
     try {
         for (;;) {
             const { done, value } = await reader.read()
@@ -188,44 +259,16 @@ export async function chatCompletionStream(
             buffer += decoder.decode(value, { stream: true })
             const lines = buffer.split('\n')
             buffer = lines.pop() ?? ''
-            for (const line of lines) {
-                const trimmed = line.trim()
-                if (!trimmed.startsWith('data:')) continue
-                const payload = trimmed.slice(5).trim()
-                if (payload === '[DONE]') continue
-                let chunk: StreamChunk
-                try {
-                    chunk = JSON.parse(payload)
-                } catch {
-                    continue
-                }
-                if (chunk.error?.message) throw new AiClientError(`AI 流错误：${chunk.error.message}`, payload)
-                const delta = chunk.choices?.[0]?.delta
-                if (delta?.content) {
-                    content += delta.content
-                    options.onDelta?.({ content: delta.content })
-                }
-                if (delta?.reasoning_content) {
-                    reasoning += delta.reasoning_content
-                    options.onDelta?.({ reasoning: delta.reasoning_content })
-                }
-                if (delta?.tool_calls) {
-                    for (const tc of delta.tool_calls) {
-                        const idx = tc.index ?? 0
-                        const cur = toolCalls.get(idx) ?? { id: '', name: '', args: '' }
-                        if (tc.id) cur.id += tc.id
-                        if (tc.function?.name) cur.name += tc.function.name
-                        if (tc.function?.arguments) cur.args += tc.function.arguments
-                        toolCalls.set(idx, cur)
-                    }
-                }
-                if (chunk.choices?.[0]?.finish_reason) finishReason = chunk.choices[0].finish_reason
-                if (chunk.usage) usage = chunk.usage
-            }
+            for (const line of lines) handleLine(line)
         }
+        // 少数实现最后一条 data 不带换行（甚至 `[DONE]` 也没有）：不 flush 就会静默丢掉最后一个 chunk，
+        // 症状正是「回复 / 工具参数在结尾处莫名缺一截」。
+        buffer += decoder.decode()
+        if (buffer.trim()) handleLine(buffer)
     } catch (e) {
         if (e instanceof AiClientError) throw e
         const err = e instanceof Error ? e.message : String(e)
+        if (options.signal?.aborted) throw new AiClientError('已停止生成', 'aborted')
         throw new AiClientError(`读取流失败：${err}`, err)
     }
 
@@ -233,7 +276,13 @@ export async function chatCompletionStream(
         .sort((a, b) => a[0] - b[0])
         .map(([, v]) => ({ id: v.id, name: v.name, arguments: v.args }))
 
-    return { content, reasoning, usage, finishReason: finishReason || undefined, toolCalls: calls.length ? calls : undefined }
+    return {
+        content,
+        reasoning,
+        usage,
+        finishReason: finishReason || undefined,
+        toolCalls: calls.length ? calls : undefined
+    }
 }
 
 // 只保留白名单乘区、合法数值，避免脏数据
