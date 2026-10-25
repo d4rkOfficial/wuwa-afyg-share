@@ -62,23 +62,23 @@ export default async function BuffSetsPage() {
                     <Icon icon="mdi:database-export-outline" className="size-4" />
                     导出 Buff 集全量 SQL
                 </a>
-                {editable && (
+                {/* 编辑入口只留一个：编辑锁关闭时是「编辑 / 登录后编辑」，锁着时管理员看到「Buff 集管理」 */}
+                {(editable || isAdmin) && (
                     <Link
                         href={user ? '/admin/buff-sets' : '/login?redirect=/admin/buff-sets'}
-                        className="inline-flex items-center gap-1.5 rounded-sm px-4 py-2 text-sm font-medium border border-(--accent) bg-(--accent) text-(--accent-fg) transition-colors hover:brightness-110"
-                        title="编辑锁已关闭：登录后即可编辑（被单独锁定的条目仍仅管理员可改）"
+                        className={`inline-flex items-center gap-1.5 rounded-sm px-4 py-2 text-sm font-medium border transition-colors ${
+                            editable
+                                ? 'border-(--accent) bg-(--accent) text-(--accent-fg) hover:brightness-110'
+                                : 'border-(--card-border) bg-(--btn-bg) text-(--btn-text) hover:bg-(--card) hover:text-(--fg)'
+                        }`}
+                        title={
+                            editable
+                                ? '编辑锁已关闭：登录后即可编辑（被单独锁定的条目仍仅管理员可改）'
+                                : 'Buff 集编辑锁开启中：仅管理员可编辑'
+                        }
                     >
-                        <Icon icon="mdi:pencil-outline" className="size-4" />
-                        {user ? '编辑 Buff 集' : '登录后编辑'}
-                    </Link>
-                )}
-                {isAdmin && (
-                    <Link
-                        href="/admin/buff-sets"
-                        className="inline-flex items-center gap-1.5 rounded-sm px-4 py-2 text-sm font-medium border border-(--card-border) bg-(--btn-bg) text-(--btn-text) transition-colors hover:bg-(--card) hover:text-(--fg)"
-                    >
-                        <Icon icon="mdi:shield-edit-outline" className="size-4" />
-                        Buff 集管理
+                        <Icon icon={editable ? 'mdi:pencil-outline' : 'mdi:shield-edit-outline'} className="size-4" />
+                        {editable ? (user ? '编辑 Buff 集' : '登录后编辑') : 'Buff 集管理'}
                     </Link>
                 )}
             </div>

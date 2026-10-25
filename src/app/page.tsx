@@ -12,7 +12,6 @@ import { getLatestCharElements } from '@/lib/data/char-elements-latest'
 import { LIST_COLUMNS } from '@/lib/project/query'
 import { isExpiredProject } from '@/lib/utils/expiry'
 import { formatCount } from '@/lib/utils/format'
-import { getViewerLocks } from '@/lib/edit-locks'
 import type { ProjectListItem, AnnouncementRow } from '@/lib/types/db'
 
 export const dynamic = 'force-dynamic'
@@ -91,12 +90,6 @@ export default async function HomePage({
         isAdmin = !!profile?.is_admin
     }
 
-    // 编辑锁：关闭时在刊头明示「可编辑」（锁着时不出现任何额外元素，与改动前一致）
-    const viewer = await getViewerLocks()
-    const buffSetsEditable = !viewer.locks.buffSetsLocked
-    const substatSetsEditable = !viewer.locks.substatSetsLocked
-    const hasEditable = buffSetsEditable || substatSetsEditable
-
     return (
         <div className="space-y-8 md:space-y-10">
             {/* 刊头：站名衬线刊头 + 右侧启动器下载入口 + 下细线 */}
@@ -112,33 +105,6 @@ export default async function HomePage({
                                 个工程
                             </span>
                         </p>
-                        {/* 编辑锁关闭时的明示入口（锁着时整行不渲染，首页保持原样） */}
-                        {hasEditable && (
-                            <p className="mt-1.5 flex flex-wrap items-center gap-x-2 gap-y-1 text-xs">
-                                <span className="inline-flex items-center gap-1 text-(--accent-text)">
-                                    <Icon icon="mdi:pencil-outline" className="size-3.5" />
-                                    可编辑
-                                </span>
-                                {buffSetsEditable && (
-                                    <Link
-                                        href={user ? '/admin/buff-sets' : '/login?redirect=/admin/buff-sets'}
-                                        className="rounded-sm border border-(--accent) px-1.5 py-0.5 text-(--accent-text) transition-colors hover:bg-(--accent) hover:text-(--accent-fg)"
-                                        title="编辑锁已关闭：登录后可编辑（被单独锁定的条目除外）"
-                                    >
-                                        Buff 集（可编辑）
-                                    </Link>
-                                )}
-                                {substatSetsEditable && (
-                                    <Link
-                                        href={user ? '/admin/substat-sets' : '/login?redirect=/admin/substat-sets'}
-                                        className="rounded-sm border border-(--accent) px-1.5 py-0.5 text-(--accent-text) transition-colors hover:bg-(--accent) hover:text-(--accent-fg)"
-                                        title="编辑锁已关闭：登录后可编辑（被单独锁定的角色除外）"
-                                    >
-                                        标准词条集（可编辑）
-                                    </Link>
-                                )}
-                            </p>
-                        )}
                     </div>
                     <LauncherDownloadTrigger
                         ariaLabel="下载椰果工具箱启动器"

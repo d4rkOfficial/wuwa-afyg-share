@@ -146,25 +146,24 @@ export default async function SubstatSetsPage() {
                         ? '编辑锁已关闭：登录后即可修改；带锁的角色仍仅管理员可编辑'
                         : '本页为只读浏览；编辑锁开启中，内容的增删改由管理员维护'}
                 </span>
-                {editable && (
+                {/* 编辑入口只留一个：编辑锁关闭时是「编辑 / 登录后编辑」，锁着时管理员看到「标准词条集管理」 */}
+                {(editable || isAdmin) && (
                     <Link
                         href={user ? '/admin/substat-sets' : '/login?redirect=/admin/substat-sets'}
                         className="inline-flex items-center gap-1.5 rounded-sm border px-4 py-2 text-sm font-black tracking-tight transition-colors hover:border-(--accent) mg-hairline"
-                        style={{ background: 'var(--accent)', color: 'var(--accent-fg)' }}
-                        title="编辑锁已关闭：登录后即可编辑（被单独锁定的角色仍仅管理员可改）"
+                        style={
+                            editable
+                                ? { background: 'var(--accent)', color: 'var(--accent-fg)' }
+                                : { background: 'var(--btn-bg)', color: 'var(--btn-text)' }
+                        }
+                        title={
+                            editable
+                                ? '编辑锁已关闭：登录后即可编辑（被单独锁定的角色仍仅管理员可改）'
+                                : '标准词条集编辑锁开启中：仅管理员可编辑'
+                        }
                     >
-                        <Icon icon="mdi:pencil-outline" className="size-4" />
-                        {user ? '编辑标准词条集' : '登录后编辑'}
-                    </Link>
-                )}
-                {isAdmin && (
-                    <Link
-                        href="/admin/substat-sets"
-                        className="inline-flex items-center gap-1.5 rounded-sm border px-4 py-2 text-sm font-black tracking-tight transition-colors hover:border-(--accent) mg-hairline"
-                        style={{ background: 'var(--btn-bg)', color: 'var(--btn-text)' }}
-                    >
-                        <Icon icon="mdi:shield-edit-outline" className="size-4" />
-                        标准词条集管理
+                        <Icon icon={editable ? 'mdi:pencil-outline' : 'mdi:shield-edit-outline'} className="size-4" />
+                        {editable ? (user ? '编辑标准词条集' : '登录后编辑') : '标准词条集管理'}
                     </Link>
                 )}
             </div>
