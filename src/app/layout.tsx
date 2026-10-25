@@ -1,10 +1,10 @@
 import type { Metadata } from 'next'
 import { Space_Grotesk } from 'next/font/google'
 import './globals.css'
-import { Icon } from '@iconify/react'
 import Header from '@/components/header'
-import LauncherDownloadTrigger from '@/components/launcher-download'
+import EditLockSwitch from '@/components/edit-lock-switch'
 import { Toaster } from '@/components/ui/toast'
+import { getViewerLocks } from '@/lib/edit-locks'
 
 const sans = Space_Grotesk({
     variable: '--font-geist-sans',
@@ -41,11 +41,13 @@ export const metadata: Metadata = {
     description: '分享、浏览和克隆《鸣潮》拉表排轴工程的社区平台，配合椰果工具箱使用。'
 }
 
-export default function RootLayout({
+export default async function RootLayout({
     children
 }: Readonly<{
     children: React.ReactNode
 }>) {
+    // 编辑锁状态按请求缓存（与顶栏共用一次查询）；非管理员不渲染开关
+    const viewer = await getViewerLocks()
     return (
         <html lang="zh-CN" suppressHydrationWarning className={`${sans.variable} min-h-full antialiased`}>
             <head>
@@ -56,14 +58,13 @@ export default function RootLayout({
                 <main className="mx-auto w-full max-w-6xl flex-1 px-4 py-10 md:px-8 md:py-14">{children}</main>
                 <footer className="border-t mg-hairline py-8">
                     <div className="mx-auto flex w-full max-w-6xl flex-col items-center gap-1.5 px-4 text-xs leading-relaxed text-(--muted) md:px-8">
-                        <LauncherDownloadTrigger
-                            ariaLabel="下载椰果工具箱启动器"
-                            title="下载椰果工具箱启动器：断网可用、随时拉表、白嫖免费AI模型"
-                            className="inline-flex cursor-pointer items-center gap-1.5 rounded-sm px-2 py-1 transition-colors hover:bg-(--card-hover) hover:text-(--fg)"
-                        >
-                            <Icon icon="mdi:download-box-outline" className="size-3.5" />
-                            下载椰果工具箱启动器
-                        </LauncherDownloadTrigger>
+                        {/* 底部原先的启动器下载入口已由「编辑锁」开关取代（下载入口仍在首页刊头） */}
+                        {viewer.isAdmin && (
+                            <EditLockSwitch
+                                buffSetsLocked={viewer.locks.buffSetsLocked}
+                                substatSetsLocked={viewer.locks.substatSetsLocked}
+                            />
+                        )}
                         <p>椰果工坊 · 与 椰果工具箱 搭配使用</p>
                     </div>
                 </footer>

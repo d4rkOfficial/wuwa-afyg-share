@@ -3,6 +3,7 @@ import { Icon } from '@iconify/react'
 import SetupNotice from '@/components/setup-notice'
 import BuffSetsBrowser from '@/components/buff-sets-browser'
 import { createClient, hasEnv } from '@/lib/supabase/server'
+import { getViewerLocks } from '@/lib/edit-locks'
 import { upgradeBuffSetRowV2 } from '@/lib/buff-snapshots/migrate-v2'
 import type { BuffSetRow } from '@/lib/types/db'
 
@@ -20,26 +21,24 @@ export default async function BuffSetsPage() {
     // 纯函数、不写库，页面永远按 v2 展示。
     const rows = ((data ?? []) as BuffSetRow[]).map((r) => upgradeBuffSetRowV2(r).row)
 
-    // 底部管理入口：仅管理员可见
+    // 底部管理入口：管理员常驻；编辑锁关闭时登录用户也直接给「编辑」入口
     const {
         data: { user }
     } = await supabase.auth.getUser()
-    let isAdmin = false
-    if (user) {
-        const { data: profile } = await supabase
-            .from('profiles')
-            .select('is_admin')
-            .eq('id', user.id)
-            .maybeSingle()
-        isAdmin = !!profile?.is_admin
-    }
+    const viewer = await getViewerLocks()
+    const isAdmin = viewer.isAdmin
+    const editable = !viewer.locks.buffSetsLocked
 
     return (
         <div className="space-y-8 md:space-y-12">
             <div className="border-b pb-4 mg-hairline">
-                <h1 className="mg-title-xl text-3xl md:text-4xl">Buff 集</h1>
+                <h1 className="mg-title-xl text-3xl md:text-4xl">
+                    Buff 集
+                    {editable && <span className="ml-2 align-middle text-sm text-(--accent-text)">（可编辑）</span>}
+                </h1>
                 <p className="mt-1 text-sm leading-relaxed text-(--muted)">
                     游戏内角色 / 武器 / 首位声骸 / 套装的固定增益数值，供工具箱一键导入。左侧选实体，右侧看明细。
+                    {editable && ' 当前已开放编辑：登录后可直接修改（被管理员单独锁定的条目除外）。'}
                 </p>
             </div>
 
@@ -63,6 +62,16 @@ export default async function BuffSetsPage() {
                     <Icon icon="mdi:database-export-outline" className="size-4" />
                     导出 Buff 集全量 SQL
                 </a>
+                {editable && (
+                    <Link
+                        href={user ? '/admin/buff-sets' : '/login?redirect=/admin/buff-sets'}
+                        className="inline-flex items-center gap-1.5 rounded-sm px-4 py-2 text-sm font-medium border border-(--accent) bg-(--accent) text-(--accent-fg) transition-colors hover:brightness-110"
+                        title="编辑锁已关闭：登录后即可编辑（被单独锁定的条目仍仅管理员可改）"
+                    >
+                        <Icon icon="mdi:pencil-outline" className="size-4" />
+                        {user ? '编辑 Buff 集' : '登录后编辑'}
+                    </Link>
+                )}
                 {isAdmin && (
                     <Link
                         href="/admin/buff-sets"

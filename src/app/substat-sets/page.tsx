@@ -3,6 +3,7 @@ import Link from 'next/link'
 import { Icon } from '@iconify/react'
 import SetupNotice from '@/components/setup-notice'
 import { createClient, hasEnv } from '@/lib/supabase/server'
+import { getViewerLocks } from '@/lib/edit-locks'
 import type { EchoStatValue, StandardSubstatSetRow } from '@/lib/types/db'
 
 export const metadata: Metadata = {
@@ -18,8 +19,8 @@ function statText(stat: EchoStatValue | null | undefined): string {
 }
 
 /**
- * @desc 标准词条集 · **只读**浏览页（任何访客都可查看，无需登录）。
- * 与编辑路径分离：编辑仍在 /admin/substat-sets（仅管理员），本页只呈现当前已收录的方案。
+ * @desc 标准词条集浏览页（任何访客都可查看，无需登录）。
+ * 编辑锁关闭时，登录用户也可以从这里进编辑页；被管理员单独锁定的角色仍只读。
  */
 export default async function SubstatSetsPage() {
     if (!hasEnv()) return <SetupNotice />
@@ -31,19 +32,12 @@ export default async function SubstatSetsPage() {
         .order('character_name', { ascending: true })
     const rows = (data ?? []) as StandardSubstatSetRow[]
 
-    // 仅管理员看到「去编辑」入口（查看/编辑分离，但给管理员留一条直达路径）
     const {
         data: { user }
     } = await supabase.auth.getUser()
-    let isAdmin = false
-    if (user) {
-        const { data: profile } = await supabase
-            .from('profiles')
-            .select('is_admin')
-            .eq('id', user.id)
-            .maybeSingle()
-        isAdmin = !!profile?.is_admin
-    }
+    const viewer = await getViewerLocks()
+    const isAdmin = viewer.isAdmin
+    const editable = !viewer.locks.substatSetsLocked
 
     return (
         <div className="space-y-8 md:space-y-10">
@@ -62,11 +56,17 @@ export default async function SubstatSetsPage() {
                 </div>
 
                 <div className="flex flex-col gap-2 border-y py-4 mg-hairline md:flex-row md:items-end md:gap-8">
-                    <h1 className="mg-title text-3xl md:text-4xl">标准 14 词条</h1>
+                    <h1 className="mg-title text-3xl md:text-4xl">
+                        标准 14 词条
+                        {editable && (
+                            <span className="ml-2 align-middle text-sm text-(--accent-text)">（可编辑）</span>
+                        )}
+                    </h1>
                     <p className="max-w-xl text-xs leading-relaxed text-(--muted) md:ml-auto md:text-right">
                         每个角色一套 5 部位声骸配置（主词条 + 副词条合计 14 条）。绝大多数角色由工具箱按角色数据本地生成，
                         此处只收录「特殊角色」的整份方案；工具箱会经 <code className="text-(--fg)">/api/substat-sets</code> 拉取后
                         一键套用。
+                        {editable && ' 当前已开放编辑：登录后可直接修改（带锁的角色仍仅管理员可改）。'}
                     </p>
                 </div>
             </header>
@@ -93,6 +93,15 @@ export default async function SubstatSetsPage() {
                                     <span className="mg-title min-w-0 flex-1 truncate text-base">
                                         {row.character_name}
                                     </span>
+                                    {viewer.locks.substatLocks[row.character_name] && (
+                                        <span
+                                            className="inline-flex shrink-0 items-center gap-1 rounded-sm border border-(--warning) px-1.5 py-0.5 text-[10px] text-(--warning)"
+                                            title="该角色已被管理员锁定，仅管理员可编辑"
+                                        >
+                                            <Icon icon="mdi:lock" className="size-3" />
+                                            已锁定
+                                        </span>
+                                    )}
                                     <span className="shrink-0 text-[11px] tracking-[0.18em] text-(--muted)">
                                         {slots.map((s) => s.cost).join('')} · {substatTotal} 条
                                     </span>
@@ -133,8 +142,21 @@ export default async function SubstatSetsPage() {
 
             <div className="flex flex-wrap items-center justify-center gap-2 border-t pt-4 mg-hairline">
                 <span className="text-[11px] text-(--muted)">
-                    本页为只读浏览；内容的增删改由管理员在后台维护
+                    {editable
+                        ? '编辑锁已关闭：登录后即可修改；带锁的角色仍仅管理员可编辑'
+                        : '本页为只读浏览；编辑锁开启中，内容的增删改由管理员维护'}
                 </span>
+                {editable && (
+                    <Link
+                        href={user ? '/admin/substat-sets' : '/login?redirect=/admin/substat-sets'}
+                        className="inline-flex items-center gap-1.5 rounded-sm border px-4 py-2 text-sm font-black tracking-tight transition-colors hover:border-(--accent) mg-hairline"
+                        style={{ background: 'var(--accent)', color: 'var(--accent-fg)' }}
+                        title="编辑锁已关闭：登录后即可编辑（被单独锁定的角色仍仅管理员可改）"
+                    >
+                        <Icon icon="mdi:pencil-outline" className="size-4" />
+                        {user ? '编辑标准词条集' : '登录后编辑'}
+                    </Link>
+                )}
                 {isAdmin && (
                     <Link
                         href="/admin/substat-sets"
