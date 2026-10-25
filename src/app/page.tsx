@@ -7,8 +7,8 @@ import LauncherDownloadTrigger from '@/components/launcher-download'
 import SetupNotice from '@/components/setup-notice'
 import AnnouncementBar from '@/components/announcement-bar'
 import { createClient, hasEnv } from '@/lib/supabase/server'
-import { getProvider } from '@/lib/upstream'
 import { getLatestCharElements } from '@/lib/data/char-elements-latest'
+import { getAvatarIcons } from '@/lib/data/avatar-icons'
 import { LIST_COLUMNS } from '@/lib/project/query'
 import { isExpiredProject } from '@/lib/utils/expiry'
 import { formatCount } from '@/lib/utils/format'
@@ -69,12 +69,7 @@ export default async function HomePage({
     const announcements = (announcementRows ?? []) as AnnouncementRow[]
 
     // 角色头像（上游 nanoka CDN；失败时用占位图兜底，不影响列表展示）
-    let charIcons: Record<string, string> = {}
-    try {
-        charIcons = await getProvider().getCharacterIcons()
-    } catch {
-        /* 上游不可用时静默降级 */
-    }
+    const charIcons = await getAvatarIcons()
 
     // 当前用户是否管理员（决定公告栏是否显示编辑入口）
     const {

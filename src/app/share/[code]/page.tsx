@@ -8,11 +8,12 @@ import ShareLinkPicker from '@/components/share-link-picker'
 import ExpiryCountdown from '@/components/expiry-countdown'
 import SetupNotice from '@/components/setup-notice'
 import { createClient, hasEnv } from '@/lib/supabase/server'
-import { getProvider } from '@/lib/upstream/provider/registry'
+import { getAvatarIcons } from '@/lib/data/avatar-icons'
 import { DETAIL_COLUMNS } from '@/lib/project/query'
 import { teamDisplayNames } from '@/lib/project/extract'
 import { formatDate, formatCount } from '@/lib/utils/format'
 import { isExpiredProject, isGracePeriod } from '@/lib/utils/expiry'
+import { pickCharacterAvatar } from '@/lib/utils/avatar'
 import type { ProjectRow } from '@/lib/types/db'
 
 export const dynamic = 'force-dynamic'
@@ -61,13 +62,8 @@ export default async function SharePage({ params }: { params: Promise<{ code: st
     const grace = isGracePeriod(project.expires_at, project.author_name)
     const isOwner = user && user.id === project.author_id
 
-    // 角色头像（与首页 ProjectCard 同源）：用于配队大卡片的右下角头像叠底
-    let charIcons: Record<string, string> = {}
-    try {
-        charIcons = await getProvider().getCharacterIcons()
-    } catch {
-        // 上游不可用时静默降级：卡片保持无叠底
-    }
+    // 角色头像（与首页 ProjectCard 同源）：配队大卡片的头像叠底 + 作者头像
+    const charIcons = await getAvatarIcons()
 
     if (expired) {
         return (
@@ -88,8 +84,20 @@ export default async function SharePage({ params }: { params: Promise<{ code: st
                     <div className="min-w-0">
                         <h1 className="mg-title-xl text-3xl md:text-4xl">{project.title}</h1>
                         <div className="mt-1.5 flex flex-wrap items-center gap-x-3 gap-y-1 text-sm text-(--muted)">
-                            <span className="flex items-center gap-1">
-                                <Icon icon="mdi:account-outline" className="size-4" />
+                            <span className="flex items-center gap-1.5">
+                                {(() => {
+                                    const avatar = pickCharacterAvatar(project.author_name, charIcons)
+                                    return avatar ? (
+                                        // eslint-disable-next-line @next/next/no-img-element
+                                        <img
+                                            src={avatar.url}
+                                            alt={avatar.name}
+                                            className="size-5 shrink-0 rounded-sm border border-(--card-border) object-cover"
+                                        />
+                                    ) : (
+                                        <Icon icon="mdi:account-outline" className="size-4" />
+                                    )
+                                })()}
                                 {project.author_name}
                             </span>
                             <span className="mg-num">{formatDate(project.created_at)}</span>

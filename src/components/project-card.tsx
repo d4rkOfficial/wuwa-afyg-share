@@ -4,9 +4,12 @@ import TeamBanner from '@/components/team-banner'
 import type { ProjectListItem } from '@/lib/types/db'
 import { teamDisplayNames } from '@/lib/project/extract'
 import { formatCount, timeAgo } from '@/lib/utils/format'
+import { pickCharacterAvatar } from '@/lib/utils/avatar'
 
 export default function ProjectCard({ project, icons }: { project: ProjectListItem; icons?: Record<string, string> }) {
     const names = teamDisplayNames(project.team_preview)
+    // 作者头像：用户名哈希 → 游戏角色头像（不再是首字占位）
+    const authorAvatar = pickCharacterAvatar(project.author_name, icons)
     // 三个角色头像做卡片右下角叠底：1 号位大→3 号位小，稍微重叠，贴右下边界
     // 仅渲染有真实 CDN 头像的角色；占位图不做底图
     const avatars = [0, 1, 2]
@@ -97,8 +100,20 @@ export default function ProjectCard({ project, icons }: { project: ProjectListIt
 
                 <div className="mt-auto flex items-center gap-3 text-xs text-(--muted)">
                     <span className="flex min-w-0 items-center gap-1.5">
-                        <span className="flex size-5 shrink-0 items-center justify-center rounded-sm border border-(--card-border) bg-(--card-hover) text-[9px] font-black tracking-tight text-(--muted)">
-                            {project.author_name?.charAt(0) || '?'}
+                        <span className="size-5 shrink-0 overflow-hidden rounded-sm border border-(--card-border) bg-(--card-hover)">
+                            {authorAvatar ? (
+                                // eslint-disable-next-line @next/next/no-img-element
+                                <img
+                                    src={authorAvatar.url}
+                                    alt={authorAvatar.name}
+                                    className="size-full object-cover"
+                                    loading="lazy"
+                                />
+                            ) : (
+                                <span className="flex size-full items-center justify-center">
+                                    <Icon icon="mdi:account-outline" className="size-3 text-(--muted)" />
+                                </span>
+                            )}
                         </span>
                         <span className="truncate">{project.author_name}</span>
                     </span>
