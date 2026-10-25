@@ -133,6 +133,28 @@ export interface AnnouncementRow {
     created_at: string
 }
 
+// ── 编辑锁（supabase/migrations/edit-locks.sql）──
+// 全局锁：locked = true 时仅管理员可编辑该域；false 时登录用户都能编辑
+export type EditScope = 'buff_sets' | 'substat_sets'
+
+export interface EditLockRow {
+    scope: EditScope
+    locked: boolean
+    updated_at: string
+}
+
+// 条目级锁：被锁的实体 / 角色即使全局锁关闭，也仍然只有管理员能编辑
+export interface BuffSetLockRow {
+    entity_type: BuffEntityType
+    entity_name: string
+    locked: boolean
+}
+
+export interface SubstatSetLockRow {
+    character_name: string
+    locked: boolean
+}
+
 // Buff 集单快照行（0002_buff_set_snapshot.sql，全表至多一行）
 export interface BuffSnapshotRow {
     id: string

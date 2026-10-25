@@ -1,7 +1,8 @@
 'use server'
 
 import { revalidatePath } from 'next/cache'
-import { requireAdmin } from '@/lib/supabase/admin'
+import { requireAdmin, requireUser } from '@/lib/supabase/admin'
+import { authorizeBuffEntityEdit } from '@/lib/edit-locks'
 import {
     BUFF_ENTITY_TYPES,
     BUFF_ZONE_MAP,
@@ -23,10 +24,22 @@ export interface ActionResult<T = undefined> {
     debug?: string
 }
 
-// 仅管理员（保存 / 删除等写操作；DB 层 RLS 同步限制）
+// 仅管理员（删除整个实体等破坏性操作；DB 层 RLS 同步限制）
 async function withAdmin() {
     const r = await requireAdmin()
     if (!r.ok || !r.supabase) return { supabase: null as never, error: r.error ?? '无权限' }
+    return { supabase: r.supabase, error: null as string | null }
+}
+
+/**
+ * @desc 单条 / 整实体的**写**操作鉴权（与 RLS 的 buff_sets_edit 策略同口径）：
+ * 管理员随时可写；全局编辑锁关闭且该实体未被单独锁定时，登录用户也可以写。
+ */
+async function withBuffSetWrite(entityType: BuffEntityType, entityName: string) {
+    const r = await requireUser()
+    if (!r.ok || !r.supabase) return { supabase: null as never, error: r.error ?? '请先登录' }
+    const perm = await authorizeBuffEntityEdit(r.supabase, r.user?.id, entityType, entityName)
+    if (!perm.ok) return { supabase: null as never, error: perm.error }
     return { supabase: r.supabase, error: null as string | null }
 }
 
@@ -136,10 +149,6 @@ function sanitizeConditionForScope(cond: unknown, scope: BuffConditionScope): Bu
 }
 
 export async function upsertBuffSet(input: InputBuff): Promise<ActionResult> {
-    const auth = await withAdmin()
-    if (auth.error || !auth.supabase) return { error: auth.error ?? '无权限' }
-    const supabase = auth.supabase
-
     const entityType = input.entityType
     if (!BUFF_ENTITY_TYPES.includes(entityType as (typeof BUFF_ENTITY_TYPES)[number])) {
         return { error: '无效的实体类型' }
@@ -147,6 +156,10 @@ export async function upsertBuffSet(input: InputBuff): Promise<ActionResult> {
     const entityName = input.entityName.trim().slice(0, 60)
     const buffName = input.buffName.trim().slice(0, 80)
     if (!entityName || !buffName) return { error: '实体名与增益名不能为空' }
+
+    const auth = await withBuffSetWrite(entityType, entityName)
+    if (auth.error || !auth.supabase) return { error: auth.error ?? '无权限' }
+    const supabase = auth.supabase
 
     const { error } = await supabase.from('buff_sets').upsert(
         {
@@ -171,7 +184,7 @@ export async function deleteBuffPreset(
     entityName: string,
     buffName: string
 ): Promise<ActionResult> {
-    const auth = await withAdmin()
+    const auth = await withBuffSetWrite(entityType, entityName)
     if (auth.error || !auth.supabase) return { error: auth.error ?? '无权限' }
     const supabase = auth.supabase
 
@@ -202,16 +215,16 @@ export interface UpsertEntityInput {
 }
 
 export async function upsertBuffEntity(input: UpsertEntityInput): Promise<ActionResult<{ saved: number }>> {
-    const auth = await withAdmin()
-    if (auth.error || !auth.supabase) return { error: auth.error ?? '无权限' }
-    const supabase = auth.supabase
-
     const entityType = input.entityType
     if (!BUFF_ENTITY_TYPES.includes(entityType as (typeof BUFF_ENTITY_TYPES)[number])) {
         return { error: '无效的实体类型' }
     }
     const entityName = input.entityName.trim().slice(0, 60)
     if (!entityName) return { error: '实体名不能为空' }
+
+    const auth = await withBuffSetWrite(entityType, entityName)
+    if (auth.error || !auth.supabase) return { error: auth.error ?? '无权限' }
+    const supabase = auth.supabase
 
     // 整体替换：先删除该实体全部行，再写回
     const { error: delErr } = await supabase

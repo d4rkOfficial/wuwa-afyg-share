@@ -1,7 +1,8 @@
 'use server'
 
 import { revalidatePath } from 'next/cache'
-import { requireAdmin } from '@/lib/supabase/admin'
+import { requireAdmin, requireUser } from '@/lib/supabase/admin'
+import { authorizeSubstatSetEdit } from '@/lib/edit-locks'
 import { validateEchoPlan } from '@/lib/utils/echo-plan'
 
 export interface ActionResult<T = undefined> {
@@ -12,10 +13,22 @@ export interface ActionResult<T = undefined> {
 const MAX_CHARACTER_NAME_LEN = 60
 const MAX_NOTE_LEN = 200
 
-// 仅管理员（保存 / 删除；DB 层 RLS 同步限制）
+// 仅管理员（删除方案；DB 层 RLS 同时限制）
 async function withAdmin() {
     const r = await requireAdmin()
     if (!r.ok || !r.supabase) return { supabase: null as never, error: r.error ?? '无权限' }
+    return { supabase: r.supabase, error: null as string | null }
+}
+
+/**
+ * @desc 保存方案的鉴权（与 RLS 的 standard_substat_sets_edit 策略同口径）：
+ * 管理员随时可写；全局编辑锁关闭且该角色未被单独锁定时，登录用户也可以写。
+ */
+async function withSubstatSetWrite(characterName: string) {
+    const r = await requireUser()
+    if (!r.ok || !r.supabase) return { supabase: null as never, error: r.error ?? '请先登录' }
+    const perm = await authorizeSubstatSetEdit(r.supabase, r.user?.id, characterName)
+    if (!perm.ok) return { supabase: null as never, error: perm.error }
     return { supabase: r.supabase, error: null as string | null }
 }
 
@@ -32,10 +45,6 @@ export interface UpsertSubstatSetInput {
  *       副词条合计恰好 14 条 / 词条 type 与 unit 白名单（见 src/lib/utils/echo-plan.ts）。
  */
 export async function upsertSubstatSet(input: UpsertSubstatSetInput): Promise<ActionResult> {
-    const auth = await withAdmin()
-    if (auth.error || !auth.supabase) return { error: auth.error ?? '无权限' }
-    const supabase = auth.supabase
-
     const characterName = typeof input?.characterName === 'string' ? input.characterName.trim() : ''
     if (!characterName) return { error: '角色名不能为空' }
     if (characterName.length > MAX_CHARACTER_NAME_LEN) {
@@ -44,6 +53,10 @@ export async function upsertSubstatSet(input: UpsertSubstatSetInput): Promise<Ac
 
     const checked = validateEchoPlan(input?.plan)
     if (!checked.ok) return { error: checked.error }
+
+    const auth = await withSubstatSetWrite(characterName)
+    if (auth.error || !auth.supabase) return { error: auth.error ?? '无权限' }
+    const supabase = auth.supabase
 
     const rawNote = typeof input?.note === 'string' ? input.note.trim().slice(0, MAX_NOTE_LEN) : ''
     const { error } = await supabase.from('standard_substat_sets').upsert(
@@ -57,10 +70,11 @@ export async function upsertSubstatSet(input: UpsertSubstatSetInput): Promise<Ac
     if (error) return { error: error.message }
 
     revalidatePath('/admin/substat-sets')
+    revalidatePath('/substat-sets')
     return {}
 }
 
-/** 删除某个角色的标准词条方案（不存在时同样返回成功，保持幂等） */
+/** 删除某个角色的标准词条方案（不存在时同样返回成功，保持幂等）；仅管理员 */
 export async function deleteSubstatSet(characterName: string): Promise<ActionResult> {
     const auth = await withAdmin()
     if (auth.error || !auth.supabase) return { error: auth.error ?? '无权限' }
@@ -73,5 +87,6 @@ export async function deleteSubstatSet(characterName: string): Promise<ActionRes
     if (error) return { error: error.message }
 
     revalidatePath('/admin/substat-sets')
+    revalidatePath('/substat-sets')
     return {}
 }
