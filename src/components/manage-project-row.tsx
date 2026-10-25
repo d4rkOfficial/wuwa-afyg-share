@@ -6,6 +6,8 @@ import { useRouter } from 'next/navigation'
 import { Icon } from '@iconify/react'
 import ShareLinkPicker from '@/components/share-link-picker'
 import ExpiryCountdown from '@/components/expiry-countdown'
+import TagInput from '@/components/ui/tag-input'
+import ExpiryPicker, { expiryDateToIso } from '@/components/ui/expiry-picker'
 import { toast } from '@/components/ui/toast'
 import { deleteProject, regenerateCode, setExpiry, updateProject, replaceProjectFile } from '@/lib/actions/projects'
 import { setProjectProtected } from '@/lib/actions/project-protection'
@@ -26,7 +28,7 @@ export default function ManageProjectRow({ project }: Props) {
 
     const [title, setTitle] = useState(project.title)
     const [description, setDescription] = useState(project.description)
-    const [tagsText, setTagsText] = useState(project.tags.join(', '))
+    const [tags, setTags] = useState<string[]>(project.tags)
 
     // 换源弹窗
     const [showReplace, setShowReplace] = useState(false)
@@ -60,9 +62,7 @@ export default function ManageProjectRow({ project }: Props) {
 
     function onSetExpireDate() {
         if (!expireDate) return
-        // 当天 23:59:59.999 过期
-        const expiresAt = `${expireDate}T23:59:59.999+08:00`
-        run(() => setExpiry(project.id, expiresAt), '已设置过期日期')
+        run(() => setExpiry(project.id, expiryDateToIso(expireDate)), '已设置过期日期')
         setExpireDate('')
     }
 
@@ -106,10 +106,7 @@ export default function ManageProjectRow({ project }: Props) {
             const res = await updateProject(project.id, {
                 title,
                 description,
-                tags: tagsText
-                    .split(/[,，\s]+/)
-                    .map((t) => t.trim())
-                    .filter(Boolean)
+                tags
             })
             setEditing(false)
             return res
@@ -232,39 +229,31 @@ export default function ManageProjectRow({ project }: Props) {
                         placeholder="简介"
                         className="w-full rounded-sm border border-(--card-border) bg-(--input-bg) px-3 py-2 text-sm outline-none transition-colors placeholder:text-(--muted) focus:border-(--accent)"
                     />
-                    <input
-                        value={tagsText}
-                        onChange={(e) => setTagsText(e.target.value)}
-                        placeholder="标签（逗号分隔）"
-                        className="w-full rounded-sm border border-(--card-border) bg-(--input-bg) px-3 py-2 text-sm outline-none transition-colors placeholder:text-(--muted) focus:border-(--accent)"
-                    />
-                    <div className="flex flex-wrap items-center gap-2">
-                        <span className="text-xs text-(--muted)">过期日期：</span>
-                        <input
-                            type="date"
-                            value={expireDate}
-                            onChange={(e) => setExpireDate(e.target.value)}
-                            className="rounded-sm border border-(--card-border) bg-(--input-bg) px-2 py-1 text-xs outline-none transition-colors focus:border-(--accent)"
-                        />
-                        <button
-                            onClick={onSetExpireDate}
-                            disabled={pending || !expireDate}
-                            className="rounded-sm border border-(--card-border) bg-(--card-hover) px-2.5 py-1 text-xs text-(--muted) transition-colors hover:text-(--fg) disabled:opacity-50"
-                        >
-                            设为过期日期
-                        </button>
-                        <button
-                            onClick={() => run(() => setExpiry(project.id, null), '已设为永久')}
-                            className="rounded-sm border border-(--card-border) bg-(--card-hover) px-2.5 py-1 text-xs text-(--muted) transition-colors hover:text-(--fg)"
-                        >
-                            永久
-                        </button>
-                        <button
-                            onClick={() => run(() => setExpiry(project.id, new Date().toISOString()), '已设为立即过期')}
-                            className="rounded-sm border border-(--danger) bg-(--card) px-2.5 py-1 text-xs text-(--danger) transition-colors hover:bg-(--danger) hover:text-(--danger-fg)"
-                        >
-                            立即过期
-                        </button>
+                    <TagInput tags={tags} onChange={setTags} suggestions={['轮切轴', '轮椅轴', '标准轴', '进阶轴', '冒烟轴', '深塔', '全息']} />
+                    <div className="space-y-2 rounded-sm border border-(--card-border) bg-(--card-hover) p-2.5">
+                        <span className="text-[11px] text-(--muted)">改期（快捷时长 / 自定义日期）</span>
+                        <ExpiryPicker value={expireDate} onChange={setExpireDate} />
+                        <div className="flex flex-wrap items-center gap-2">
+                            <button
+                                onClick={onSetExpireDate}
+                                disabled={pending || !expireDate}
+                                className="rounded-sm border border-(--card-border) bg-(--card) px-2.5 py-1 text-xs text-(--fg) transition-colors hover:border-(--accent) disabled:opacity-50"
+                            >
+                                应用到该工程
+                            </button>
+                            <button
+                                onClick={() => run(() => setExpiry(project.id, null), '已设为永久')}
+                                className="rounded-sm border border-(--card-border) bg-(--card) px-2.5 py-1 text-xs text-(--muted) transition-colors hover:text-(--fg)"
+                            >
+                                设为永久
+                            </button>
+                            <button
+                                onClick={() => run(() => setExpiry(project.id, new Date().toISOString()), '已设为立即过期')}
+                                className="rounded-sm border border-(--danger) bg-(--card) px-2.5 py-1 text-xs text-(--danger) transition-colors hover:bg-(--danger) hover:text-(--danger-fg)"
+                            >
+                                立即过期
+                            </button>
+                        </div>
                     </div>
                     <div className="flex justify-end gap-2">
                         <button

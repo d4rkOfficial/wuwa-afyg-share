@@ -15,10 +15,14 @@ export interface ActionResult<T = undefined> {
 
 export interface PublishInput {
     fileText: string
+    /** @desc 上传前可改的标题（缺省用工程文件里的名字） */
+    title?: string
     description: string
     tags: string[]
     expiresDays: number | null
     expiresAt?: string | null
+    /** @desc 上传前可填的游戏版本（可选，展示在卡片右上角） */
+    gameVersion?: string | null
 }
 
 async function requireUser() {
@@ -82,7 +86,9 @@ export async function publishProject(input: PublishInput): Promise<ActionResult<
         input.expiresAt ??
         (input.expiresDays ? new Date(Date.now() + input.expiresDays * 86400000).toISOString() : null)
 
-    const name = project.name.trim()
+    // 标题：上传前填的优先（留空才回落到工程文件里的名字）
+    const name = (input.title ?? '').trim().slice(0, 60) || project.name.trim().slice(0, 60)
+    const gameVersion = (input.gameVersion ?? '').trim().slice(0, 20) || null
     const { data: profile } = await supabase
         .from('profiles')
         .select('username')
@@ -101,6 +107,7 @@ export async function publishProject(input: PublishInput): Promise<ActionResult<
                 title: name,
                 description,
                 tags,
+                game_version: gameVersion,
                 team_preview: preview,
                 project_blob: blobHex,
                 file_size: fileSize,

@@ -1,25 +1,40 @@
 'use client'
 
-import { useRef, useState, useTransition } from 'react'
+// 上传工程：**不再手写 JSON**。
+// 左侧：拖拽 / 选择工具箱导出的 .json（只读，原样上传，保证「下载 = 上传的文件」）。
+// 右侧：分享信息（标题 / 简介 / 标签 / 游戏版本 / 有效期）—— 全部上传前可改。
+import { useMemo, useRef, useState, useTransition } from 'react'
 import { useRouter } from 'next/navigation'
 import { Icon } from '@iconify/react'
 import TeamBanner from '@/components/team-banner'
+import TagInput from '@/components/ui/tag-input'
+import ExpiryPicker, { daysFromNow, expiryDateToIso } from '@/components/ui/expiry-picker'
 import { publishProject } from '@/lib/actions/projects'
 import { parseProjectFile, safeJsonParse } from '@/lib/project/parse'
 import { teamDisplayNames } from '@/lib/project/extract'
 import type { ProjectData } from '@/lib/types/project'
 
-const EXPIRY_OPTIONS = [
-    { days: 7, label: '+7 天' },
-    { days: 30, label: '+30 天' },
-    { days: 90, label: '+90 天' }
+const TAG_SUGGESTIONS = [
+    '轮切轴',
+    '轮椅轴',
+    '标准轴',
+    '进阶轴',
+    '冒烟轴',
+    '无相交替',
+    '深塔',
+    '海墟',
+    '全息',
+    '单通',
+    '低练',
+    '高练'
 ]
 
-function toDateInput(d: Date): string {
-    const y = d.getFullYear()
-    const m = String(d.getMonth() + 1).padStart(2, '0')
-    const day = String(d.getDate()).padStart(2, '0')
-    return `${y}-${m}-${day}`
+interface FileMeta {
+    /** @desc 解析出的工程名（作为标题初值） */
+    name: string
+    bytes: number
+    preview: ProjectData
+    names: string[]
 }
 
 export default function UploadForm() {
@@ -27,49 +42,85 @@ export default function UploadForm() {
     const fileRef = useRef<HTMLInputElement>(null)
 
     const [fileText, setFileText] = useState('')
+    const [meta, setMeta] = useState<FileMeta | null>(null)
     const [parseError, setParseError] = useState<string | null>(null)
-    const [preview, setPreview] = useState<ProjectData | null>(null)
+    const [dragging, setDragging] = useState(false)
 
+    // 分享信息（上传前可改）
+    const [title, setTitle] = useState('')
     const [description, setDescription] = useState('')
-    const [tagsText, setTagsText] = useState('')
-    // 过期日期（YYYY-MM-DD），空串 = 永久
-    const [expireDate, setExpireDate] = useState(() => toDateInput(new Date(Date.now() + 30 * 86400000)))
+    const [tags, setTags] = useState<string[]>([])
+    const [gameVersion, setGameVersion] = useState('')
+    const [expireDate, setExpireDate] = useState(() => daysFromNow(30))
 
     const [submitError, setSubmitError] = useState<string | null>(null)
     const [pending, startTransition] = useTransition()
 
-    function onTextChange(text: string) {
-        setFileText(text)
-        setParseError(null)
-        setPreview(null)
-        if (!text.trim()) return
-        try {
-            const project = parseProjectFile(safeJsonParse(text))
-            setPreview(project)
-        } catch (e) {
-            setParseError(e instanceof Error ? e.message : '解析失败')
+    const titlePlaceholder = meta?.name ?? '工程标题'
+
+    function readFile(file: File) {
+        const reader = new FileReader()
+        reader.onload = () => {
+            const text = String(reader.result ?? '')
+            setFileText(text)
+            setParseError(null)
+            setMeta(null)
+            setSubmitError(null)
+            try {
+                const project = parseProjectFile(safeJsonParse(text))
+                setMeta({
+                    name: project.name,
+                    bytes: new TextEncoder().encode(text).length,
+                    preview: project,
+                    names: teamDisplayNames({ slots: project.team, names: project.lockedTeamNames ?? [] })
+                })
+                // 标题留空 = 用工程名（保持旧行为），用户可随时改写
+                setTitle('')
+                setDescription('')
+            } catch (e) {
+                setParseError(e instanceof Error ? e.message : '解析失败')
+            }
         }
+        reader.readAsText(file)
     }
 
     function onFileChange(e: React.ChangeEvent<HTMLInputElement>) {
         const file = e.target.files?.[0]
         if (!file) return
-        const reader = new FileReader()
-        reader.onload = () => onTextChange(String(reader.result ?? ''))
-        reader.readAsText(file)
+        readFile(file)
         if (fileRef.current) fileRef.current.value = ''
     }
 
+    function onDrop(e: React.DragEvent<HTMLDivElement>) {
+        e.preventDefault()
+        setDragging(false)
+        const file = e.dataTransfer.files?.[0]
+        if (file) readFile(file)
+    }
+
+    function clearFile() {
+        setFileText('')
+        setMeta(null)
+        setParseError(null)
+        setTitle('')
+        setDescription('')
+        setTags([])
+        setGameVersion('')
+    }
+
     function onSubmit() {
-        if (!preview) return
+        if (!meta) return
         setSubmitError(null)
         startTransition(async () => {
-            const tags = tagsText
-                .split(/[,，\s]+/)
-                .map((t) => t.trim())
-                .filter(Boolean)
-            const expiresAt = expireDate ? `${expireDate}T23:59:59.999+08:00` : null
-            const res = await publishProject({ fileText, description, tags, expiresDays: null, expiresAt })
+            const res = await publishProject({
+                fileText,
+                title: title.trim(),
+                description: description.trim(),
+                tags,
+                gameVersion: gameVersion.trim() || null,
+                expiresDays: null,
+                expiresAt: expiryDateToIso(expireDate)
+            })
             if (res.error) {
                 setSubmitError(res.error)
                 return
@@ -79,149 +130,175 @@ export default function UploadForm() {
         })
     }
 
-    const names = preview
-        ? teamDisplayNames({ slots: preview.team, names: preview.lockedTeamNames ?? [] })
-        : []
+    const sizeText = useMemo(() => (meta ? `${(meta.bytes / 1024).toFixed(1)} KB` : ''), [meta])
 
     return (
-        <div className="space-y-6">
-            <div className="mg-card p-6">
-                <div className="mg-section">
-                    <Icon icon="mdi:file-upload-outline" className="size-4 shrink-0 text-(--accent-text)" />
-                    <h2 className="mg-title text-base">1. 选择工程文件</h2>
-                </div>
-                <p className="mg-note mb-4">
-                    在椰果工具箱中「导出」工程获得 .json 文件，或直接粘贴其内容。
-                </p>
+        <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_22rem] lg:items-start">
+            {/* ── 左：工程文件（只读） ── */}
+            <div className="space-y-4">
+                <div className="mg-card p-4">
+                    <div className="mg-section">
+                        <Icon icon="mdi:file-upload-outline" className="size-4 shrink-0 text-(--accent-text)" />
+                        <h2 className="mg-title text-sm">工程文件</h2>
+                        <span className="mg-note ml-auto">原样上传，不做任何改写</span>
+                    </div>
 
-                <div className="flex flex-col gap-3">
-                    <button
+                    <div
+                        onDragOver={(e) => {
+                            e.preventDefault()
+                            setDragging(true)
+                        }}
+                        onDragLeave={() => setDragging(false)}
+                        onDrop={onDrop}
                         onClick={() => fileRef.current?.click()}
-                        className="flex items-center justify-center gap-2 rounded-sm border border-dashed border-(--card-border) bg-(--card-hover) px-4 py-8 text-sm text-(--muted) transition-colors hover:border-(--accent) hover:text-(--fg)"
+                        role="button"
+                        tabIndex={0}
+                        onKeyDown={(e) => {
+                            if (e.key === 'Enter' || e.key === ' ') {
+                                e.preventDefault()
+                                fileRef.current?.click()
+                            }
+                        }}
+                        className={`flex cursor-pointer flex-col items-center justify-center gap-2 rounded-sm border border-dashed px-4 py-10 text-center transition-colors ${
+                            dragging
+                                ? 'border-(--accent) bg-(--card-hover)'
+                                : 'border-(--card-border) bg-(--card-hover) hover:border-(--accent)'
+                        }`}
                     >
-                        <Icon icon="mdi:file-upload-outline" className="size-6" />
-                        点击选择导出的 .json 文件
-                    </button>
-                    <input ref={fileRef} type="file" accept=".json,application/json" className="hidden" onChange={onFileChange} />
-
-                    <textarea
-                        value={fileText}
-                        onChange={(e) => onTextChange(e.target.value)}
-                        placeholder="……或直接粘贴工程 JSON 内容"
-                        rows={5}
-                        className="w-full rounded-sm border border-(--card-border) bg-(--input-bg) px-3 py-2.5 font-mono text-xs outline-none transition-colors placeholder:text-(--muted) focus:border-(--accent)"
-                    />
-                </div>
-
-                {parseError && (
-                    <div className="mt-3 rounded-sm border border-(--danger) bg-(--danger) px-3 py-2 text-sm text-(--danger-fg)">
-                        {parseError}
-                    </div>
-                )}
-
-                {preview && (
-                    <div className="mt-4 space-y-3 rounded-sm border border-(--card-border) bg-(--card-hover) p-4">
-                        <div className="flex items-center justify-between">
-                            <span className="mg-title text-sm">{preview.name}</span>
-                            <span className="mg-num text-xs text-(--muted)">
-                                {(new TextEncoder().encode(fileText).length / 1024).toFixed(1)} KB
-                            </span>
-                        </div>
-                        <p className="text-xs text-(--warning)">
-                            提示：项目名建议不要直接写三个角色名（如「绯雪 / 守岸人 / 维里奈」），此类名称可被自动检测出来；可在工具内重命名工程后再导出。
+                        <Icon icon="mdi:file-upload-outline" className="size-8 text-(--muted)" />
+                        <p className="text-sm text-(--fg)">
+                            {dragging ? '松开即可导入' : '拖入，或点击选择工具箱导出的 .json'}
                         </p>
-                        <TeamBanner names={names} />
-                        {preview.lockedTeamNames && (
-                            <p className="text-xs text-(--muted)">已锁定配队：{preview.lockedTeamNames.join(' / ')}</p>
-                        )}
+                        <p className="text-[11px] text-(--muted)">
+                            工具箱 →「导出工程」得到文件；这里不再提供粘贴 / 手写 JSON
+                        </p>
+                    </div>
+                    <input
+                        ref={fileRef}
+                        type="file"
+                        accept=".json,application/json"
+                        className="hidden"
+                        onChange={onFileChange}
+                    />
+
+                    {parseError && (
+                        <div className="mt-3 flex items-start gap-2 rounded-sm border border-(--danger) bg-(--danger) px-3 py-2 text-sm text-(--danger-fg)">
+                            <Icon icon="mdi:alert-circle-outline" className="mt-0.5 size-4 shrink-0" />
+                            <span className="min-w-0 flex-1">{parseError}</span>
+                        </div>
+                    )}
+
+                    {meta && (
+                        <div className="mt-3 space-y-3 rounded-sm border border-(--card-border) bg-(--card-hover) p-3">
+                            <div className="flex flex-wrap items-center gap-2">
+                                <Icon icon="mdi:check-circle-outline" className="size-4 shrink-0 text-(--success)" />
+                                <span className="mg-title min-w-0 flex-1 truncate text-sm">{meta.name}</span>
+                                <span className="mg-num shrink-0 text-[11px] text-(--muted)">{sizeText}</span>
+                                <button
+                                    onClick={clearFile}
+                                    className="shrink-0 rounded-sm border border-(--card-border) px-1.5 py-0.5 text-[10px] text-(--muted) transition-colors hover:text-(--fg)"
+                                >
+                                    重新选择
+                                </button>
+                            </div>
+                            <TeamBanner names={meta.names} />
+                            {meta.preview.lockedTeamNames && meta.preview.lockedTeamNames.length > 0 && (
+                                <p className="text-[11px] text-(--muted)">
+                                    已锁定配队：{meta.preview.lockedTeamNames.join(' / ')}
+                                </p>
+                            )}
+                        </div>
+                    )}
+                </div>
+            </div>
+
+            {/* ── 右：分享信息（上传前修改 meta） ── */}
+            <div className="space-y-4 lg:sticky lg:top-20">
+                <div className="mg-card p-4">
+                    <div className="mg-section">
+                        <Icon icon="mdi:tag-multiple-outline" className="size-4 shrink-0 text-(--accent-text)" />
+                        <h2 className="mg-title text-sm">分享信息</h2>
+                    </div>
+
+                    <div className="space-y-3">
+                        <label className="block">
+                            <span className="mb-1 block text-[11px] text-(--muted)">标题</span>
+                            <input
+                                value={title}
+                                onChange={(e) => setTitle(e.target.value)}
+                                placeholder={titlePlaceholder}
+                                maxLength={60}
+                                className="w-full rounded-sm border border-(--card-border) bg-(--input-bg) px-2.5 py-2 text-sm outline-none transition-colors placeholder:text-(--muted) focus:border-(--accent)"
+                            />
+                            <span className="mt-1 block text-[10px] text-(--muted)">留空则用工程名「{titlePlaceholder}」</span>
+                        </label>
+
+                        <label className="block">
+                            <span className="mb-1 block text-[11px] text-(--muted)">简介</span>
+                            <textarea
+                                value={description}
+                                onChange={(e) => setDescription(e.target.value)}
+                                placeholder="有无参考轴视频？操作难度如何？"
+                                rows={3}
+                                maxLength={500}
+                                className="w-full rounded-sm border border-(--card-border) bg-(--input-bg) px-2.5 py-2 text-sm outline-none transition-colors placeholder:text-(--muted) focus:border-(--accent)"
+                            />
+                        </label>
+
+                        <div>
+                            <span className="mb-1 block text-[11px] text-(--muted)">标签</span>
+                            <TagInput
+                                tags={tags}
+                                onChange={setTags}
+                                suggestions={TAG_SUGGESTIONS}
+                                placeholder="回车 / 逗号成词，最多 8 个"
+                            />
+                        </div>
+
+                        <label className="block">
+                            <span className="mb-1 block text-[11px] text-(--muted)">游戏版本（可选）</span>
+                            <input
+                                value={gameVersion}
+                                onChange={(e) => setGameVersion(e.target.value)}
+                                placeholder="例如 2.6"
+                                maxLength={20}
+                                className="w-full rounded-sm border border-(--card-border) bg-(--input-bg) px-2.5 py-2 text-sm outline-none transition-colors placeholder:text-(--muted) focus:border-(--accent)"
+                            />
+                        </label>
+
+                        <div>
+                            <span className="mb-1 block text-[11px] text-(--muted)">有效期</span>
+                            <ExpiryPicker value={expireDate} onChange={setExpireDate} disabled={pending} />
+                        </div>
+                    </div>
+                </div>
+
+                {submitError && (
+                    <div className="flex items-start gap-2 rounded-sm border border-(--danger) bg-(--danger) px-3 py-2 text-sm text-(--danger-fg)">
+                        <Icon icon="mdi:alert-circle-outline" className="mt-0.5 size-4 shrink-0" />
+                        <span className="min-w-0 flex-1">{submitError}</span>
                     </div>
                 )}
-            </div>
 
-            <div className="mg-card p-6">
-                <div className="mg-section">
-                    <Icon icon="mdi:tag-multiple-outline" className="size-4 shrink-0 text-(--accent-text)" />
-                    <h2 className="mg-title text-base">2. 分享信息</h2>
-                </div>
-
-                <div className="space-y-4">
-                    <div>
-                        <label className="mb-1.5 block text-sm text-(--muted)">简介</label>
-                        <textarea
-                            value={description}
-                            onChange={(e) => setDescription(e.target.value)}
-                            placeholder="简单介绍这个工程，比如说有无参考轴视频？"
-                            rows={3}
-                            maxLength={500}
-                            className="w-full rounded-sm border border-(--card-border) bg-(--input-bg) px-3 py-2.5 text-sm outline-none transition-colors placeholder:text-(--muted) focus:border-(--accent)"
+                <div className="flex items-center justify-end gap-2">
+                    <button
+                        onClick={() => router.back()}
+                        className="rounded-sm border border-(--card-border) bg-(--card) px-3 py-2 text-sm text-(--muted) transition-colors hover:text-(--fg)"
+                    >
+                        取消
+                    </button>
+                    <button
+                        onClick={onSubmit}
+                        disabled={!meta || pending}
+                        className="inline-flex items-center gap-1.5 rounded-sm border border-(--card-border) bg-(--btn-bg) px-4 py-2 text-sm font-medium text-(--btn-text) transition-colors hover:bg-(--card) hover:text-(--fg) disabled:opacity-50"
+                    >
+                        <Icon
+                            icon={pending ? 'mdi:loading' : 'mdi:publish'}
+                            className={`size-4 ${pending ? 'animate-spin' : ''}`}
                         />
-                    </div>
-
-                    <div>
-                        <label className="mb-1.5 block text-sm text-(--muted)">标签（逗号分隔，最多 8 个）</label>
-                        <input
-                            value={tagsText}
-                            onChange={(e) => setTagsText(e.target.value)}
-                            placeholder="轮切轴,轮椅轴,标准轴,进阶轴,冒烟轴,..."
-                            className="w-full rounded-sm border border-(--card-border) bg-(--input-bg) px-3 py-2.5 text-sm outline-none transition-colors placeholder:text-(--muted) focus:border-(--accent)"
-                        />
-                    </div>
-
-                    <div>
-                        <label className="mb-1.5 block text-sm text-(--muted)">过期日期</label>
-                        <div className="flex flex-wrap items-center gap-2">
-                            {EXPIRY_OPTIONS.map((opt) => (
-                                <button
-                                    key={opt.label}
-                                    onClick={() => setExpireDate(toDateInput(new Date(Date.now() + opt.days * 86400000)))}
-                                    className="rounded-sm border border-(--card-border) bg-(--card) px-3 py-1.5 text-sm text-(--muted) transition-colors hover:text-(--fg)"
-                                >
-                                    {opt.label}
-                                </button>
-                            ))}
-                            <input
-                                type="date"
-                                value={expireDate}
-                                onChange={(e) => setExpireDate(e.target.value)}
-                                className="rounded-sm border border-(--card-border) bg-(--input-bg) px-3 py-1.5 text-sm outline-none transition-colors focus:border-(--accent)"
-                            />
-                            <button
-                                onClick={() => setExpireDate('')}
-                                className={`rounded-sm px-3 py-1.5 text-sm transition-colors ${
-                                    !expireDate
-                                        ? 'bg-(--accent) text-(--accent-fg)'
-                                        : 'border border-(--card-border) bg-(--card) text-(--muted) hover:text-(--fg)'
-                                }`}
-                            >
-                                永久
-                            </button>
-                        </div>
-                        <p className="mt-1.5 text-xs text-(--muted)">到期后分享链接将自动失效，可在「我的工程」中随时改期。</p>
-                    </div>
+                        {pending ? '发布中…' : '发布分享'}
+                    </button>
                 </div>
-            </div>
-
-            {submitError && (
-                <div className="rounded-sm border border-(--danger) bg-(--danger) px-3 py-2 text-sm text-(--danger-fg)">
-                    {submitError}
-                </div>
-            )}
-
-            <div className="flex justify-end gap-2">
-                <button
-                    onClick={() => router.back()}
-                    className="rounded-sm border border-(--card-border) bg-(--card) px-4 py-2 text-sm text-(--muted) transition-colors hover:text-(--fg)"
-                >
-                    取消
-                </button>
-                <button
-                    onClick={onSubmit}
-                    disabled={!preview || pending}
-                    className="inline-flex items-center gap-1.5 rounded-sm px-5 py-2 text-sm font-medium border border-(--card-border) bg-(--btn-bg) text-(--btn-text) transition-colors hover:bg-(--card) hover:text-(--fg) disabled:opacity-50"
-                >
-                    <Icon icon={pending ? 'mdi:loading' : 'mdi:publish'} className={`size-4 ${pending ? 'animate-spin' : ''}`} />
-                    发布分享
-                </button>
             </div>
         </div>
     )
