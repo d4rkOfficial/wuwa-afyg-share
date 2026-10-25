@@ -10,6 +10,7 @@ import SubstatPlanJson from '@/components/admin/substat-plan-json'
 import SubstatSlotEditor from '@/components/admin/substat-slot-editor'
 import { toast } from '@/components/ui/toast'
 import { deleteSubstatSet, upsertSubstatSet } from '@/lib/actions/substat-sets'
+import { setSubstatSetLock } from '@/lib/actions/edit-locks'
 import { ECHO_MAX_TOTAL_COST, SUBSTAT_TOTAL_COUNT } from '@/lib/consts/echo-stats'
 import { fetchEntityList } from '@/lib/upstream'
 import { cloneEchoPlan, countPlanSubstats, createEmptyEchoPlan, validateEchoPlan } from '@/lib/utils/echo-plan'
@@ -18,12 +19,16 @@ import type { EchoPlan, EchoPlanSlot, StandardSubstatSetRow } from '@/lib/types/
 
 interface Props {
     rows: StandardSubstatSetRow[]
+    /** @desc 是否管理员（决定能否删方案 / 切换条目级锁 / 编辑被锁方案） */
+    isAdmin: boolean
+    /** @desc 被单独锁定的角色（锁定的方案普通用户不能改） */
+    substatLocks: Record<string, boolean>
 }
 
 const FIELD_CLASS =
     'w-full rounded-sm border border-(--card-border) bg-(--input-bg) px-2.5 py-1.5 text-sm outline-none transition-colors focus:border-(--accent)'
 
-export default function SubstatSetsAdmin({ rows }: Props) {
+export default function SubstatSetsAdmin({ rows, isAdmin, substatLocks }: Props) {
     const router = useRouter()
     const [characterName, setCharacterName] = useState('')
     const [note, setNote] = useState('')
@@ -114,6 +119,10 @@ export default function SubstatSetsAdmin({ rows }: Props) {
             toast('请先填写角色名', 'error')
             return
         }
+        if (!isAdmin && substatLocks[name]) {
+            toast(`「${name}」的标准词条集已被管理员锁定，仅管理员可修改`, 'error')
+            return
+        }
         if (!planCheck.ok) {
             toast(planCheck.error, 'error')
             return
@@ -126,6 +135,20 @@ export default function SubstatSetsAdmin({ rows }: Props) {
             }
             setLoadedName(name)
             toast(`已保存「${name}」的标准词条方案`, 'success')
+            router.refresh()
+        })
+    }
+
+    /** @desc 管理员逐个角色开关条目级锁 */
+    function onToggleLock(name: string) {
+        const next = !substatLocks[name]
+        startTransition(async () => {
+            const res = await setSubstatSetLock(name, next)
+            if (res.error) {
+                toast(res.error, 'error')
+                return
+            }
+            toast(next ? `已锁定「${name}」的标准词条集` : `已解锁「${name}」的标准词条集`, 'success')
             router.refresh()
         })
     }
@@ -204,7 +227,12 @@ export default function SubstatSetsAdmin({ rows }: Props) {
                     </button>
                     <button
                         onClick={onSave}
-                        disabled={pending || !characterName.trim()}
+                        disabled={pending || !characterName.trim() || (!isAdmin && !!substatLocks[characterName.trim()])}
+                        title={
+                            !isAdmin && substatLocks[characterName.trim()]
+                                ? '该方案已被管理员锁定，仅管理员可修改'
+                                : undefined
+                        }
                         className="toolbar-btn toolbar-btn-primary"
                     >
                         <Icon
@@ -213,7 +241,7 @@ export default function SubstatSetsAdmin({ rows }: Props) {
                         />
                         {pending ? '保存中…' : '保存'}
                     </button>
-                    {loadedName && (
+                    {isAdmin && loadedName && (
                         <button
                             onClick={() => onDelete(loadedName)}
                             disabled={pending}
@@ -279,6 +307,8 @@ export default function SubstatSetsAdmin({ rows }: Props) {
                 {rows.map((row) => {
                     const total = countPlanSubstats(row.plan)
                     const isLoaded = loadedName === row.character_name
+                    const locked = !!substatLocks[row.character_name]
+                    const lockedForMe = locked && !isAdmin
                     return (
                         <div
                             key={row.id}
@@ -301,6 +331,12 @@ export default function SubstatSetsAdmin({ rows }: Props) {
                                             编辑中
                                         </span>
                                     )}
+                                    {locked && (
+                                        <span className="inline-flex items-center gap-1 rounded-sm border border-(--warning) px-1.5 py-0.5 text-[10px] text-(--warning)">
+                                            <Icon icon="mdi:lock" className="size-3" />
+                                            已锁定
+                                        </span>
+                                    )}
                                 </div>
                                 <p className="mt-0.5 truncate text-xs text-(--muted)" title={row.updated_at}>
                                     更新于 <span className="mg-num">{formatDate(row.updated_at)}</span>（
@@ -309,32 +345,53 @@ export default function SubstatSetsAdmin({ rows }: Props) {
                                 </p>
                             </div>
                             <div className="flex shrink-0 items-center gap-2">
+                                {/* 条目级锁：仅管理员可切换 */}
+                                {isAdmin && (
+                                    <button
+                                        onClick={() => onToggleLock(row.character_name)}
+                                        disabled={pending}
+                                        className={`rounded-sm p-1.5 transition-colors disabled:opacity-50 ${
+                                            locked
+                                                ? 'text-(--warning) hover:text-(--fg)'
+                                                : 'text-(--muted) hover:text-(--fg)'
+                                        }`}
+                                        title={locked ? '解锁：允许登录用户编辑' : '锁定：仅管理员可编辑'}
+                                    >
+                                        <Icon
+                                            icon={locked ? 'mdi:lock' : 'mdi:lock-open-variant'}
+                                            className="size-3.5"
+                                        />
+                                    </button>
+                                )}
                                 <button
                                     onClick={() => onLoad(row)}
-                                    disabled={pending}
+                                    disabled={pending || lockedForMe}
+                                    title={lockedForMe ? '该方案已被管理员锁定，仅管理员可编辑' : undefined}
                                     className="toolbar-btn toolbar-btn-ghost"
                                 >
                                     <Icon icon="mdi:pencil-outline" className="size-3.5" />
                                     载入编辑
                                 </button>
-                                {confirmDelete === row.id ? (
-                                    <button
-                                        onClick={() => onDelete(row.character_name)}
-                                        disabled={pending}
-                                        className="rounded-sm border border-(--danger) bg-(--danger) px-3 py-1.5 text-xs text-(--danger-fg) transition-colors hover:bg-(--card) hover:text-(--danger) disabled:opacity-50"
-                                    >
-                                        确认删除
-                                    </button>
-                                ) : (
-                                    <button
-                                        onClick={() => setConfirmDelete(row.id)}
-                                        onBlur={() => setTimeout(() => setConfirmDelete(null), 2500)}
-                                        disabled={pending}
-                                        className="rounded-sm border border-(--danger) bg-(--card) px-3 py-1.5 text-xs text-(--danger) transition-colors hover:bg-(--danger) hover:text-(--danger-fg) disabled:opacity-50"
-                                    >
-                                        删除
-                                    </button>
-                                )}
+                                {/* 删除整份方案 = 破坏性操作，仅管理员 */}
+                                {isAdmin &&
+                                    (confirmDelete === row.id ? (
+                                        <button
+                                            onClick={() => onDelete(row.character_name)}
+                                            disabled={pending}
+                                            className="rounded-sm border border-(--danger) bg-(--danger) px-3 py-1.5 text-xs text-(--danger-fg) transition-colors hover:bg-(--card) hover:text-(--danger) disabled:opacity-50"
+                                        >
+                                            确认删除
+                                        </button>
+                                    ) : (
+                                        <button
+                                            onClick={() => setConfirmDelete(row.id)}
+                                            onBlur={() => setTimeout(() => setConfirmDelete(null), 2500)}
+                                            disabled={pending}
+                                            className="rounded-sm border border-(--danger) bg-(--card) px-3 py-1.5 text-xs text-(--danger) transition-colors hover:bg-(--danger) hover:text-(--danger-fg) disabled:opacity-50"
+                                        >
+                                            删除
+                                        </button>
+                                    ))}
                             </div>
                         </div>
                     )

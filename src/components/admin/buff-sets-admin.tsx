@@ -1,6 +1,7 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useTransition } from 'react'
+import { useRouter } from 'next/navigation'
 import { Icon } from '@iconify/react'
 import BuffEntityGrid from '@/components/admin/buff-entity-grid'
 import BuffEntityEditor from '@/components/admin/buff-entity-editor'
@@ -13,12 +14,15 @@ import {
     type AiConfig
 } from '@/lib/ai/config'
 import { toast } from '@/components/ui/toast'
+import { setBuffSetLock } from '@/lib/actions/edit-locks'
 import type { ChatMessage } from '@/lib/ai/client'
 import type { BuffEntityType, BuffSetRow } from '@/lib/types/db'
 
 interface Props {
     rows: BuffSetRow[]
     isAdmin: boolean
+    /** @desc 被管理员单独锁定的 buff 实体（key = `类型/名称`）；锁定的条目普通用户不能编辑 */
+    buffLocks: Record<string, boolean>
 }
 
 const TOOL_BASE_STORAGE = 'wuwa-afyg:tool-base'
@@ -41,7 +45,9 @@ function entityKey(entityType: string, entityName: string) {
     return `${entityType}/${entityName}`
 }
 
-export default function BuffSetsAdmin({ rows, isAdmin }: Props) {
+export default function BuffSetsAdmin({ rows, isAdmin, buffLocks }: Props) {
+    const router = useRouter()
+    const [lockPending, startTransition] = useTransition()
     // AI 连接配置（IndexedDB 持久化；加载后供编辑器使用）
     const [ai, setAi] = useState<AiConfig | null>(null)
     const [aiDraft, setAiDraft] = useState<AiConfig>({ ...DEFAULT_AI_CONFIG })
@@ -157,8 +163,28 @@ export default function BuffSetsAdmin({ rows, isAdmin }: Props) {
     }
 
     function handleSelect(entity: { entityType: BuffEntityType; entityName: string }) {
+        // 条目级锁：普通用户点开被锁实体直接拦下（管理员可照常编辑）
+        if (!isAdmin && buffLocks[entityKey(entity.entityType, entity.entityName)]) {
+            toast(`「${entity.entityName}」的 Buff 集已被管理员锁定，仅管理员可编辑`, 'error')
+            return
+        }
         setSelected(entity)
         setEditingKey(entityKey(entity.entityType, entity.entityName))
+    }
+
+    /** @desc 管理员逐个实体开关条目级锁 */
+    function toggleEntityLock(entityType: BuffEntityType, entityName: string) {
+        const key = entityKey(entityType, entityName)
+        const next = !buffLocks[key]
+        startTransition(async () => {
+            const res = await setBuffSetLock(entityType, entityName, next)
+            if (res.error) {
+                toast(res.error, 'error')
+                return
+            }
+            toast(next ? `已锁定「${entityName}」` : `已解锁「${entityName}」`, 'success')
+            router.refresh()
+        })
     }
 
     const initial = selected
@@ -181,7 +207,8 @@ export default function BuffSetsAdmin({ rows, isAdmin }: Props) {
                     <span className="mg-title text-sm">实体列表</span>
                 </span>
                 <span className="flex items-center gap-2">
-                    <BuffSnapshotPanel />
+                    {/* 快照（根 + 版本链）严格仅管理员：普通用户无权动快照 */}
+                    {isAdmin && <BuffSnapshotPanel />}
                     <button onClick={() => setShowConfig(true)} className="toolbar-btn toolbar-btn-ghost">
                         <span className="flex items-center gap-1.5">
                             <Icon icon="mdi:cog-outline" className="size-4" />
@@ -197,7 +224,14 @@ export default function BuffSetsAdmin({ rows, isAdmin }: Props) {
 
             {/* 实体网格 */}
             <div className="min-h-0 flex-1">
-                <BuffEntityGrid existingCountMap={existingCountMap} onSelect={handleSelect} />
+                <BuffEntityGrid
+                    existingCountMap={existingCountMap}
+                    onSelect={handleSelect}
+                    isAdmin={isAdmin}
+                    locks={buffLocks}
+                    lockPending={lockPending}
+                    onToggleLock={toggleEntityLock}
+                />
             </div>
 
             {/* 编辑弹窗 */}
@@ -219,6 +253,7 @@ export default function BuffSetsAdmin({ rows, isAdmin }: Props) {
                             slangDict={slangDict}
                             reasoningEffort={ai?.reasoningEffort ?? 'medium'}
                             isAdmin={isAdmin}
+                            canEdit={isAdmin || !buffLocks[entityKey(selected.entityType, selected.entityName)]}
                             sessionSeed={sessionShare ? shareSessions[selected.entityType] : undefined}
                             onSessionUpdate={(msgs) => handleSessionUpdate(selected.entityType, msgs)}
                             sessionShareEnabled={sessionShare}

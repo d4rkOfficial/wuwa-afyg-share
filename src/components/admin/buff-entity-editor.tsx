@@ -74,6 +74,8 @@ interface Props {
     /** @desc AI 浏览器直连（不经站点转发代理） */
     aiDirect?: boolean
     isAdmin: boolean
+    /** @desc 当前实体是否可编辑（编辑锁开着且该实体未被单独锁定；管理员恒为 true） */
+    canEdit?: boolean
     // 跨实体共享会话（省 token / 缓存命中）
     sessionSeed?: ChatMessage[]
     onSessionUpdate?: (messages: ChatMessage[]) => void
@@ -128,6 +130,7 @@ export default function BuffEntityEditor({
     reasoningEffort,
     aiDirect,
     isAdmin,
+    canEdit = true,
     sessionSeed,
     onSessionUpdate,
     sessionShareEnabled,
@@ -452,7 +455,7 @@ export default function BuffEntityEditor({
     }
 
     /**
-     * @desc AI 的「直接写入数据库」：与「保存」按钮同一条服务端链路（同样要管理员权限）。
+     * @desc AI 的「直接写入数据库」：与「保存」按钮同一条服务端链路（权限由服务端 actions 判定）。
      *  返回结构化结果而不是弹 toast，AI 才能知道成功 / 失败原因。
      * @param list 可选：写这份内容（AI 回合内的工作副本），缺省写编辑器当前状态
      */
@@ -461,7 +464,7 @@ export default function BuffEntityEditor({
     ): Promise<{ ok: boolean; error?: string; saved?: number }> {
         const name = entityName.trim()
         if (!name) return { ok: false, error: '实体名不能为空' }
-        if (!isAdmin) return { ok: false, error: '仅管理员可写入数据库' }
+        if (!canEdit) return { ok: false, error: '该条目已被管理员锁定，仅管理员可写入数据库' }
         const payload = buildSavePayload(list ? list.map(toBuffRow) : buffs)
         const savedCount = payload.filter((b) => b.zones.length > 0).length
         const res = await upsertBuffEntity({
@@ -1152,14 +1155,14 @@ export default function BuffEntityEditor({
                         )
                     ) : (
                         <span className="toolbar-btn toolbar-btn-ghost text-(--muted) select-none">
-                            <Icon icon="mdi:lock-outline" className="size-3.5" />
-                            仅管理员可保存
+                            <Icon icon={canEdit ? 'mdi:pencil-outline' : 'mdi:lock-outline'} className="size-3.5" />
+                            {canEdit ? '编辑锁关闭中：保存即写入' : '该条目已被管理员锁定'}
                         </span>
                     )}
                     <button
                         onClick={onSave}
-                        disabled={pending || !canSave || !isAdmin}
-                        title={!isAdmin ? '仅管理员可保存' : undefined}
+                        disabled={pending || !canSave || !canEdit}
+                        title={!canEdit ? '该条目已被管理员锁定，仅管理员可保存' : undefined}
                         className="toolbar-btn toolbar-btn-primary"
                     >
                         <Icon

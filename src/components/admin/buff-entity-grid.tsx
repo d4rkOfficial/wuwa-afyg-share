@@ -10,9 +10,16 @@ import type { ToolListEntry } from '@/lib/ai/info'
 import type { BuffEntityType } from '@/lib/types/db'
 
 interface Props {
-    
     existingCountMap: Record<string, number>
     onSelect: (entity: { entityType: BuffEntityType; entityName: string }) => void
+    /** @desc 是否管理员（决定能否切换条目级锁） */
+    isAdmin?: boolean
+    /** @desc 被单独锁定的实体（key = `类型/名称`） */
+    locks?: Record<string, boolean>
+    /** @desc 锁开关请求进行中（避免连点） */
+    lockPending?: boolean
+    /** @desc 管理员切换某个实体的条目级锁 */
+    onToggleLock?: (entityType: BuffEntityType, entityName: string, locked: boolean) => void
 }
 
 function entityKey(entityType: BuffEntityType, entityName: string) {
@@ -36,7 +43,14 @@ const FILTERS: Array<{ key: 'with' | 'without'; label: string }> = [
 
 const SKELETON_COUNT = 12
 
-export default function BuffEntityGrid({ existingCountMap, onSelect }: Props) {
+export default function BuffEntityGrid({
+    existingCountMap,
+    onSelect,
+    isAdmin = false,
+    locks = {},
+    lockPending = false,
+    onToggleLock
+}: Props) {
     const router = useRouter()
     const [mainTab, setMainTab] = useState<BuffEntityType>('character')
     const [setPiece, setSetPiece] = useState<BuffEntityType>('1set')
@@ -255,26 +269,75 @@ export default function BuffEntityGrid({ existingCountMap, onSelect }: Props) {
                 )}
                 {!error && filtered.length > 0 && (
                     <div className="grid grid-cols-2 gap-2 md:grid-cols-3 xl:grid-cols-4">
-                        {filtered.map((e) => (
-                            <button
-                                key={e.name}
-                                onClick={() => onSelect({ entityType: activeType, entityName: e.name })}
-                                className="group flex flex-col gap-1 rounded-sm border border-(--card-border) bg-(--card-hover) px-3 py-2.5 text-left transition-colors hover:border-(--accent)"
-                            >
-                                <span className="truncate text-sm font-medium text-(--fg) group-hover:text-(--accent-text)">
-                                    {e.name}
-                                </span>
-                                <span
-                                    className={`w-fit rounded-sm px-2 py-0.5 text-[10px] ${
-                                        e.count > 0
-                                            ? 'bg-(--accent) text-(--accent-fg)'
-                                            : 'bg-(--card) text-(--muted)'
+                        {filtered.map((e) => {
+                            const key = entityKey(activeType, e.name)
+                            const locked = !!locks[key]
+                            return (
+                                <div
+                                    key={e.name}
+                                    role="button"
+                                    tabIndex={0}
+                                    onClick={() => onSelect({ entityType: activeType, entityName: e.name })}
+                                    onKeyDown={(evt) => {
+                                        if (evt.key !== 'Enter' && evt.key !== ' ') return
+                                        evt.preventDefault()
+                                        onSelect({ entityType: activeType, entityName: e.name })
+                                    }}
+                                    title={locked ? '该条目的 Buff 集已锁定（仅管理员可编辑）' : undefined}
+                                    className={`group flex cursor-pointer flex-col gap-1 rounded-sm border bg-(--card-hover) px-3 py-2.5 text-left transition-colors hover:border-(--accent) ${
+                                        locked && !isAdmin
+                                            ? 'border-(--card-border) opacity-60'
+                                            : 'border-(--card-border)'
                                     }`}
                                 >
-                                    <span className="mg-num">{e.count}</span> 条
-                                </span>
-                            </button>
-                        ))}
+                                    <span className="flex items-start gap-1.5">
+                                        <span className="min-w-0 flex-1 truncate text-sm font-medium text-(--fg) group-hover:text-(--accent-text)">
+                                            {e.name}
+                                        </span>
+                                        {/* 条目级锁：普通用户只看到锁图标；管理员可直接点按切换 */}
+                                        {isAdmin ? (
+                                            <button
+                                                type="button"
+                                                onClick={(evt) => {
+                                                    evt.stopPropagation()
+                                                    onToggleLock?.(activeType, e.name, !locked)
+                                                }}
+                                                disabled={lockPending}
+                                                className={`shrink-0 rounded-sm p-0.5 transition-colors disabled:opacity-50 ${
+                                                    locked
+                                                        ? 'text-(--warning) hover:text-(--fg)'
+                                                        : 'text-(--muted) opacity-50 hover:opacity-100 hover:text-(--fg)'
+                                                }`}
+                                                title={locked ? '解锁：允许登录用户编辑' : '锁定：仅管理员可编辑'}
+                                            >
+                                                <Icon
+                                                    icon={locked ? 'mdi:lock' : 'mdi:lock-open-variant'}
+                                                    className="size-3.5"
+                                                />
+                                            </button>
+                                        ) : (
+                                            locked && <Icon icon="mdi:lock" className="size-3.5 shrink-0 text-(--warning)" />
+                                        )}
+                                    </span>
+                                    <span className="flex items-center gap-1.5">
+                                        <span
+                                            className={`w-fit rounded-sm px-2 py-0.5 text-[10px] ${
+                                                e.count > 0
+                                                    ? 'bg-(--accent) text-(--accent-fg)'
+                                                    : 'bg-(--card) text-(--muted)'
+                                            }`}
+                                        >
+                                            <span className="mg-num">{e.count}</span> 条
+                                        </span>
+                                        {locked && (
+                                            <span className="w-fit rounded-sm border border-(--card-border) px-1.5 py-0.5 text-[10px] text-(--muted)">
+                                                已锁定
+                                            </span>
+                                        )}
+                                    </span>
+                                </div>
+                            )
+                        })}
                     </div>
                 )}
             </div>
