@@ -1,18 +1,11 @@
+import LoadingIndicator from '@/components/ui/loading-indicator'
+
+// 路由级加载态：统一用大号旋转图标（不再用骨架屏 —— 骨架的形状永远和真实内容对不上，
+// 反而把「正在加载」这件事藏了起来）
 export default function Loading() {
     return (
-        <div className="space-y-6">
-            <div className="flex flex-wrap items-center justify-between gap-4">
-                <div className="space-y-2">
-                    <div className="h-7 w-40 animate-pulse rounded-sm bg-(--card-hover)" />
-                    <div className="h-4 w-64 animate-pulse rounded bg-(--card-hover)" />
-                </div>
-                <div className="h-10 w-64 animate-pulse rounded-sm bg-(--card-hover)" />
-            </div>
-            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-                {Array.from({ length: 6 }).map((_, i) => (
-                    <div key={i} className="h-44 animate-pulse rounded-sm bg-(--card-hover)" />
-                ))}
-            </div>
+        <div className="flex min-h-[60vh] items-center justify-center">
+            <LoadingIndicator label="加载中…" />
         </div>
     )
 }
