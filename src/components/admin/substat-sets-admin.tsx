@@ -37,6 +37,8 @@ export default function SubstatSetsAdmin({ rows, isAdmin, substatLocks }: Props)
     const [planVersion, setPlanVersion] = useState(0)
     const [jsonText, setJsonText] = useState('')
     const [loadedName, setLoadedName] = useState<string | null>(null)
+    /** @desc 「删除角色名」只在**角色列表里已保存的角色**上启用（新输入的名字先保存才能删） */
+    const canDeleteRole = !!loadedName && rows.some((row) => row.character_name === loadedName)
     const [confirmDelete, setConfirmDelete] = useState<string | null>(null)
     const [characterList, setCharacterList] = useState<string[]>([])
     const [catalogError, setCatalogError] = useState<string | null>(null)
@@ -95,6 +97,13 @@ export default function SubstatSetsAdmin({ rows, isAdmin, substatLocks }: Props)
         setConfirmDelete(null)
         resetEditor(createEmptyEchoPlan(), '', '')
         toast('已新建空方案', 'info')
+    }
+
+    /** @desc 清空当前词条：只把编辑区 5 个部位清空（角色名与备注保持不变），不影响已保存的方案 */
+    function onClearPlan() {
+        resetEditor(createEmptyEchoPlan(), characterName, note)
+        setConfirmDelete(null)
+        toast('已清空编辑区的词条（未保存）', 'info')
     }
 
     function onLoad(row: StandardSubstatSetRow) {
@@ -287,20 +296,21 @@ export default function SubstatSetsAdmin({ rows, isAdmin, substatLocks }: Props)
                                 ))}
                             </datalist>
                         </label>
-                        <label className="flex min-w-44 flex-1 flex-col gap-1 text-xs text-(--muted)">
-                            备注（仅管理页可见，不入公开 API）
-                            <input
-                                value={note}
-                                onChange={(e) => setNote(e.target.value)}
-                                placeholder="例如：特殊词条配置来源 / 说明"
-                                className={FIELD_CLASS}
-                            />
-                        </label>
+
                     </div>
                     <div className="flex shrink-0 items-center gap-2">
                         <button onClick={onNew} disabled={pending} className="toolbar-btn toolbar-btn-ghost">
                             <Icon icon="mdi:file-plus-outline" className="size-3.5" />
                             新建
+                        </button>
+                        <button
+                            onClick={onClearPlan}
+                            disabled={pending}
+                            title="把编辑区的 5 个部位清空（角色名保留，未保存前不影响线上数据）"
+                            className="toolbar-btn toolbar-btn-ghost"
+                        >
+                            <Icon icon="mdi:broom" className="size-3.5" />
+                            清空当前词条
                         </button>
                         <button
                             onClick={onSave}
@@ -318,27 +328,38 @@ export default function SubstatSetsAdmin({ rows, isAdmin, substatLocks }: Props)
                             />
                             {pending ? '保存中…' : '保存'}
                         </button>
-                        {isAdmin && loadedName && (
-                            confirmDelete === loadedName ? (
-                                <button
-                                    onClick={() => onDelete(loadedName)}
-                                    disabled={pending}
-                                    className="rounded-sm border border-(--danger) bg-(--danger) px-2.5 py-1.5 text-xs font-medium text-(--danger-fg) transition-colors hover:opacity-90 disabled:opacity-50"
-                                >
-                                    确认删除
-                                </button>
+                        {isAdmin &&
+                            (canDeleteRole ? (
+                                confirmDelete === loadedName ? (
+                                    <button
+                                        onClick={() => onDelete(loadedName!)}
+                                        disabled={pending}
+                                        className="rounded-sm border border-(--danger) bg-(--danger) px-2.5 py-1.5 text-xs font-medium text-(--danger-fg) transition-colors hover:opacity-90 disabled:opacity-50"
+                                    >
+                                        确认删除
+                                    </button>
+                                ) : (
+                                    <button
+                                        onClick={() => setConfirmDelete(loadedName)}
+                                        onBlur={() => setTimeout(() => setConfirmDelete(null), 2500)}
+                                        disabled={pending}
+                                        className="rounded-sm border border-(--danger) bg-(--card) px-2.5 py-1.5 text-xs font-medium text-(--danger) transition-colors hover:bg-(--danger) hover:text-(--danger-fg) disabled:opacity-50"
+                                    >
+                                        <Icon icon="mdi:trash-can-outline" className="mr-1 inline size-3.5" />
+                                        删除角色名
+                                    </button>
+                                )
                             ) : (
                                 <button
-                                    onClick={() => setConfirmDelete(loadedName)}
-                                    onBlur={() => setTimeout(() => setConfirmDelete(null), 2500)}
-                                    disabled={pending}
-                                    className="rounded-sm border border-(--danger) bg-(--card) px-2.5 py-1.5 text-xs font-medium text-(--danger) transition-colors hover:bg-(--danger) hover:text-(--danger-fg) disabled:opacity-50"
+                                    type="button"
+                                    disabled
+                                    title="只有从左侧角色列表载入的角色才能删除；新输入的角色名请先保存"
+                                    className="cursor-not-allowed rounded-sm border border-(--card-border) bg-(--card) px-2.5 py-1.5 text-xs font-medium text-(--muted) opacity-50"
                                 >
                                     <Icon icon="mdi:trash-can-outline" className="mr-1 inline size-3.5" />
-                                    删除当前
+                                    删除角色名
                                 </button>
-                            )
-                        )}
+                            ))}
                     </div>
                 </div>
 
