@@ -1,6 +1,8 @@
 'use client'
 
-// 标签快速输入：回车/逗号/空格成词，点 × 删除；支持常用标签一键补齐 + 自定义。
+// 标签输入。两种模式：
+// 1) `options` 给定 → **固定选项多选**（工程标签只允许这几个，不能自造）；
+// 2) 不给 → 自由输入（回车 / 逗号 / 空格成词，粘贴自动拆分，可一键补常用词）。
 // 上限与后端口径一致（最多 8 个、每个 ≤ 12 字）。
 import { useRef, useState } from 'react'
 import { Icon } from '@iconify/react'
@@ -10,21 +12,67 @@ export const MAX_TAGS = 8
 interface Props {
     tags: string[]
     onChange: (tags: string[]) => void
-    /** @desc 常用标签（点一下追加，已在列表里的不再出现） */
+    /** @desc 固定可选项（给了就是「只能从这些里选」模式） */
+    options?: string[]
+    /** @desc 自由模式下的常用词（点一下追加） */
     suggestions?: string[]
     placeholder?: string
     disabled?: boolean
 }
 
-/** @desc 清洗单个标签（与后端 sanitizeTags 同口径：去空白、限长 20） */
+/** @desc 清洗单个标签（与后端 sanitizeTags 同口径：去空白、限长 12） */
 function normalizeTag(raw: string): string {
     return raw.trim().replace(/^#+/, '').replace(/\s+/g, '').slice(0, 12)
 }
 
-export default function TagInput({ tags, onChange, suggestions = [], placeholder, disabled }: Props) {
+export default function TagInput({
+    tags,
+    onChange,
+    options,
+    suggestions = [],
+    placeholder,
+    disabled
+}: Props) {
     const [draft, setDraft] = useState('')
     const inputRef = useRef<HTMLInputElement>(null)
 
+    // ── 固定选项模式：只能选 / 取消这几个标签 ──
+    if (options && options.length > 0) {
+        return (
+            <div className="flex flex-wrap gap-1.5">
+                {options.map((option) => {
+                    const active = tags.includes(option)
+                    return (
+                        <button
+                            key={option}
+                            type="button"
+                            disabled={disabled}
+                            onClick={() =>
+                                onChange(
+                                    active
+                                        ? tags.filter((t) => t !== option)
+                                        : tags.length >= MAX_TAGS
+                                          ? tags
+                                          : [...tags, option]
+                                )
+                            }
+                            aria-pressed={active}
+                            className={`inline-flex items-center gap-1 rounded-sm border px-2 py-1 text-[11px] transition-colors disabled:opacity-50 ${
+                                active
+                                    ? 'border-(--accent) bg-(--accent) text-(--accent-fg)'
+                                    : 'border-(--card-border) bg-(--card) text-(--muted) hover:border-(--accent) hover:text-(--fg)'
+                            }`}
+                        >
+                            {active && <Icon icon="mdi:check" className="size-3" />}
+                            {option}
+                        </button>
+                    )
+                })}
+            </div>
+        )
+    }
+
+    // ── 自由输入模式 ──
     function addTag(raw: string) {
         const tag = normalizeTag(raw)
         if (!tag) return

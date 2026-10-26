@@ -2,7 +2,7 @@
 
 // 上传工程：**不再手写 JSON**。
 // 左侧：拖拽 / 选择工具箱导出的 .json（只读，原样上传，保证「下载 = 上传的文件」）。
-// 右侧：分享信息（标题 / 简介 / 标签 / 游戏版本 / 有效期）—— 全部上传前可改。
+// 右侧：分享信息（标题 / 简介 / 标签 / 有效期）—— 全部上传前可改。
 import { useMemo, useRef, useState, useTransition } from 'react'
 import { useRouter } from 'next/navigation'
 import { Icon } from '@iconify/react'
@@ -12,22 +12,9 @@ import ExpiryPicker, { daysFromNow, expiryDateToIso } from '@/components/ui/expi
 import { publishProject } from '@/lib/actions/projects'
 import { parseProjectFile, safeJsonParse } from '@/lib/project/parse'
 import { teamDisplayNames } from '@/lib/project/extract'
+import { PROJECT_TAGS } from '@/lib/consts/project-tags'
 import type { ProjectData } from '@/lib/types/project'
 
-const TAG_SUGGESTIONS = [
-    '轮切轴',
-    '轮椅轴',
-    '标准轴',
-    '进阶轴',
-    '冒烟轴',
-    '无相交替',
-    '深塔',
-    '海墟',
-    '全息',
-    '单通',
-    '低练',
-    '高练'
-]
 
 interface FileMeta {
     /** @desc 解析出的工程名（作为标题初值） */
@@ -50,7 +37,6 @@ export default function UploadForm() {
     const [title, setTitle] = useState('')
     const [description, setDescription] = useState('')
     const [tags, setTags] = useState<string[]>([])
-    const [gameVersion, setGameVersion] = useState('')
     const [expireDate, setExpireDate] = useState(() => daysFromNow(30))
 
     const [submitError, setSubmitError] = useState<string | null>(null)
@@ -105,7 +91,6 @@ export default function UploadForm() {
         setTitle('')
         setDescription('')
         setTags([])
-        setGameVersion('')
     }
 
     function onSubmit() {
@@ -117,7 +102,6 @@ export default function UploadForm() {
                 title: title.trim(),
                 description: description.trim(),
                 tags,
-                gameVersion: gameVersion.trim() || null,
                 expiresDays: null,
                 expiresAt: expiryDateToIso(expireDate)
             })
@@ -247,24 +231,10 @@ export default function UploadForm() {
 
                         <div>
                             <span className="mb-1 block text-[11px] text-(--muted)">标签</span>
-                            <TagInput
-                                tags={tags}
-                                onChange={setTags}
-                                suggestions={TAG_SUGGESTIONS}
-                                placeholder="回车 / 逗号成词，最多 8 个"
-                            />
+                            <TagInput tags={tags} onChange={setTags} options={[...PROJECT_TAGS]} />
+                            <p className="mt-1 text-[10px] text-(--muted)">只能从这几种玩法标签里选（可多选）</p>
                         </div>
 
-                        <label className="block">
-                            <span className="mb-1 block text-[11px] text-(--muted)">游戏版本（可选）</span>
-                            <input
-                                value={gameVersion}
-                                onChange={(e) => setGameVersion(e.target.value)}
-                                placeholder="例如 2.6"
-                                maxLength={20}
-                                className="w-full rounded-sm border border-(--card-border) bg-(--input-bg) px-2.5 py-2 text-sm outline-none transition-colors placeholder:text-(--muted) focus:border-(--accent)"
-                            />
-                        </label>
 
                         <div>
                             <span className="mb-1 block text-[11px] text-(--muted)">有效期</span>

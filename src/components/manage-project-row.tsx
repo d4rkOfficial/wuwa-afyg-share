@@ -8,6 +8,7 @@ import ShareLinkPicker from '@/components/share-link-picker'
 import ExpiryCountdown from '@/components/expiry-countdown'
 import TagInput from '@/components/ui/tag-input'
 import ExpiryPicker, { expiryDateToIso } from '@/components/ui/expiry-picker'
+import { PROJECT_TAGS } from '@/lib/consts/project-tags'
 import { toast } from '@/components/ui/toast'
 import { deleteProject, regenerateCode, setExpiry, updateProject, replaceProjectFile } from '@/lib/actions/projects'
 import { setProjectProtected } from '@/lib/actions/project-protection'
@@ -229,7 +230,7 @@ export default function ManageProjectRow({ project }: Props) {
                         placeholder="简介"
                         className="w-full rounded-sm border border-(--card-border) bg-(--input-bg) px-3 py-2 text-sm outline-none transition-colors placeholder:text-(--muted) focus:border-(--accent)"
                     />
-                    <TagInput tags={tags} onChange={setTags} suggestions={['轮切轴', '轮椅轴', '标准轴', '进阶轴', '冒烟轴', '深塔', '全息']} />
+                    <TagInput tags={tags} onChange={setTags} options={[...PROJECT_TAGS]} />
                     <div className="space-y-2 rounded-sm border border-(--card-border) bg-(--card-hover) p-2.5">
                         <span className="text-[11px] text-(--muted)">改期（快捷时长 / 自定义日期）</span>
                         <ExpiryPicker value={expireDate} onChange={setExpireDate} />
