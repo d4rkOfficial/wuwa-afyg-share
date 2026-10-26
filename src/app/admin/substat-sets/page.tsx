@@ -46,11 +46,6 @@ export default async function AdminSubstatSetsPage() {
                 <h1 className="mg-title text-2xl md:text-3xl">
                     {isAdmin ? '标准词条集管理' : '标准词条集编辑'}
                 </h1>
-                <p className="mt-1.5 mg-note">
-                    每个角色一套标准 14 条副词条声骸配置。绝大部分角色由工具箱按角色数据本地生成，
-                    这里只维护「特殊角色」的整份方案（5 个部位的主词条 + 副主词条 + 副词条全覆盖）。
-                    保存后工具箱经 /api/substat-sets 公开拉取，用于一键把角色 5 个声骸改标准词条。
-                </p>
             </div>
 
             <SubstatSetsAdmin rows={rows} isAdmin={isAdmin} substatLocks={locks.substatLocks} />

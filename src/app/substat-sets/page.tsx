@@ -36,8 +36,6 @@ export default async function SubstatSetsPage() {
     const editable = !viewer.locks.substatSetsLocked
     const icons = (await getEntityIcons()).character
 
-    const lockedCount = rows.filter((row) => viewer.locks.substatLocks[row.character_name]).length
-
     return (
         <div className="space-y-5">
             <div className="flex flex-wrap items-end justify-between gap-3 border-b pb-4 mg-hairline">
@@ -48,14 +46,6 @@ export default async function SubstatSetsPage() {
                             <span className="ml-2 align-middle text-xs font-normal text-(--accent-text)">（可编辑）</span>
                         )}
                     </h1>
-                    <p className="mt-1 text-sm leading-relaxed text-(--muted)">
-                        每个角色一套 5 部位声骸配置（主词条 + 副词条合计 14 条），工具箱经{' '}
-                        <code className="text-(--fg)">/api/substat-sets</code> 拉取后一键套用。
-                        <span className="ml-1">
-                            <span className="mg-num text-(--fg)">{rows.length}</span> 个角色
-                            {lockedCount > 0 && ` · ${lockedCount} 个已锁定`}
-                        </span>
-                    </p>
                 </div>
                 <div className="flex flex-wrap items-center gap-2">
                     {(editable || isAdmin) && (

@@ -48,12 +48,6 @@ export default async function AdminBuffSetsPage() {
         <div className="buff-admin-shell mx-auto max-w-6xl space-y-6">
             <div className="border-b pb-4 mg-hairline">
                 <h1 className="mg-title text-2xl md:text-3xl">{isAdmin ? 'Buff 集管理' : 'Buff 集编辑'}</h1>
-                <p className="mt-1.5 mg-note">
-                    左侧按角色/武器/声骸/套装选实体，右侧就地编辑该实体的 Buff（不再弹窗）。
-                    {isAdmin
-                        ? '管理员可保存/删除、逐个条目加锁；快照（根 + 版本链）仅管理员可用。'
-                        : '编辑锁开启期间仅管理员可保存；被单独锁定的条目（左侧带锁图标）同样仅管理员可改。'}
-                </p>
             </div>
 
             <BuffSetsAdmin rows={rows} isAdmin={isAdmin} buffLocks={locks.buffLocks} entityIcons={entityIcons} />
