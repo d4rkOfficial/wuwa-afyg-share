@@ -37,8 +37,15 @@ export default function SubstatSetsAdmin({ rows, isAdmin, substatLocks }: Props)
     const [planVersion, setPlanVersion] = useState(0)
     const [jsonText, setJsonText] = useState('')
     const [loadedName, setLoadedName] = useState<string | null>(null)
-    /** @desc 「删除角色名」只在**角色列表里已保存的角色**上启用（新输入的名字先保存才能删） */
-    const canDeleteRole = !!loadedName && rows.some((row) => row.character_name === loadedName)
+    /**
+     * @desc 最右侧删除按钮跟随**当前输入的角色名**：
+     * 名字在已保存列表里（有效）→ 「删除{名字}」可点；否则 → 「角色名无效」禁用。
+     */
+    const deletableName = (() => {
+        const name = characterName.trim()
+        if (!name) return null
+        return rows.some((row) => row.character_name === name) ? name : null
+    })()
     const [confirmDelete, setConfirmDelete] = useState<string | null>(null)
     const [characterList, setCharacterList] = useState<string[]>([])
     const [catalogError, setCatalogError] = useState<string | null>(null)
@@ -329,10 +336,10 @@ export default function SubstatSetsAdmin({ rows, isAdmin, substatLocks }: Props)
                             {pending ? '保存中…' : '保存'}
                         </button>
                         {isAdmin &&
-                            (canDeleteRole ? (
-                                confirmDelete === loadedName ? (
+                            (deletableName ? (
+                                confirmDelete === deletableName ? (
                                     <button
-                                        onClick={() => onDelete(loadedName!)}
+                                        onClick={() => onDelete(deletableName)}
                                         disabled={pending}
                                         className="rounded-sm border border-(--danger) bg-(--danger) px-2.5 py-1.5 text-xs font-medium text-(--danger-fg) transition-colors hover:opacity-90 disabled:opacity-50"
                                     >
@@ -340,24 +347,24 @@ export default function SubstatSetsAdmin({ rows, isAdmin, substatLocks }: Props)
                                     </button>
                                 ) : (
                                     <button
-                                        onClick={() => setConfirmDelete(loadedName)}
+                                        onClick={() => setConfirmDelete(deletableName)}
                                         onBlur={() => setTimeout(() => setConfirmDelete(null), 2500)}
                                         disabled={pending}
                                         className="rounded-sm border border-(--danger) bg-(--card) px-2.5 py-1.5 text-xs font-medium text-(--danger) transition-colors hover:bg-(--danger) hover:text-(--danger-fg) disabled:opacity-50"
                                     >
                                         <Icon icon="mdi:trash-can-outline" className="mr-1 inline size-3.5" />
-                                        删除角色名
+                                        删除{deletableName}
                                     </button>
                                 )
                             ) : (
                                 <button
                                     type="button"
                                     disabled
-                                    title="只有从左侧角色列表载入的角色才能删除；新输入的角色名请先保存"
+                                    title="当前角色名还没有已保存的方案（或为空），无法删除；先保存一次再删"
                                     className="cursor-not-allowed rounded-sm border border-(--card-border) bg-(--card) px-2.5 py-1.5 text-xs font-medium text-(--muted) opacity-50"
                                 >
                                     <Icon icon="mdi:trash-can-outline" className="mr-1 inline size-3.5" />
-                                    删除角色名
+                                    角色名无效
                                 </button>
                             ))}
                     </div>
