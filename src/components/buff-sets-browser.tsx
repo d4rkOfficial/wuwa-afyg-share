@@ -10,14 +10,13 @@ import {
     describeCondition,
     describeZoneConditionBadge
 } from '@/lib/consts/buff-zones'
-import { pickCharacterAvatar } from '@/lib/utils/avatar'
-import CharacterAvatar from '@/components/ui/character-avatar'
+import type { EntityIconMaps } from '@/lib/data/avatar-icons'
 import type { BuffEntityType, BuffSetRow } from '@/lib/types/db'
 
 interface Props {
     rows: BuffSetRow[]
-    /** @desc 角色名 → 头像地址（角色实体在 sidebar / 主内容里带头像） */
-    icons?: Record<string, string>
+    /** @desc 四类实体的名字 → 图标地址（角色 / 武器 / 首位声骸 / 套装都要有图标） */
+    entityIcons?: EntityIconMaps
 }
 
 const GROUPS: Array<{ key: 'character' | 'weapon' | 'echo' | 'set'; label: string; icon: string }> = [
@@ -44,7 +43,42 @@ function zoneLabel(id: string) {
     return BUFF_ZONE_MAP.get(id)?.label ?? id
 }
 
-export default function BuffSetsBrowser({ rows, icons = {} }: Props) {
+type GroupKey = "character" | "weapon" | "echo" | "set"
+
+/** @desc 实体自己的图标：四类实体各查各自的表（不是把名字哈希成随机角色的头像） */
+function iconFor(
+    group: GroupKey,
+    entityName: string,
+    maps: EntityIconMaps | undefined
+): string | undefined {
+    return maps?.[group]?.[entityName]
+}
+
+/** @desc 小方图标（无图时退回组图标，保证「所有实体都有图标」） */
+function EntityIcon({
+    url,
+    fallback,
+    className = "size-5"
+}: {
+    url?: string
+    fallback: string
+    className?: string
+}) {
+    return (
+        <span
+            className={`inline-flex shrink-0 items-center justify-center overflow-hidden rounded-sm bg-(--card-hover) ${className}`}
+        >
+            {url ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img src={url} alt="" className="size-full object-cover" loading="lazy" />
+            ) : (
+                <Icon icon={fallback} className="size-3.5 text-(--muted)" />
+            )}
+        </span>
+    )
+}
+
+export default function BuffSetsBrowser({ rows, entityIcons }: Props) {
     const [search, setSearch] = useState('')
     const [selectedKey, setSelectedKey] = useState<string | null>(null)
 
@@ -86,7 +120,8 @@ export default function BuffSetsBrowser({ rows, icons = {} }: Props) {
     }, [entities, q])
 
     const selected = entities.find((e) => e.key === selectedKey) ?? null
-    const selectedAvatar = selected?.group === 'character' ? pickCharacterAvatar(selected.entityName, icons) : null
+    const selectedIcon = selected ? iconFor(selected.group, selected.entityName, entityIcons) : undefined
+    const selectedGroup = selected ? GROUPS.find((g) => g.key === selected.group) : undefined
 
     const scopeCounts = useMemo(() => {
         if (!selected) return []
@@ -129,14 +164,19 @@ export default function BuffSetsBrowser({ rows, icons = {} }: Props) {
                 </div>
 
                 <div className="workbench-list">
-                    {grouped.map((group) =>
-                        group.items.length === 0 ? null : (
-                            <div key={group.key}>
-                                <div className="workbench-group">
-                                    <Icon icon={group.icon} className="size-3" />
-                                    {group.label}
-                                    <span className="workbench-item-meta ml-auto">{group.items.length}</span>
-                                </div>
+                    {/* 固定四类：角色 / 武器 / 首位声骸 / 套装（空分类也保留标题，分组结构始终可见） */}
+                    {grouped.map((group) => (
+                        <div key={group.key}>
+                            <div className="workbench-group">
+                                <Icon icon={group.icon} className="size-3" />
+                                {group.label}
+                                <span className="workbench-item-meta ml-auto">{group.items.length}</span>
+                            </div>
+                            {group.items.length === 0 && (
+                                <p className="px-2 pb-1 text-[10px] text-(--muted)">
+                                    {q ? '无匹配' : '暂无条目'}
+                                </p>
+                            )}
                                 {group.items.map((entity) => (
                                     <button
                                         key={entity.key}
@@ -144,16 +184,10 @@ export default function BuffSetsBrowser({ rows, icons = {} }: Props) {
                                         data-active={selectedKey === entity.key}
                                         className="workbench-item"
                                     >
-                                        {entity.group === 'character' ? (
-                                            <CharacterAvatar
-                                                username={entity.entityName}
-                                                icons={icons}
-                                                className="size-5"
-                                                bordered={false}
-                                            />
-                                        ) : (
-                                            <Icon icon={group.icon} className="size-3.5 shrink-0 opacity-60" />
-                                        )}
+                                        <EntityIcon
+                                            url={iconFor(entity.group, entity.entityName, entityIcons)}
+                                            fallback={group.icon}
+                                        />
                                         <span className="min-w-0 flex-1 truncate">{entity.entityName}</span>
                                         {entity.pieces.length > 0 && (
                                             <span className="workbench-item-meta">{entity.pieces.join('/')}件</span>
@@ -161,9 +195,8 @@ export default function BuffSetsBrowser({ rows, icons = {} }: Props) {
                                         <span className="workbench-item-meta">{entity.buffs.length}</span>
                                     </button>
                                 ))}
-                            </div>
-                        )
-                    )}
+                        </div>
+                    ))}
                     {q && grouped.every((g) => g.items.length === 0) && (
                         <p className="px-2 py-8 text-center text-xs text-(--muted)">没有匹配的实体</p>
                     )}
@@ -186,24 +219,11 @@ export default function BuffSetsBrowser({ rows, icons = {} }: Props) {
                         {/* 实体头 */}
                         <header className="mg-card p-4">
                             <div className="flex flex-wrap items-center gap-3">
-                                {selectedAvatar ? (
-                                    // eslint-disable-next-line @next/next/no-img-element
-                                    <img
-                                        src={selectedAvatar.url}
-                                        alt={selectedAvatar.name}
-                                        className="size-11 shrink-0 rounded-sm border border-(--card-border) object-cover"
-                                    />
-                                ) : (
-                                    <span className="flex size-11 shrink-0 items-center justify-center rounded-sm border border-(--card-border) bg-(--card-hover)">
-                                        <Icon
-                                            icon={
-                                                GROUPS.find((g) => g.key === selected.group)?.icon ??
-                                                'mdi:shape-outline'
-                                            }
-                                            className="size-5 text-(--accent-text)"
-                                        />
-                                    </span>
-                                )}
+                                <EntityIcon
+                                    url={selectedIcon}
+                                    fallback={selectedGroup?.icon ?? 'mdi:shape-outline'}
+                                    className="size-11 border border-(--card-border)"
+                                />
                                 <div className="min-w-0 flex-1">
                                     <div className="flex flex-wrap items-center gap-2">
                                         <h2 className="mg-title truncate text-lg">{selected.entityName}</h2>

@@ -3,6 +3,7 @@ import { redirect } from 'next/navigation'
 import BuffSetsAdmin from '@/components/admin/buff-sets-admin'
 import { createClient, hasEnv } from '@/lib/supabase/server'
 import { getViewerLocks } from '@/lib/edit-locks'
+import { getEntityIcons } from '@/lib/data/avatar-icons'
 import type { BuffSetRow } from '@/lib/types/db'
 
 export const metadata: Metadata = {
@@ -40,6 +41,8 @@ export default async function AdminBuffSetsPage() {
         .order('entity_type', { ascending: true })
         .order('entity_name', { ascending: true })
     const rows = (data ?? []) as BuffSetRow[]
+    // 实体列表图标（角色 / 武器 / 首位声骸 / 套装）
+    const entityIcons = await getEntityIcons()
 
     return (
         <div className="buff-admin-shell mx-auto max-w-6xl space-y-6">
@@ -53,7 +56,7 @@ export default async function AdminBuffSetsPage() {
                 </p>
             </div>
 
-            <BuffSetsAdmin rows={rows} isAdmin={isAdmin} buffLocks={locks.buffLocks} />
+            <BuffSetsAdmin rows={rows} isAdmin={isAdmin} buffLocks={locks.buffLocks} entityIcons={entityIcons} />
         </div>
     )
 }

@@ -7,6 +7,7 @@ import { Icon } from '@iconify/react'
 import { BUFF_ENTITY_LABELS } from '@/lib/consts/buff-zones'
 import { fetchToolList, type ToolListEntry } from '@/lib/ai/info'
 import LoadingIndicator from '@/components/ui/loading-indicator'
+import type { EntityIconMaps } from '@/lib/data/avatar-icons'
 import type { BuffEntityType } from '@/lib/types/db'
 
 interface Props {
@@ -17,13 +18,15 @@ interface Props {
     locks: Record<string, boolean>
     lockPending: boolean
     onToggleLock: (entityType: BuffEntityType, entityName: string, locked: boolean) => void
+    /** @desc 四类实体的图标表（角色 / 武器 / 首位声骸 / 套装都显示图标） */
+    entityIcons?: EntityIconMaps
 }
 
-const MAIN_TABS: Array<{ type: BuffEntityType; label: string }> = [
-    { type: 'character', label: '角色' },
-    { type: 'weapon', label: '武器' },
-    { type: 'echo', label: '声骸' },
-    { type: '1set', label: '套装' }
+const MAIN_TABS: Array<{ type: BuffEntityType; label: string; group: keyof EntityIconMaps }> = [
+    { type: 'character', label: '角色', group: 'character' },
+    { type: 'weapon', label: '武器', group: 'weapon' },
+    { type: 'echo', label: '首位声骸', group: 'echo' },
+    { type: '1set', label: '套装', group: 'set' }
 ]
 
 const SET_PIECES: BuffEntityType[] = ['1set', '2set', '3set', '4set', '5set']
@@ -35,7 +38,8 @@ export default function BuffEntitySidebar({
     isAdmin,
     locks,
     lockPending,
-    onToggleLock
+    onToggleLock,
+    entityIcons
 }: Props) {
     const [mainTab, setMainTab] = useState<BuffEntityType>('character')
     const [setPiece, setSetPiece] = useState<BuffEntityType>('1set')
@@ -78,6 +82,7 @@ export default function BuffEntitySidebar({
         }
     }, [activeType])
 
+    const activeGroup = (MAIN_TABS.find((tab) => tab.type === mainTab)?.group ?? 'character') as keyof EntityIconMaps
     const loading = catalogState.type !== activeType
     const catalog: ToolListEntry[] | null = loading ? null : catalogState.list
     const error = loading ? null : catalogState.error
@@ -187,6 +192,19 @@ export default function BuffEntitySidebar({
                                 className="workbench-item min-w-0 flex-1"
                                 data-active={selectedKey === key}
                             >
+                                <span className="inline-flex size-5 shrink-0 items-center justify-center overflow-hidden rounded-sm bg-(--card-hover)">
+                                    {entityIcons?.[activeGroup]?.[e.name] ? (
+                                        // eslint-disable-next-line @next/next/no-img-element
+                                        <img
+                                            src={entityIcons[activeGroup][e.name]}
+                                            alt=""
+                                            className="size-full object-cover"
+                                            loading="lazy"
+                                        />
+                                    ) : (
+                                        <Icon icon="mdi:shape-outline" className="size-3.5 text-(--muted)" />
+                                    )}
+                                </span>
                                 <span className="min-w-0 flex-1 truncate">{e.name}</span>
                                 <span className="workbench-item-meta">{e.count}</span>
                                 {locked && <Icon icon="mdi:lock" className="size-3 shrink-0 text-(--warning)" />}

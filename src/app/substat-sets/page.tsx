@@ -5,7 +5,7 @@ import SetupNotice from '@/components/setup-notice'
 import SubstatSetsBrowser from '@/components/substat-sets-browser'
 import { createClient, hasEnv } from '@/lib/supabase/server'
 import { getViewerLocks } from '@/lib/edit-locks'
-import { getAvatarIcons } from '@/lib/data/avatar-icons'
+import { getEntityIcons } from '@/lib/data/avatar-icons'
 import type { StandardSubstatSetRow } from '@/lib/types/db'
 
 export const metadata: Metadata = {
@@ -34,7 +34,7 @@ export default async function SubstatSetsPage() {
     const viewer = await getViewerLocks()
     const isAdmin = viewer.isAdmin
     const editable = !viewer.locks.substatSetsLocked
-    const icons = await getAvatarIcons()
+    const icons = (await getEntityIcons()).character
 
     const lockedCount = rows.filter((row) => viewer.locks.substatLocks[row.character_name]).length
 

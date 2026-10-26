@@ -4,7 +4,7 @@ import SetupNotice from '@/components/setup-notice'
 import BuffSetsBrowser from '@/components/buff-sets-browser'
 import { createClient, hasEnv } from '@/lib/supabase/server'
 import { getViewerLocks } from '@/lib/edit-locks'
-import { getAvatarIcons } from '@/lib/data/avatar-icons'
+import { getEntityIcons } from '@/lib/data/avatar-icons'
 import { upgradeBuffSetRowV2 } from '@/lib/buff-snapshots/migrate-v2'
 import type { BuffSetRow } from '@/lib/types/db'
 
@@ -28,8 +28,8 @@ export default async function BuffSetsPage() {
     const viewer = await getViewerLocks()
     const isAdmin = viewer.isAdmin
     const editable = !viewer.locks.buffSetsLocked
-    // 角色头像（与首页 ProjectCard 同源）：sidebar / 实体头都按角色名取图
-    const icons = await getAvatarIcons()
+    // 四类实体的图标（角色 / 武器 / 首位声骸 / 套装）：sidebar 与实体头都按名字取图
+    const entityIcons = await getEntityIcons()
 
     const entityCount = new Set(rows.map((r) => `${r.entity_type}/${r.entity_name}`)).size
 
@@ -92,7 +92,7 @@ export default async function BuffSetsPage() {
                     <p className="text-(--muted)">暂时还没有收录任何 Buff 集</p>
                 </div>
             ) : (
-                <BuffSetsBrowser rows={rows} icons={icons} />
+                <BuffSetsBrowser rows={rows} entityIcons={entityIcons} />
             )}
         </div>
     )

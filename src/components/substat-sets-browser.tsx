@@ -3,16 +3,31 @@
 // 标准词条集浏览（工作台式布局）：左侧角色 sidebar + 右侧 5 部位明细主内容区。
 import { useMemo, useState } from 'react'
 import { Icon } from '@iconify/react'
-import { pickCharacterAvatar } from '@/lib/utils/avatar'
-import CharacterAvatar from '@/components/ui/character-avatar'
+
 import { countPlanSubstats } from '@/lib/utils/echo-plan'
 import { ECHO_MAX_TOTAL_COST, SUBSTAT_TOTAL_COUNT } from '@/lib/consts/echo-stats'
 import type { EchoStatValue, StandardSubstatSetRow } from '@/lib/types/db'
 
 interface Props {
     rows: StandardSubstatSetRow[]
-    /** @desc 角色名 → 头像地址（用户名同款哈希头像，角色实体直接按名字取图） */
+    /** @desc 角色名 → 角色头像地址（直接按名字取图，不做哈希） */
     icons?: Record<string, string>
+}
+
+/** @desc 角色小头像（无图时退回人形图标） */
+function CharacterIcon({ url, className = 'size-5' }: { url?: string; className?: string }) {
+    return (
+        <span
+            className={`inline-flex shrink-0 items-center justify-center overflow-hidden rounded-sm bg-(--card-hover) ${className}`}
+        >
+            {url ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img src={url} alt="" className="size-full object-cover" loading="lazy" />
+            ) : (
+                <Icon icon="mdi:account-outline" className="size-3.5 text-(--muted)" />
+            )}
+        </span>
+    )
 }
 
 function statText(stat: EchoStatValue | null | undefined): string {
@@ -73,12 +88,7 @@ export default function SubstatSetsBrowser({ rows, icons = {} }: Props) {
                                 data-active={(selected?.id ?? '') === row.id}
                                 className="workbench-item"
                             >
-                                <CharacterAvatar
-                                    username={row.character_name}
-                                    icons={icons}
-                                    className="size-5"
-                                    bordered={false}
-                                />
+                                <CharacterIcon url={icons[row.character_name]} />
                                 <span className="min-w-0 flex-1 truncate">{row.character_name}</span>
                                 <span
                                     className={`workbench-item-meta ${
@@ -104,21 +114,7 @@ export default function SubstatSetsBrowser({ rows, icons = {} }: Props) {
                     <div className="space-y-4">
                         <header className="mg-card p-4">
                             <div className="flex flex-wrap items-center gap-3">
-                                {(() => {
-                                    const avatar = pickCharacterAvatar(selected.character_name, icons)
-                                    return avatar ? (
-                                        // eslint-disable-next-line @next/next/no-img-element
-                                        <img
-                                            src={avatar.url}
-                                            alt={avatar.name}
-                                            className="size-11 shrink-0 rounded-sm border border-(--card-border) object-cover"
-                                        />
-                                    ) : (
-                                        <span className="flex size-11 shrink-0 items-center justify-center rounded-sm border border-(--card-border) bg-(--card-hover)">
-                                            <Icon icon="mdi:account-outline" className="size-5 text-(--accent-text)" />
-                                        </span>
-                                    )
-                                })()}
+                                <CharacterIcon url={icons[selected.character_name]} className="size-11 border border-(--card-border)" />
                                 <div className="min-w-0 flex-1">
                                     <div className="flex flex-wrap items-center gap-2">
                                         <h2 className="mg-title truncate text-lg">{selected.character_name}</h2>
