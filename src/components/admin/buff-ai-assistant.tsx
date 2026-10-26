@@ -198,6 +198,11 @@ interface Props {
     /** @desc 结果应用：整体替换 / 追加合并 */
     onApply: (list: GeneratedBuff[]) => void
     onMerge: (list: GeneratedBuff[]) => void
+    /**
+     * @desc 版式：`pane`（默认，独立右栏，固定宽度）/ `inline`（作为工作区铺满，
+     *  与编辑器互斥切换时用）。
+     */
+    variant?: 'pane' | 'inline'
 }
 
 /** @desc 待确认的危险工具（如「直接写入数据库」） */
@@ -225,7 +230,8 @@ export default function BuffAiAssistant({
     getCurrentBuffs,
     draft,
     onApply,
-    onMerge
+    onMerge,
+    variant = 'pane'
 }: Props) {
     const [busy, setBusy] = useState(false)
     const [messages, setMessages] = useState<DisplayMsg[]>([])
@@ -644,7 +650,13 @@ export default function BuffAiAssistant({
     const hasContent = messages.length > 0 || Boolean(result) || Boolean(error)
 
     return (
-        <div className="buff-editor-ai flex h-full min-h-0 w-96 shrink-0 flex-col border-l border-(--card-border)">
+        <div
+            className={
+                variant === 'inline'
+                    ? 'buff-editor-ai flex h-full min-h-0 w-full min-w-0 flex-col'
+                    : 'buff-editor-ai flex h-full min-h-0 w-96 shrink-0 flex-col border-l border-(--card-border)'
+            }
+        >
             {/* 头部：标题 + 动作（生成 / 润色 / 停止 / 清空） */}
             <div className="flex shrink-0 flex-wrap items-center gap-1.5 border-b border-(--card-border) px-3 py-2">
                 <span className="flex items-center gap-1 mg-title text-xs text-(--accent-text)">

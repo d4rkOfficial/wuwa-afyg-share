@@ -362,25 +362,19 @@ html.light .theme-icon-light {
 }
 
 /* ──────────────────────────────────────────────────────────────
-   窄屏 Buff 编辑器（≤ 900px 或竖屏）：四栏改为「页签 + 单栏」。
-   宽屏仍是四栏并排（列表 / 编辑 / 乘区 / AI），页签由 .buff-editor-mobile-tabs 在宽屏隐藏。
-   为什么不继续用「窄列 + 上下分区」：手机上四栏各剩几十像素，输入框和长 Buff 名都不可用。
+   Buff 编辑器：宽屏 =「左侧 Buff 列表常驻 + 右侧（手工编辑 或 AI 工作区）」。
+   窄屏（≤ 900px 或竖屏）：左侧列表**收起为顶部的 Buff 下拉**，右侧仍是一次显示
+   「手工编辑 / AI 工作区」之一（用编辑器头部的切换按钮）。
+   为什么不继续用「页签 + 多栏」：手机上多栏各剩几十像素，输入框和长 Buff 名都不可用；
+   而列表本身必须能随时切条目，所以收成下拉而不是藏进页签。
    ────────────────────────────────────────────────────────────── */
 @media (max-width: 900px), (orientation: portrait) {
-    .buff-editor-modal-shell {
-        padding: 0.5rem;
-    }
-    .buff-editor-modal {
-        width: calc(100vw - 1rem);
-        height: calc(100dvh - 1rem);
-        border-radius: var(--radius-sm);
-    }
     .buff-editor-layout {
         display: flex;
         flex-direction: column;
         overflow: hidden;
     }
-    /* 单栏：所有面包满宽度，边框改成上下分隔 */
+    /* 右侧区占满：宽度由 flex 决定，去掉固定宽度 */
     .buff-editor-layout > * {
         width: auto !important;
         height: auto !important;
@@ -390,11 +384,8 @@ html.light .theme-icon-light {
         border-left: 0;
         border-right: 0;
     }
-    /* 只显示当前页签对应的面板（data-mobile-pane 由编辑器写入） */
-    .buff-editor-layout:not([data-mobile-pane='list']) .buff-editor-buff-list,
-    .buff-editor-layout:not([data-mobile-pane='edit']) .buff-editor-main,
-    .buff-editor-layout:not([data-mobile-pane='zones']) .buff-editor-zones,
-    .buff-editor-layout:not([data-mobile-pane='ai']) .buff-editor-ai {
+    /* 左侧列表在窄屏隐藏（改用顶部下拉），保证右侧编辑区有足够宽度 */
+    .buff-editor-buff-list {
         display: none;
     }
     /* 触屏点按目标放大一档（原 11px 文字在手机上太小） */
@@ -409,10 +400,14 @@ html.light .theme-icon-light {
     }
 }
 
-/* 宽屏：页签不占位（四栏并排时用不上） */
-@media (min-width: 901px) and (orientation: landscape) {
-    .buff-editor-mobile-tabs {
-        display: none;
+/* Buff 下拉选择：只在窄屏出现（宽屏靠左侧常驻列表） */
+.buff-editor-mobile-picker {
+    display: none;
+}
+
+@media (max-width: 900px), (orientation: portrait) {
+    .buff-editor-mobile-picker {
+        display: flex;
     }
 }
 
@@ -427,81 +422,6 @@ html.light .theme-icon-light {
     }
     .buff-editor-modal .mg-title {
         font-size: 1rem;
-    }
-}
-
-/* 动效备选：尊重 prefers-reduced-motion */
-@media (prefers-reduced-motion: reduce) {
-    *,
-    *::before,
-    *::after {
-        animation-duration: 0.01ms !important;
-        animation-iteration-count: 1 !important;
-        transition-duration: 0.01ms !important;
-        scroll-behavior: auto !important;
-    }
-    .app-link-hint {
-        transition: opacity 100ms ease;
-        transform: none;
-    }
-    .project-filter-shell[data-pending='true'] .project-filter-progress {
-        width: 100%;
-        opacity: 0.55;
-        transform: none;
-    }
-}
-
-/* ──────────────────────────────────────────────────────────────
-   杂志衬线风格助手（全站统一）：
-   标题=衬线重音（字重+收紧字距）；分区=细分割线；卡片=小圆角+细边框；无英文小标（一律用图标）
-   ────────────────────────────────────────────────────────────── */
-@layer components {
-    /* 衬线重音标题：不要在标题上再用 font-semibold，统一用 font-black + 收紧字距 */
-    .mg-title {
-        font-family: var(--font-serif);
-        font-weight: 900;
-        letter-spacing: -0.01em;
-        line-height: 1.2;
-        color: var(--fg);
-    }
-    .mg-title-xl {
-        font-family: var(--font-serif);
-        font-weight: 900;
-        letter-spacing: -0.015em;
-        line-height: 1.05;
-    }
-    /* 分区标题：图标 + 衬线粗标题 + 下细线 */
-    .mg-section {
-        display: flex;
-        align-items: center;
-        gap: 0.5rem;
-        border-bottom: 1px solid var(--card-border);
-        padding-bottom: 0.625rem;
-        margin-bottom: 0.875rem;
-    }
-    /* 细分割线（杂志感层次，替代阴影） */
-    .mg-hairline {
-        border-color: var(--card-border);
-    }
-    /* 小圆角卡片：细边框 + 实色底，不使用阴影 */
-    .mg-card {
-        background: var(--card);
-        border: 1px solid var(--card-border);
-        border-radius: var(--radius-sm);
-        transition:
-            border-color 160ms ease-out,
-            background-color 160ms ease-out;
-    }
-    /* 关键数字：等宽数字 + 衬线重音 */
-    .mg-num {
-        font-variant-numeric: tabular-nums;
-        font-weight: 900;
-    }
-    /* 弱化说明文字 */
-    .mg-note {
-        font-size: 0.6875rem;
-        line-height: 1.6;
-        color: var(--muted);
     }
 }
 

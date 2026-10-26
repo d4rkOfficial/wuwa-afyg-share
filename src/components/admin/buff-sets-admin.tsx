@@ -16,6 +16,7 @@ import {
 import { toast } from '@/components/ui/toast'
 import { setBuffSetLock } from '@/lib/actions/edit-locks'
 import type { ChatMessage } from '@/lib/ai/client'
+import type { EntityIconMaps } from '@/lib/data/avatar-icons'
 import type { BuffEntityType, BuffSetRow } from '@/lib/types/db'
 
 interface Props {
@@ -23,6 +24,8 @@ interface Props {
     isAdmin: boolean
     /** @desc 被管理员单独锁定的 buff 实体（key = `类型/名称`）；锁定的条目普通用户不能编辑 */
     buffLocks: Record<string, boolean>
+    /** @desc 四类实体的图标表（列表里每个实体都显示图标） */
+    entityIcons?: EntityIconMaps
 }
 
 const TOOL_BASE_STORAGE = 'wuwa-afyg:tool-base'
@@ -45,7 +48,7 @@ function entityKey(entityType: string, entityName: string) {
     return `${entityType}/${entityName}`
 }
 
-export default function BuffSetsAdmin({ rows, isAdmin, buffLocks }: Props) {
+export default function BuffSetsAdmin({ rows, isAdmin, buffLocks, entityIcons }: Props) {
     const router = useRouter()
     const [lockPending, startTransition] = useTransition()
     // AI 连接配置（IndexedDB 持久化；加载后供编辑器使用）
@@ -219,7 +222,7 @@ export default function BuffSetsAdmin({ rows, isAdmin, buffLocks }: Props) {
             </div>
 
             {/* 工作台：左侧实体 sidebar + 右侧就地编辑器（不再用弹窗） */}
-            <div className="workbench">
+            <div className="workbench items-stretch">
                 <BuffEntitySidebar
                     existingCountMap={existingCountMap}
                     selectedKey={editingKey}
@@ -228,6 +231,7 @@ export default function BuffSetsAdmin({ rows, isAdmin, buffLocks }: Props) {
                     locks={buffLocks}
                     lockPending={lockPending}
                     onToggleLock={toggleEntityLock}
+                    entityIcons={entityIcons}
                 />
 
                 <section className="workbench-main">
@@ -264,9 +268,9 @@ export default function BuffSetsAdmin({ rows, isAdmin, buffLocks }: Props) {
                             />
                         </div>
                     ) : (
-                        <div className="flex min-h-[28rem] flex-col items-center justify-center gap-3 rounded-sm border border-dashed border-(--card-border) p-8 text-center">
+                        <div className="flex h-full min-h-[32rem] flex-col items-center justify-center gap-3 rounded-sm border border-dashed border-(--card-border) p-8 text-center">
                             <Icon icon="mdi:cursor-default-click-outline" className="size-9 text-(--muted)" />
-                            <p className="text-sm text-(--muted)">从左侧选择一个实体开始编辑</p>
+                            <p className="text-sm text-(--muted)">选择一个实体开始编辑</p>
                             <p className="text-xs text-(--muted)">
                                 还没有条目的实体：切「全部实体」后点选，即可新建
                             </p>

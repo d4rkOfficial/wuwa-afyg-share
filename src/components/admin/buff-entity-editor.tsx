@@ -140,11 +140,7 @@ export default function BuffEntityEditor({
     const router = useRouter()
     const [pending, startTransition] = useTransition()
     const [confirmDeleteEntity, setConfirmDeleteEntity] = useState(false)
-    /**
-     * @desc 窄屏 / 竖屏下的当前面板（列表 / 编辑 / 乘区 / AI）。
-     *  宽屏不显示页签，四栏并排；窄屏用页签避免四栏被压成几十像素。
-     */
-    const [mobilePane, setMobilePane] = useState<'list' | 'edit' | 'zones' | 'ai'>('edit')
+
 
     const entityType = initial.entityType
     const entityName = initial.entityName
@@ -196,7 +192,8 @@ export default function BuffEntityEditor({
     }
 
     // ── buff 列表与就地编辑 ──
-    const [activeBuffIdx, setActiveBuffIdx] = useState<number | null>(null)
+    // 默认选中第一条：进来就有内容可编辑（窄屏下拉也才不会与状态不一致）
+    const [activeBuffIdx, setActiveBuffIdx] = useState<number | null>(buffs.length > 0 ? 0 : null)
     const [condPanelOpen, setCondPanelOpen] = useState(false)
     /** @desc 展开行内「乘区条件」面板的乘区下标（同一乘区可有多条，故用下标定位） */
     const [expandedZoneIdx, setExpandedZoneIdx] = useState<number | null>(null)
@@ -608,13 +605,13 @@ export default function BuffEntityEditor({
         save: saveDraftDirect
     }
 
-    /** @desc 窄屏页签（宽屏不渲染；CSS 只在小屏隐藏非当前面板） */
-    const MOBILE_PANES = [
-        { key: 'list' as const, label: '条目', icon: 'mdi:format-list-bulleted' },
-        { key: 'edit' as const, label: '编辑', icon: 'mdi:pencil-outline' },
-        { key: 'zones' as const, label: '乘区', icon: 'mdi:view-grid-outline' },
-        { key: 'ai' as const, label: 'AI', icon: 'mdi:robot-outline' }
-    ]
+    /** @desc 「添加乘区」面板是否展开（就在乘区列表下方，与手工编辑区捆绑） */
+    const [zonesOpen, setZonesOpen] = useState(false)
+    /**
+     * @desc 右侧显示「手工编辑区」还是「AI 工作区」（互斥切换）。
+     *  左侧 Buff 列表在宽屏常驻、窄屏收成顶部下拉，因此右侧始终是唯一的工作区。
+     */
+    const [rightView, setRightView] = useState<'edit' | 'ai'>('edit')
 
     return (
         <div className="flex h-full flex-col mg-card">
@@ -630,6 +627,25 @@ export default function BuffEntityEditor({
                     <span className="text-xs text-(--muted)">
                         <span className="mg-num">{buffs.length}</span> 条 Buff
                     </span>
+                    <div className="flex overflow-hidden rounded-sm border border-(--card-border)">
+                        {[
+                            { key: 'edit' as const, label: '手工编辑', icon: 'mdi:pencil-outline' },
+                            { key: 'ai' as const, label: 'AI 工作区', icon: 'mdi:robot-outline' }
+                        ].map((tab) => (
+                            <button
+                                key={tab.key}
+                                onClick={() => setRightView(tab.key)}
+                                className={`inline-flex items-center gap-1 px-2 py-1 text-[11px] transition-colors ${
+                                    rightView === tab.key
+                                        ? 'bg-(--accent) text-(--accent-fg)'
+                                        : 'text-(--muted) hover:text-(--fg)'
+                                }`}
+                            >
+                                <Icon icon={tab.icon} className="size-3.5" />
+                                {tab.label}
+                            </button>
+                        ))}
+                    </div>
                     {onclose && (
                         <button
                             onClick={onclose}
@@ -642,29 +658,32 @@ export default function BuffEntityEditor({
                 </div>
             </div>
 
-            {/* 窄屏页签：四栏在手机上改为一次看一栏（宽屏由 CSS 隐藏） */}
-            <div className="buff-editor-mobile-tabs flex shrink-0 items-center gap-1 border-b border-(--card-border) px-2 py-1.5">
-                {MOBILE_PANES.map((pane) => (
-                    <button
-                        key={pane.key}
-                        onClick={() => setMobilePane(pane.key)}
-                        className={`flex flex-1 items-center justify-center gap-1 rounded-sm px-2 py-1 text-[11px] transition-colors ${
-                            mobilePane === pane.key
-                                ? 'bg-(--accent) text-(--accent-fg)'
-                                : 'text-(--muted) hover:text-(--fg)'
-                        }`}
-                    >
-                        <Icon icon={pane.icon} className="size-3.5" />
-                        {pane.label}
-                    </button>
-                ))}
+            {/* 窄屏：左侧列表收起为「Buff 下拉」——条目切换始终可达（宽屏隐藏本行） */}
+            <div className="buff-editor-mobile-picker shrink-0 items-center gap-1.5 border-b border-(--card-border) px-2 py-1.5">
+                <Icon icon="mdi:format-list-bulleted" className="size-3.5 shrink-0 text-(--accent-text)" />
+                <select
+                    value={activeBuffIdx ?? ''}
+                    onChange={(e) => {
+                        setActiveBuffIdx(Number(e.target.value))
+                        setExpandedZoneIdx(null)
+                    }}
+                    className="min-w-0 flex-1 rounded-sm border border-(--card-border) bg-(--input-bg) px-2 py-1 text-xs outline-none focus:border-(--accent)"
+                >
+                    {buffs.length === 0 && <option value="">（暂无 Buff）</option>}
+                    {buffs.map((buff, idx) => (
+                        <option key={idx} value={idx}>
+                            {buff.buffName.trim() || '（未命名）'}
+                        </option>
+                    ))}
+                </select>
+                <button onClick={addBuff} className="toolbar-btn toolbar-btn-ghost shrink-0 px-1.5 py-1">
+                    <Icon icon="mdi:plus" className="size-3.5" />
+                    新增
+                </button>
             </div>
 
-            {/* 四栏主体：横屏并排；窄屏按上面页签单栏显示 */}
-            <div
-                className="buff-editor-layout flex min-h-0 flex-1 overflow-hidden"
-                data-mobile-pane={mobilePane}
-            >
+            {/* 主体：左侧 Buff 列表（宽屏常驻）+ 右侧工作区（手工编辑 / AI 二选一） */}
+            <div className="buff-editor-layout flex min-h-0 flex-1 overflow-hidden">
 
                 {/* ① 左：Buff 列表 */}
                 <div className="buff-editor-buff-list flex w-56 shrink-0 flex-col border-r border-(--card-border)">
@@ -689,8 +708,8 @@ export default function BuffEntityEditor({
                                     onClick={() => {
                                         setActiveBuffIdx(idx)
                                         setExpandedZoneIdx(null)
-                                        // 窄屏：选条目后直接进编辑栏（宽屏无副作用）
-                                        setMobilePane('edit')
+                                        // 选中条目即回到手工编辑区（在 AI 工作区里点条目也能继续改）
+                                        setRightView('edit')
                                     }}
                                     className={`w-full rounded-sm px-2 py-1.5 text-left transition-colors ${
                                         idx === activeBuffIdx
@@ -717,7 +736,8 @@ export default function BuffEntityEditor({
                     </div>
                 </div>
 
-                {/* ② 中：就地编辑器（Buff 名 / 作用域 / 实例级链阶门槛 / 乘区贡献条目列表） */}
+                {/* 右侧工作区：手工编辑（含乘区，捆绑在一起） 或 AI 工作区，二者互斥 */}
+                {rightView === 'edit' ? (
                 <div className="buff-editor-main flex min-w-0 flex-1 flex-col">
                     {activeBuff && activeBuffIdx !== null ? (
                         <>
@@ -1040,65 +1060,75 @@ export default function BuffEntityEditor({
                                     })
                                 )}
                             </div>
+
+                            {/* 添加乘区：直接接在乘区列表下方（不再单独开一栏，保持「编辑一条 Buff」的连贯性） */}
+                            <div className="shrink-0 border-t border-(--card-border)">
+                                <button
+                                    onClick={() => setZonesOpen((v) => !v)}
+                                    className="flex w-full items-center gap-1.5 px-3 py-1.5 text-[11px] text-(--muted) transition-colors hover:bg-(--card-hover)"
+                                    title="添加乘区贡献条目（同一乘区可多次添加）"
+                                >
+                                    <Icon
+                                        icon={zonesOpen ? 'mdi:chevron-down' : 'mdi:playlist-plus'}
+                                        className="size-3.5 shrink-0 text-(--accent-text)"
+                                    />
+                                    <span className="mg-title text-[11px]">添加乘区</span>
+                                    <span className="ml-auto text-[10px]">同一乘区可多次添加</span>
+                                </button>
+                                {zonesOpen && (
+                                    <div className="max-h-60 overflow-y-auto border-t border-(--card-border) p-2">
+                                        <div className="grid grid-cols-2 gap-x-2 gap-y-1.5 xl:grid-cols-3">
+                                            {BUFF_ZONE_SECTION_VIEWS.map((section) => (
+                                                <div key={section.title} className="min-w-0">
+                                                    <div className="px-1 pb-0.5 text-[10px] font-black tracking-[0.1em] text-(--muted)">
+                                                        {section.title}
+                                                    </div>
+                                                    <div className="space-y-0.5">
+                                                        {section.defs.map((def) => {
+                                                            const count = zoneCounts.get(def.id) ?? 0
+                                                            return (
+                                                                <button
+                                                                    key={def.id}
+                                                                    onClick={() => addZone(def.id)}
+                                                                    title={`添加「${def.label}」${
+                                                                        count > 0 ? `（已有 ${count} 条）` : ''
+                                                                    }`}
+                                                                    className={`flex w-full items-center gap-1 rounded-sm px-1.5 py-1 text-left text-[11px] transition-colors ${
+                                                                        count > 0
+                                                                            ? 'text-(--accent-text) hover:bg-(--card-hover)'
+                                                                            : 'text-(--muted) hover:bg-(--card-hover) hover:text-(--fg)'
+                                                                    }`}
+                                                                >
+                                                                    <Icon icon="mdi:plus" className="size-3 shrink-0" />
+                                                                    <span className="min-w-0 flex-1 truncate">
+                                                                        {def.label}
+                                                                    </span>
+                                                                    {count > 0 && (
+                                                                        <span className="shrink-0 text-[10px]">
+                                                                            {count}
+                                                                        </span>
+                                                                    )}
+                                                                </button>
+                                                            )
+                                                        })}
+                                                    </div>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    </div>
+                                )}
+                            </div>
                         </>
                     ) : (
                         <div className="flex flex-1 items-center justify-center text-xs text-(--muted)">
-                            点击左侧 Buff 条目进行编辑
+                            选择一条 Buff 开始编辑（或点「新增」）
                         </div>
                     )}
                 </div>
 
-                {/* ③ 乘区清单（点击即添加一条贡献条目；同一乘区可多次添加） */}
-                <div className="buff-editor-zones flex w-44 shrink-0 flex-col border-r border-(--card-border)">
-                    <div className="flex shrink-0 items-center gap-1.5 border-b border-(--card-border) px-3 py-2 text-xs text-(--muted)">
-                        <Icon icon="mdi:playlist-plus" className="size-3.5 shrink-0 text-(--accent-text)" />
-                        <span className="mg-title text-xs">添加乘区</span>
-                    </div>
-                    <div className="min-h-0 flex-1 space-y-1.5 overflow-y-auto p-1.5">
-                        {BUFF_ZONE_SECTION_VIEWS.map((section) => (
-                            <div key={section.title}>
-                                <div className="px-1 pb-0.5 text-[10px] font-black tracking-[0.1em] text-(--muted)">
-                                    {section.title}
-                                </div>
-                                <div className="space-y-0.5">
-                                    {section.defs.map((def) => {
-                                        const count = zoneCounts.get(def.id) ?? 0
-                                        return (
-                                            <button
-                                                key={def.id}
-                                                onClick={() => addZone(def.id)}
-                                                disabled={activeBuffIdx === null}
-                                                title={`添加「${def.label}」${count > 0 ? `（已有 ${count} 条）` : ''}`}
-                                                className={`flex w-full items-center gap-1.5 rounded-sm px-2 py-1.5 text-left text-[11px] font-medium transition-colors disabled:opacity-40 ${
-                                                    count > 0
-                                                        ? 'text-(--accent-text) hover:bg-(--card-hover)'
-                                                        : 'text-(--muted) hover:bg-(--card-hover) hover:text-(--fg)'
-                                                }`}
-                                            >
-                                                <Icon icon="mdi:plus" className="size-3.5 shrink-0" />
-                                                <span className="min-w-0 flex-1 truncate">{def.label}</span>
-                                                {count > 0 && (
-                                                    <span
-                                                        className="shrink-0 px-1 text-[10px]"
-                                                        style={{
-                                                            background: 'color-mix(in srgb, var(--accent) 18%, transparent)',
-                                                            color: 'var(--accent-text)'
-                                                        }}
-                                                    >
-                                                        {count}
-                                                    </span>
-                                                )}
-                                            </button>
-                                        )
-                                    })}
-                                </div>
-                            </div>
-                        ))}
-                    </div>
-                </div>
-
-                {/* ④ AI 生成面板（工具箱式活动流：实时显示轮次 / 工具 / 流式输出） */}
+                ) : (
                 <BuffAiAssistant
+                    variant="inline"
                     entityType={entityType}
                     entityName={entityName}
                     apiKey={apiKey}
@@ -1118,6 +1148,7 @@ export default function BuffEntityEditor({
                     onApply={applyBuffList}
                     onMerge={mergeBuffList}
                 />
+                )}
             </div>
 
             {refTargetIdx !== null && (
