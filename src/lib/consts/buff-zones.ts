@@ -282,8 +282,17 @@ export function sanitizeZoneCondition(cond: unknown): BuffCondition | undefined 
     return sanitizeCondition(cond, 'zone')
 }
 
-/** @desc 条件摘要文案（与工具箱 describeCondition 同口径；实例级用链/阶，乘区级用类型/属性） */
-export function describeCondition(cond: BuffCondition | null | undefined, slotName = (i: number) => `角色 ${i + 1}`): string {
+/**
+ * @desc 条件摘要文案（与工具箱 describeCondition 同口径；实例级用链/阶，乘区级用类型/属性）。
+ *
+ * 角色槽位的说法按**实体类型**取（工坊没有配队上下文，不写「角色 1」这类槽位号）：
+ * - 角色自身的 Buff → 「当前角色」
+ * - 武器 / 首位声骸 / 套装 → 「装配角色」
+ */
+export function describeCondition(
+    cond: BuffCondition | null | undefined,
+    slotName: (i: number) => string = () => '当前角色'
+): string {
     if (!cond || isConditionEmpty(cond)) return '无条件'
     const groups: string[] = []
     const gate: string[] = []
@@ -296,6 +305,16 @@ export function describeCondition(cond: BuffCondition | null | undefined, slotNa
     if (cond.elements?.length) groups.push(cond.elements.join(' 或 '))
     if (cond.damageTypes?.length) groups.push(cond.damageTypes.join(' 或 '))
     return groups.length ? groups.join(' 且 ') : '无条件'
+}
+
+
+/**
+ * @desc 按实体类型取槽位称呼：角色 → 「当前角色」；武器 / 首位声骸 / 套装 → 「装配角色」。
+ * 用法：`describeCondition(cond, slotNameFor(entityType))`。
+ */
+export function slotNameFor(entityType: string): (i: number) => string {
+    const label = entityType === 'character' ? '当前角色' : '装配角色'
+    return () => label
 }
 
 /** @desc 乘区条件徽标短摘要（伤害类型在前、属性在后，类内 `/`、类间 `·`） */

@@ -8,7 +8,8 @@ import {
     BUFF_SCOPE_LABELS,
     BUFF_ZONE_MAP,
     describeCondition,
-    describeZoneConditionBadge
+    describeZoneConditionBadge,
+    slotNameFor
 } from '@/lib/consts/buff-zones'
 import type { EntityIconMaps } from '@/lib/data/avatar-icons'
 import type { BuffEntityType, BuffSetRow } from '@/lib/types/db'
@@ -259,7 +260,7 @@ export default function BuffSetsBrowser({ rows, entityIcons }: Props) {
                         <div className="grid grid-cols-1 gap-3 xl:grid-cols-2">
                             {selected.buffs.map((buff, index) => {
                                 const piece = isSetType(buff.entity_type) ? Number(buff.entity_type[0]) : null
-                                const conditionText = buff.condition ? describeCondition(buff.condition) : ''
+                                const conditionText = buff.condition ? describeCondition(buff.condition, slotNameFor(buff.entity_type)) : ''
                                 return (
                                     <article
                                         key={`${buff.entity_type}/${buff.entity_name}/${buff.buff_name}/${index}`}

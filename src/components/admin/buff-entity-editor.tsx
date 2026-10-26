@@ -22,7 +22,8 @@ import {
     sanitizeZoneCondition,
     isConditionEmpty,
     describeCondition,
-    describeZoneConditionBadge
+    describeZoneConditionBadge,
+    slotNameFor
 } from '@/lib/consts/buff-zones'
 import type { BuffEntityType, BuffScope, BuffSetRow, BuffCondition } from '@/lib/types/db'
 import type { GeneratedBuff } from '@/lib/ai/types'
@@ -216,7 +217,7 @@ export default function BuffEntityEditor({
         if (!cond) return ''
         const parts: string[] = []
         const chain = chainMinOf(cond)
-        if (chain !== undefined && canChain) parts.push(chain > 0 ? `≥${chain}链` : '角色本体')
+        if (chain !== undefined && canChain) parts.push(chain > 0 ? `≥${chain}链` : '本体')
         const refine = cond.refinements?.[0]?.min ?? cond.refinement
         if (refine !== undefined && canRefinement) parts.push(`武器 ≥${refine}阶`)
         return parts.join('，')
@@ -881,7 +882,7 @@ export default function BuffEntityEditor({
                                                                 background: 'color-mix(in srgb, var(--accent) 18%, transparent)',
                                                                 color: 'var(--accent-text)'
                                                             }}
-                                                            title={`该乘区条件：${describeCondition(z.condition)}`}
+                                                            title={`该乘区条件：${describeCondition(z.condition, slotNameFor(entityType))}`}
                                                         >
                                                             {badge}
                                                         </span>
@@ -978,7 +979,7 @@ export default function BuffEntityEditor({
                                                         }`}
                                                         title={
                                                             z.condition
-                                                                ? `该乘区条件：${describeCondition(z.condition)}`
+                                                                ? `该乘区条件：${describeCondition(z.condition, slotNameFor(entityType))}`
                                                                 : '为该乘区设置生效条件（伤害类型/属性）'
                                                         }
                                                     >

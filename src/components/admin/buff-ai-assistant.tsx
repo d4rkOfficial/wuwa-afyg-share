@@ -15,6 +15,7 @@ import {
     BUFF_ZONE_MAP,
     describeCondition,
     describeZoneConditionBadge,
+    slotNameFor,
     sanitizeCondition,
     sanitizeZoneCondition
 } from '@/lib/consts/buff-zones'
@@ -898,7 +899,7 @@ export default function BuffAiAssistant({
                         </div>
                         {result.map((b, i) => {
                             const cond = sanitizeCondition(b.condition, 'buff')
-                            const condText = cond ? describeCondition(cond) : ''
+                            const condText = cond ? describeCondition(cond, slotNameFor(entityType)) : ''
                             return (
                                 <div key={i} className="rounded-sm bg-(--card-hover) px-2 py-1.5">
                                     <div className="flex flex-wrap items-center gap-1.5">
