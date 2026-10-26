@@ -239,8 +239,8 @@ export default function BuffSetsAdmin({ rows, isAdmin, buffLocks, entityIcons }:
                 </span>
             </div>
 
-            {/* 工作台：左侧实体 sidebar + 右侧就地编辑器（不再用弹窗） */}
-            <div className="workbench items-stretch">
+            {/* 工作台：左侧实体 sidebar + 右侧就地编辑器（不再用弹窗）；两栏等高 */}
+            <div className="workbench workbench-editor">
                 <BuffEntitySidebar
                     existingCountMap={existingCountMap}
                     selectedKey={editingKey}
@@ -254,7 +254,7 @@ export default function BuffSetsAdmin({ rows, isAdmin, buffLocks, entityIcons }:
 
                 <section className="workbench-main">
                     {selected && initial ? (
-                        <div className="h-[calc(100dvh-13rem)] min-h-[32rem]">
+                        <div className="h-full min-h-0">
                             <BuffEntityEditor
                                 key={editingKey ?? 'new'}
                                 initial={initial}
@@ -287,7 +287,7 @@ export default function BuffSetsAdmin({ rows, isAdmin, buffLocks, entityIcons }:
                             />
                         </div>
                     ) : (
-                        <div className="flex h-full min-h-[32rem] flex-col items-center justify-center gap-3 rounded-sm border border-dashed border-(--card-border) p-8 text-center">
+                        <div className="flex h-full flex-col items-center justify-center gap-3 rounded-sm border border-dashed border-(--card-border) p-8 text-center">
                             <Icon icon="mdi:cursor-default-click-outline" className="size-9 text-(--muted)" />
                             <p className="text-sm text-(--muted)">选择一个实体开始编辑</p>
                             <p className="text-xs text-(--muted)">

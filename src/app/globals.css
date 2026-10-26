@@ -565,4 +565,122 @@ html.light .theme-icon-light {
             max-height: 36dvh;
         }
     }
+
+    /* ──────────────────────────────────────────────────────────
+       编辑工作台（管理页）：左右两栏**严格等高**，且同为一整张卡片。
+       高度取「视口下方可用高度」，两栏共用同一个 --workbench-h，
+       页面本身基本不滚动（编辑器内部各自滚动），这样右侧编辑区与左侧
+       sidebar 的卡片轮廓上下沿始终对齐。
+       ────────────────────────────────────────────────────────── */
+    .workbench-editor {
+        --workbench-h: max(32rem, calc(100dvh - 13rem));
+        align-items: stretch;
+    }
+
+    .workbench-editor .workbench-sidebar,
+    .workbench-editor .workbench-main {
+        height: var(--workbench-h);
+        min-height: 0;
+    }
+
+    .workbench-editor .workbench-sidebar {
+        /* 两栏等高且同滚：不再 sticky，避免滚动时 sidebar 上浮、与右侧卡片错位 */
+        position: static;
+        max-height: var(--workbench-h);
+    }
+
+    /* 窄屏：上下堆叠，取消锁高（否则 sidebar 会占满整屏） */
+    @media (max-width: 900px) {
+        .workbench-editor {
+            align-items: start;
+        }
+
+        .workbench-editor .workbench-sidebar {
+            position: static;
+            height: auto;
+            max-height: 36dvh;
+        }
+
+        .workbench-editor .workbench-main {
+            height: auto;
+            min-height: 32rem;
+        }
+    }
+}
+
+/* 动效备选：尊重 prefers-reduced-motion */
+@media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+        animation-duration: 0.01ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: 0.01ms !important;
+        scroll-behavior: auto !important;
+    }
+    .app-link-hint {
+        transition: opacity 100ms ease;
+        transform: none;
+    }
+    .project-filter-shell[data-pending='true'] .project-filter-progress {
+        width: 100%;
+        opacity: 0.55;
+        transform: none;
+    }
+}
+
+/* ──────────────────────────────────────────────────────────────
+   杂志衬线风格助手（全站统一）：
+   标题=衬线重音（字重+收紧字距）；分区=细分割线；卡片=小圆角+细边框；无英文小标（一律用图标）
+   注意：这一层曾被误删过一次，导致 mg-card / mg-title / mg-note 全部失效（卡片没有轮廓），
+   改这里时请整块保留。
+   ────────────────────────────────────────────────────────────── */
+@layer components {
+    /* 衬线重音标题：不要在标题上再用 font-semibold，统一用 font-black + 收紧字距 */
+    .mg-title {
+        font-family: var(--font-serif);
+        font-weight: 900;
+        letter-spacing: -0.01em;
+        line-height: 1.2;
+        color: var(--fg);
+    }
+    .mg-title-xl {
+        font-family: var(--font-serif);
+        font-weight: 900;
+        letter-spacing: -0.015em;
+        line-height: 1.05;
+    }
+    /* 分区标题：图标 + 衬线粗标题 + 下细线 */
+    .mg-section {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        border-bottom: 1px solid var(--card-border);
+        padding-bottom: 0.625rem;
+        margin-bottom: 0.875rem;
+    }
+    /* 细分割线（杂志感层次，替代阴影） */
+    .mg-hairline {
+        border-color: var(--card-border);
+    }
+    /* 小圆角卡片：细边框 + 实色底，不使用阴影 */
+    .mg-card {
+        background: var(--card);
+        border: 1px solid var(--card-border);
+        border-radius: var(--radius-sm);
+        transition:
+            border-color 160ms ease-out,
+            background-color 160ms ease-out;
+    }
+    /* 关键数字：等宽数字 + 衬线重音 */
+    .mg-num {
+        font-variant-numeric: tabular-nums;
+        font-weight: 900;
+    }
+    /* 弱化说明文字 */
+    .mg-note {
+        font-size: 0.6875rem;
+        line-height: 1.6;
+        color: var(--muted);
+    }
 }

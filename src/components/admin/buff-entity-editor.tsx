@@ -618,7 +618,7 @@ export default function BuffEntityEditor({
     const [rightView, setRightView] = useState<'edit' | 'ai'>('edit')
 
     return (
-        <div className="flex h-full flex-col mg-card">
+        <div className="flex h-full min-h-0 flex-col overflow-hidden mg-card">
             {/* 实体信息头 */}
             <div className="flex items-center justify-between border-b border-(--card-border) px-4 py-3">
                 <div className="flex items-center gap-2">
@@ -724,7 +724,11 @@ export default function BuffEntityEditor({
                                     <span className="block truncate text-xs font-medium">
                                         {buff.buffName.trim() || '（未命名）'}
                                     </span>
-                                    <span className="block truncate text-[10px] text-(--muted)">
+                                    <span
+                                        className={`block truncate text-[10px] ${
+                                            idx === activeBuffIdx ? 'text-(--accent-fg) opacity-80' : 'text-(--muted)'
+                                        }`}
+                                    >
                                         {buff.zones
                                             .map(
                                                 (z) =>
