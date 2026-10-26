@@ -435,6 +435,39 @@ html.light .theme-icon-light {
 }
 
 /* ──────────────────────────────────────────────────────────────
+   词条部位卡片（标准词条集编辑）：用比 --card-border 更明显的边框 + 头部色带，
+   让「一个部位 = 一张卡片」在深色/浅色主题下都能一眼看清。
+   ────────────────────────────────────────────────────────────── */
+@layer components {
+    .slot-card {
+        display: flex;
+        flex-direction: column;
+        gap: 0.75rem;
+        overflow: hidden;
+        border: 1px solid color-mix(in srgb, var(--fg) 16%, transparent);
+        border-radius: var(--radius-sm);
+        background: var(--card);
+        box-shadow: 0 1px 2px color-mix(in srgb, var(--fg) 6%, transparent);
+    }
+
+    .slot-card-head {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 0.5rem;
+        padding: 0.5rem 0.75rem;
+        border-bottom: 1px solid color-mix(in srgb, var(--fg) 12%, transparent);
+        background: var(--card-hover);
+    }
+
+    .slot-card-body {
+        display: flex;
+        flex-direction: column;
+        gap: 0.75rem;
+        padding: 0 0.75rem 0.75rem;
+    }
+}
+/* ──────────────────────────────────────────────────────────────
    双栏工作台：左侧「sidebar 列表」+ 右侧主内容区。
    浏览页（Buff 集 / 标准词条集）与管理页共用同一套骨架：
    - 宽屏：sidebar 固定宽度、随页面滚动吸附（sticky），自身可滚动；

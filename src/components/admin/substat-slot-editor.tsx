@@ -56,9 +56,9 @@ export default function SubstatSlotEditor({ index, slot, onChange }: Props) {
     }
 
     return (
-        <div className="flex flex-col gap-3 mg-card p-3">
+        <div className="slot-card">
             {/* 部位头：序号 + cost 切换（不限组合，合计 ≤ 12 由页面统一校验） */}
-            <div className="flex items-center justify-between gap-2">
+            <div className="slot-card-head">
                 <span className="mg-title text-sm">
                     部位 <span className="mg-num">{index + 1}</span>
                     <span className="ml-1 text-[10px] font-normal text-(--muted)">
@@ -91,6 +91,7 @@ export default function SubstatSlotEditor({ index, slot, onChange }: Props) {
                 </div>
             </div>
 
+            <div className="slot-card-body">
             {/* 主词条：只选类型，数值固定满级 */}
             <div className="flex flex-col gap-1">
                 <div className="flex items-center justify-between gap-2">
@@ -156,7 +157,7 @@ export default function SubstatSlotEditor({ index, slot, onChange }: Props) {
                 </div>
 
                 {slot.substats.length === 0 && (
-                    <p className="mg-note">该部位暂无副词条（每部位 1-5 条）</p>
+                    <p className="text-[11px] leading-relaxed text-(--muted) opacity-65">该部位暂无副词条（每部位 1-5 条）</p>
                 )}
 
                 {slot.substats.map((stat, i) => {
@@ -207,6 +208,7 @@ export default function SubstatSlotEditor({ index, slot, onChange }: Props) {
                         </div>
                     )
                 })}
+            </div>
             </div>
         </div>
     )
