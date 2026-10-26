@@ -396,6 +396,47 @@ const BASE_TOOLS: ToolDefinition[] = [
                 '把当前编辑中的 Buff 草稿**直接写入数据库**（整体替换该实体的全部 Buff 行）。会弹出管理员确认，确认后才执行。仅在用户明确要求「保存 / 直接写入」时调用。',
             parameters: { type: 'object', properties: {} }
         }
+    },
+    // ── 交互 / 命名参考 ──
+    {
+        type: 'function',
+        function: {
+            name: 'ask_user',
+            description:
+                '向用户提问并等待回答。**询问模式下每一轮都必须先调用它**（确认命名风格 / 范围 / 细节），在用户回答前不要输出 buffs JSON。',
+            parameters: {
+                type: 'object',
+                properties: {
+                    question: { type: 'string', description: '要问用户的一个具体问题' },
+                    options: {
+                        type: 'array',
+                        items: { type: 'string' },
+                        description: '可选：2-5 个快捷选项（用户也可自由作答）'
+                    },
+                    allowText: { type: 'boolean', description: '是否允许自由文本作答（默认 true）' }
+                },
+                required: ['question']
+            }
+        }
+    },
+    {
+        type: 'function',
+        function: {
+            name: 'browse_buff_naming',
+            description:
+                '抽样查看数据库里**其它实体**已有的 Buff 名称，作为命名风格参考（避免自创格式、与既有库统一）。返回按实体分组的名字样本。',
+            parameters: {
+                type: 'object',
+                properties: {
+                    entityType: {
+                        type: 'string',
+                        enum: ENTITY_TYPES,
+                        description: '可选：只看某一类实体'
+                    },
+                    limit: { type: 'number', description: '返回名字条数上限（默认 60，最多 200）' }
+                }
+            }
+        }
     }
 ]
 
@@ -413,8 +454,13 @@ export const DRAFT_TOOL_NAMES = new Set<string>([
  * @param toolPrompts 工具名 → 自定义 description
  * @param opts.draft 是否存在可编辑草稿；`false` 时草稿类工具不上清单，避免模型调用必失败的工具
  */
-export function buildTools(toolPrompts?: Record<string, string>, opts?: { draft?: boolean }): ToolDefinition[] {
-    const available = opts?.draft === false ? BASE_TOOLS.filter((t) => !DRAFT_TOOL_NAMES.has(t.function.name)) : BASE_TOOLS
+export function buildTools(
+    toolPrompts?: Record<string, string>,
+    opts?: { draft?: boolean; askUser?: boolean }
+): ToolDefinition[] {
+    let available = opts?.draft === false ? BASE_TOOLS.filter((t) => !DRAFT_TOOL_NAMES.has(t.function.name)) : BASE_TOOLS
+    // 交互式提问需要宿主提供 UI 回调；没有就干脆不上清单（避免模型调用必然失败的工具）
+    if (opts?.askUser === false) available = available.filter((t) => t.function.name !== 'ask_user')
     if (!toolPrompts) return available
     return available.map((t) => {
         const custom = toolPrompts[t.function.name]
@@ -426,6 +472,21 @@ export function buildTools(toolPrompts?: Record<string, string>, opts?: { draft?
     })
 }
 
+/** @desc ask_user 工具的问题（单题：一个问题 + 可选快捷选项） */
+export interface AskUserQuestion {
+    question: string
+    options?: string[]
+    allowText?: boolean
+}
+
+/** @desc ask_user 的作答（skipped = 用户跳过/取消） */
+export interface AskUserAnswer {
+    answer: string | null
+    skipped?: boolean
+}
+
+export type AskUserFn = (question: AskUserQuestion) => Promise<AskUserAnswer>
+
 export interface GetBuffSetsFn {
     (entityType?: string, entityName?: string, query?: string): Promise<unknown>
 }
@@ -436,6 +497,10 @@ export interface ToolContext {
     entityName: string
     getBuffSets?: GetBuffSetsFn
     slangDict?: string
+    /** @desc 交互式提问（ask_user 工具）：由 AI 面板提供卡片 UI；缺省时该工具不上清单 */
+    askUser?: AskUserFn
+    /** @desc 用户自定义的 Buff 命名规则（为空则用内置默认 NAMING_RULES_TEXT） */
+    namingRule?: string
     /** @desc 管理员编辑中的 Buff 草稿（改名 / 改细节 / 增删 / 直接落库都改它；无管理员编辑器时缺席） */
     draft?: BuffDraftApi
     /** @desc 危险操作的确认回调（如直接写入数据库）；未注入则危险工具一律拒绝 */
@@ -633,8 +698,49 @@ export async function executeTool(ctx: ToolContext, name: string, args: Record<s
             return REF_RULES_TEXT
         case 'get_slang_dict':
             return slangDict?.trim() || DEFAULT_SLANG_DICT
+
+        case 'ask_user': {
+            if (!ctx.askUser) return JSON.stringify({ error: '当前界面不支持交互式提问' })
+            const question = str(args.question)
+            if (!question) return JSON.stringify({ error: '缺少 question' })
+            const options = Array.isArray(args.options)
+                ? args.options.map((o) => String(o).trim()).filter(Boolean).slice(0, 5)
+                : undefined
+            const res = await ctx.askUser({
+                question,
+                ...(options && options.length > 0 ? { options } : {}),
+                allowText: args.allowText === undefined ? true : !!args.allowText
+            })
+            return JSON.stringify({ question, ...(options ? { options } : {}), ...res })
+        }
+        case 'browse_buff_naming': {
+            if (!getBuffSets) return JSON.stringify({ error: '无法查询数据库' })
+            const limitRaw = typeof args.limit === 'number' && Number.isFinite(args.limit) ? Math.floor(args.limit) : 60
+            const limit = Math.min(200, Math.max(1, limitRaw))
+            const onlyType = validEntityType(args.entityType) ? (args.entityType as BuffEntityType) : undefined
+            const data = (await getBuffSets(onlyType)) as { buffSets?: BuffSetRow[] } | { error?: string }
+            if ((data as { error?: string }).error) return JSON.stringify({ error: (data as { error?: string }).error })
+            const rows = ((data as { buffSets?: BuffSetRow[] }).buffSets ?? []) as BuffSetRow[]
+            const byEntity = new Map<string, { entityType: string; entityName: string; names: string[] }>()
+            for (const row of rows) {
+                // 排除当前正在编辑的实体：要的是「其它实体」的命名风格启发
+                if (row.entity_type === curType && row.entity_name === curName) continue
+                const key = `${row.entity_type}/${row.entity_name}`
+                const bucket = byEntity.get(key) ?? {
+                    entityType: row.entity_type,
+                    entityName: row.entity_name,
+                    names: []
+                }
+                if (bucket.names.length < 8) bucket.names.push(row.buff_name)
+                byEntity.set(key, bucket)
+            }
+            const samples = [...byEntity.values()].slice(0, 24)
+            const names = samples.flatMap((s) => s.names).slice(0, limit)
+            return JSON.stringify({ count: names.length, names, samples })
+        }
         case 'get_naming_rules':
-            return NAMING_RULES_TEXT
+            // 用户自定义规则优先；没配就用内置默认（与系统提示里注入的是同一份）
+            return slangRuleOf(ctx) || NAMING_RULES_TEXT
         case 'get_examples':
             // 示例按实体类型过滤：示例7（chain）仅角色、示例8（refinement）仅武器
             return filterExamples(curType)
@@ -730,6 +836,9 @@ export async function executeTool(ctx: ToolContext, name: string, args: Record<s
 }
 
 const str = (v: unknown): string => (typeof v === 'string' ? v.trim() : '')
+
+/** @desc 自定义命名规则（空白视为未配置） */
+const slangRuleOf = (ctx: ToolContext): string => (ctx.namingRule ?? '').trim()
 
 /** @desc 草稿工具的可用性检查（没有管理员编辑器时工具不应出现，直接调用也给出可读原因） */
 function requireDraft(ctx: ToolContext): true | string {

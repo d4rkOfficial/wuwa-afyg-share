@@ -5,7 +5,7 @@
 // 2. **实时上报生成情况**：每轮请求、每次工具调用、每段流式正文/思考都作为事件抛出，
 //    界面据此把「正在做什么」画在生成任务那一行上，而不是等结束才一次性给结果。
 import { chatCompletionStream, sanitizeBuffs, AiClientError, type ChatMessage } from '@/lib/ai/client'
-import { buildTools, executeTool, type BuffDraftApi } from '@/lib/ai/tools'
+import { buildTools, executeTool, type AskUserAnswer as AskAnswer, type AskUserQuestion as AskQuestion, type BuffDraftApi } from '@/lib/ai/tools'
 import {
     renderSystemPrompt,
     renderInitialTaskPrompt,
@@ -78,6 +78,15 @@ export interface GenerateBuffSetOptions {
     maxOutputTokens?: number
     /** @desc 用户停止（唯一能终止生成的手段） */
     signal?: AbortSignal
+    /** @desc 用户自定义的 Buff 命名规则（为空则用内置默认） */
+    namingRule?: string
+    /**
+     * @desc 询问模式：开启后模型必须每轮先 ask_user 向用户确认，**不直接输出 buffs JSON**。
+     *  由面板上的开关控制；历史/文案都按「对话」处理，不做 JSON 自动修复。
+     */
+    askMode?: boolean
+    /** @desc 交互式提问回调（ask_user 工具的宿主实现） */
+    askUser?: (question: AskQuestion) => Promise<AskAnswer>
     getBuffSets: (queryType?: string, queryName?: string, query?: string) => Promise<unknown>
     /** @desc 管理员编辑中的 Buff 草稿（改名 / 改细节 / 增删 / 直接落库的工具数据源） */
     draft?: BuffDraftApi
@@ -121,11 +130,16 @@ export async function generateBuffSet(options: GenerateBuffSetOptions): Promise<
         entityName,
         getBuffSets: options.getBuffSets,
         slangDict,
+        namingRule: options.namingRule,
         draft: options.draft,
+        askUser: options.askUser,
         onConfirm: options.onConfirm
     }
-    // 草稿类工具只在管理员编辑器里上清单（否则模型会调用必失败的工具）
-    const tools = buildTools(toolPrompts, { draft: Boolean(options.draft) })
+    // 草稿类工具只在管理员编辑器里上清单；ask_user 只在宿主提供提问 UI 时上清单
+    const tools = buildTools(toolPrompts, {
+        draft: Boolean(options.draft),
+        askUser: Boolean(options.askUser)
+    })
 
     if (!apiKey) throw new Error('请先填入所选 AI 提供商的 API Key')
 
@@ -153,7 +167,17 @@ export async function generateBuffSet(options: GenerateBuffSetOptions): Promise<
     const draftSection = options.draft
         ? `\n\n【编辑工具（当前界面已打开 Buff 编辑器）】你可以直接改「编辑中的草稿」，改完管理员立刻能在列表里看到：\n- rename_buff：给某一条 buff 改名（保留数值/条件）\n- update_buff：改某一条的 scope / 实例级条件 / 乘区贡献条目（只传要改的字段）\n- add_buff / remove_buff：增删单条 buff\n- save_buff_set：把当前草稿**直接写入数据库**（会弹管理员确认；只在用户明确要求保存时调用）\n小范围修正（改名、改数值/条件、补一条）请优先用这些工具，不要为改一条而重新输出整份 JSON；\n只有「整份重新生成 / 大规模改写」才输出完整 buffs JSON 供管理员点「应用」。`
         : ''
-    const systemContent = `${renderSystemPrompt(systemTemplate, { entityType })}${draftSection}`
+    /**
+     * @desc 命名规则：用户在「连接配置」里自定义的那份优先（与 get_naming_rules 工具同一份），
+     * 以「当前生效」章节注入，保证模型不必调用工具也知道规则。
+     */
+    const namingRule = (options.namingRule ?? '').trim()
+    const namingSection = namingRule ? `\n\n【命名规则（当前生效，必须遵守）】\n${namingRule}` : ''
+    /** @desc 询问模式：强制每轮先问用户，不许直接产出 JSON */
+    const askSection = options.askMode
+        ? '\n\n【询问模式（已开启）】本次每完成一次调查后，必须调用 ask_user 向用户确认下一步（命名风格、范围、细节），得到回答再继续；**禁止直接输出 buffs JSON**。问题要具体、一次一个，建议带 2-5 个快捷选项。'
+        : ''
+    const systemContent = `${renderSystemPrompt(systemTemplate, { entityType })}${draftSection}${namingSection}${askSection}`
     const messages: ChatMessage[] = [{ role: 'system', content: systemContent }]
     emit({ type: 'prompt', promptKind: 'system', text: systemContent })
 
@@ -164,7 +188,12 @@ export async function generateBuffSet(options: GenerateBuffSetOptions): Promise<
         emit({ type: 'prompt', promptKind: 'history', text: JSON.stringify(seed) })
     }
 
-    const initialUser = renderInitialTaskPrompt(initialTaskTemplate, { entityType, entityName })
+    // 询问模式：首轮任务指令里也点明「先问再做」，否则首轮容易直接开始输出
+    const initialUser =
+        renderInitialTaskPrompt(initialTaskTemplate, { entityType, entityName }) +
+        (options.askMode
+            ? '\n\n（询问模式已开启：先用 ask_user 向我确认命名风格与覆盖范围，逐轮确认后再继续；不要直接输出 buffs JSON。）'
+            : '')
     messages.push({ role: 'user', content: initialUser })
     emit({ type: 'prompt', promptKind: 'user', text: initialUser })
 
@@ -292,6 +321,12 @@ export async function generateBuffSet(options: GenerateBuffSetOptions): Promise<
         if (!content.trim()) {
             emit({ type: 'error', text: 'AI 未返回内容', round, toolCalls: toolCallTotal })
             return finish({ buffs: null, rawContent: content, parseError: 'AI 未返回内容' })
+        }
+
+        // 询问模式：模型这一轮是对话（问询/说明），不要求也不修复成 buffs JSON
+        if (options.askMode) {
+            emitStatus('询问模式：本轮为对话回复', { round, toolCalls: toolCallTotal })
+            return finish({ buffs: null, rawContent: content, parseError: null })
         }
 
         let buffs: ReturnType<typeof sanitizeBuffs> | null = null
