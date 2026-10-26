@@ -317,6 +317,56 @@ export function slotNameFor(entityType: string): (i: number) => string {
     return () => label
 }
 
+/**
+ * @desc 引用 / 转模的一行摘要（Buff 集列表、AI 结果卡统一用这份）。
+ *
+ * 三种形态：
+ * - 线性：「（超过 2000 攻击的部分）×2%」
+ * - 离散档位：「（攻击）每 100 +5%」——这类转模 `pct` 通常是 0，换算在 divisor/multiplier 上，
+ *   直接拿 pct 显示会出现「×0%」这种明显错误；
+ * - 兜底：只写「引用某属性」，不再硬拼百分数。
+ */
+export function describeZoneRef(
+    ref:
+        | {
+              targetZoneId?: string
+              pct?: number
+              threshold?: number
+              lower?: number
+              upper?: number
+              discrete?: boolean
+              divisor?: number
+              multiplier?: number
+          }
+        | null
+        | undefined
+): string {
+    if (!ref) return ''
+    const def = BUFF_REF_ZONE_MAP.get(String(ref.targetZoneId ?? ''))
+    const label = def?.label ?? String(ref.targetZoneId ?? '')
+    const unit = def?.unit === '%' ? '%' : ''
+    const th = Number(ref.threshold ?? 0)
+    const base =
+        th !== 0 ? `${label}${th < 0 ? '+' : '−'}${Math.abs(th)}${unit}的部分` : label
+    const clamp =
+        ref.lower !== undefined && ref.upper !== undefined
+            ? `，上下限 ${ref.lower}~${ref.upper}`
+            : ref.lower !== undefined
+              ? `，至少 ${ref.lower}`
+              : ref.upper !== undefined
+                ? `，最多 ${ref.upper}`
+                : ''
+    const divisor = Number(ref.divisor ?? 0)
+    const multiplier = Number(ref.multiplier ?? 0)
+    // 离散档位（每 X 转 Y）：真正的换算在 divisor/multiplier，不是 pct
+    if (ref.discrete && divisor > 0 && multiplier > 0) {
+        return `${base}：每 ${divisor}${unit} +${multiplier}%${clamp}`
+    }
+    const pct = Number(ref.pct ?? 0)
+    if (pct > 0) return `${base}×${pct}%${clamp}`
+    return `引用${base}${clamp}`
+}
+
 /** @desc 乘区条件徽标短摘要（伤害类型在前、属性在后，类内 `/`、类间 `·`） */
 export function describeZoneConditionBadge(cond: BuffCondition | null | undefined): string {
     if (!cond || isConditionEmpty(cond)) return ''

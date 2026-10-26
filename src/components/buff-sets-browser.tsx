@@ -9,6 +9,7 @@ import {
     BUFF_ZONE_MAP,
     describeCondition,
     describeZoneConditionBadge,
+    describeZoneRef,
     slotNameFor
 } from '@/lib/consts/buff-zones'
 import type { EntityIconMaps } from '@/lib/data/avatar-icons'
@@ -312,8 +313,11 @@ export default function BuffSetsBrowser({ rows, entityIcons }: Props) {
                                                             </span>
                                                         )}
                                                         {zone.ref && (
-                                                            <span className="shrink-0 text-[10px] text-(--info)">
-                                                                引用{zoneLabel(zone.ref.targetZoneId)}×{zone.ref.pct}%
+                                                            <span
+                                                                className="min-w-0 shrink truncate text-[10px] text-(--info)"
+                                                                title={`引用 / 转模：${describeZoneRef(zone.ref)}`}
+                                                            >
+                                                                {describeZoneRef(zone.ref)}
                                                             </span>
                                                         )}
                                                         <span className="mg-num shrink-0 text-(--fg)">
