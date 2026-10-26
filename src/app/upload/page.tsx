@@ -29,8 +29,7 @@ export default async function UploadPage() {
             <div className="border-b pb-4 mg-hairline">
                 <h1 className="mg-title-xl text-2xl md:text-3xl">上传工程</h1>
                 <p className="mt-1 text-sm leading-relaxed text-(--muted)">
-                    选择工具箱导出的 .json，填写分享信息后发布。文件原样保存，
-                    「下载 = 上传的文件」；标题 / 简介 / 标签 / 有效期都能在发布前改。
+                    选择工具箱导出的 .json，填写分享信息后发布；标题 / 简介 / 标签 / 有效期都能在发布前改。
                 </p>
             </div>
             <UploadForm />
