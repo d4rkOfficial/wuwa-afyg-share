@@ -14,6 +14,7 @@ import { teamDisplayNames } from '@/lib/project/extract'
 import { formatDate, formatCount } from '@/lib/utils/format'
 import { isExpiredProject, isGracePeriod } from '@/lib/utils/expiry'
 import { pickCharacterAvatar } from '@/lib/utils/avatar'
+import { fastCalcUrl } from '@/lib/utils/site'
 import type { ProjectRow } from '@/lib/types/db'
 
 export const dynamic = 'force-dynamic'
@@ -137,9 +138,21 @@ export default async function SharePage({ params }: { params: Promise<{ code: st
                 )}
 
                 <div className="flex flex-wrap items-center gap-2 border-t pt-4 mg-hairline">
+                    {/* 简表速览：实心黄色主按钮，放在下载左侧 */}
+                    <a
+                        href={fastCalcUrl(project.code)}
+                        target="_blank"
+                        rel="noreferrer"
+                        title="在工具箱中打开该工程的简表速览"
+                        className="inline-flex items-center gap-1.5 rounded-sm border border-(--warning) bg-(--warning) px-4 py-2 text-sm font-medium text-(--warning-fg) transition-opacity hover:opacity-90"
+                    >
+                        <Icon icon="mdi:table-eye" className="size-4" />
+                        简表速览
+                    </a>
+                    {/* 下载工程 JSON：空心绿色按钮 */}
                     <a
                         href={`/share/${project.code}/download`}
-                        className="inline-flex items-center gap-1.5 rounded-sm border border-(--card-border) bg-(--btn-bg) px-4 py-2 text-sm font-medium text-(--btn-text) transition-colors hover:bg-(--card) hover:text-(--fg)"
+                        className="inline-flex items-center gap-1.5 rounded-sm border border-(--success) bg-transparent px-4 py-2 text-sm font-medium text-(--success) transition-colors hover:bg-(--card-hover)"
                     >
                         <Icon icon="mdi:download" className="size-4" />
                         下载工程 JSON

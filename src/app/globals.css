@@ -45,6 +45,8 @@
     --success-text: #7fbf9a;
     --warning: #d9b26a;
     --warning-text: #d9b26a;
+    /* 实心警告色按钮的前景色（深色主题下用深墨，保证对比度） */
+    --warning-fg: #2a2214;
     --info: #86b5cf;
     --info-text: #86b5cf;
     --code-bg: #1a1a1f;
@@ -82,6 +84,8 @@ html.light {
     --success-text: #3f7a5c;
     --warning: #8a6a2f;
     --warning-text: #8a6a2f;
+    /* 浅色主题的警告色偏深，前景用近白 */
+    --warning-fg: #fdfcfb;
     --info: #3c6a86;
     --info-text: #3c6a86;
     --code-bg: #f1ede7;

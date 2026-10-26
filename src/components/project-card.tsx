@@ -5,6 +5,7 @@ import type { ProjectListItem } from '@/lib/types/db'
 import { teamDisplayNames } from '@/lib/project/extract'
 import { formatCount, timeAgo } from '@/lib/utils/format'
 import { pickCharacterAvatar } from '@/lib/utils/avatar'
+import { fastCalcUrl } from '@/lib/utils/site'
 
 export default function ProjectCard({ project, icons }: { project: ProjectListItem; icons?: Record<string, string> }) {
     const names = teamDisplayNames(project.team_preview)
@@ -17,7 +18,7 @@ export default function ProjectCard({ project, icons }: { project: ProjectListIt
         .filter((src): src is string => !!src)
 
     return (
-        <div className="mg-card relative overflow-hidden p-4 transition-colors hover:border-(--accent) hover:bg-(--card-hover)">
+        <div className="mg-card relative flex flex-col overflow-hidden p-4 transition-colors hover:border-(--accent) hover:bg-(--card-hover)">
             {/* ── 角色头像叠底（右下；1 号大→3 号小，重叠约 1/3） ── */}
             {/* 整组半透明；DOM 顺序左→右，右边后渲染压在左边上面；被遮挡部分实色覆盖 */}
             {/* 边缘用 mask 渐变淡化（alpha 蒙版，非可见颜色渐变）：3/2 号右边界+上边界淡出，1 号上边界淡出 */}
@@ -70,7 +71,7 @@ export default function ProjectCard({ project, icons }: { project: ProjectListIt
             )}
 
             {/* ── 内容（z-10，浮于头像之上） ── */}
-            <div className="relative z-10 flex flex-col gap-3">
+            <div className="pointer-events-none relative z-10 flex flex-1 flex-col gap-3">
                 <div className="flex items-start justify-between gap-3">
                     <h3 className="mg-title line-clamp-1 text-base">{project.title}</h3>
                     {project.game_version && (
@@ -90,7 +91,7 @@ export default function ProjectCard({ project, icons }: { project: ProjectListIt
                             <Link
                                 key={tag}
                                 href={`/?q=${encodeURIComponent(tag)}`}
-                                className="relative z-30 rounded-sm bg-(--card-hover) px-2 py-0.5 text-xs text-(--muted) transition-colors hover:bg-(--accent) hover:text-(--accent-fg)"
+                                className="pointer-events-auto rounded-sm bg-(--card-hover) px-2 py-0.5 text-xs text-(--muted) transition-colors hover:bg-(--accent) hover:text-(--accent-fg)"
                             >
                                 #{tag}
                             </Link>
@@ -118,6 +119,15 @@ export default function ProjectCard({ project, icons }: { project: ProjectListIt
                         <span className="truncate">{project.author_name}</span>
                     </span>
                     <span className="shrink-0">{timeAgo(project.created_at)}</span>
+                    <a
+                        href={fastCalcUrl(project.code)}
+                        target="_blank"
+                        rel="noreferrer"
+                        title="在工具箱中打开该工程的简表速览"
+                        className="pointer-events-auto shrink-0 font-medium text-(--warning) underline underline-offset-2 transition-colors"
+                    >
+                        简表速览
+                    </a>
                     <div className="flex-1" />
                     <span className="mg-num flex items-center gap-0.5">
                         <Icon icon="mdi:eye-outline" className="size-3.5" />
@@ -130,12 +140,13 @@ export default function ProjectCard({ project, icons }: { project: ProjectListIt
                 </div>
             </div>
 
-            {/* ── stretched-link 覆盖层（z-20）：整卡可点跳详情页 ── */}
+            {/* ── stretched-link 覆盖层（z-0）：整卡可点跳详情页 ── */}
             {/* 卡片根用 <div> 而非 <Link>，避免与标签 <Link> 嵌套成 <a> 内 <a> */}
-            {/* 标签链接用 z-30 浮于覆盖层之上，保留各自的跳转 */}
+            {/* 内容层 z-10 且 pointer-events-none：点击穿透到下方覆盖层；标签 / 简表速览等
+                可交互元素单独 pointer-events-auto，保证不被整卡跳转吞掉 */}
             <Link
                 href={`/share/${project.code}`}
-                className="absolute inset-0 z-20"
+                className="absolute inset-0 z-0"
                 aria-label={`查看工程：${project.title}`}
             />
         </div>
