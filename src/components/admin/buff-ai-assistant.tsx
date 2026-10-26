@@ -10,11 +10,11 @@ import { Icon } from '@iconify/react'
 import { generateBuffSet, type GenerateEvent } from '@/lib/ai/generate'
 import { AiClientError, type ChatMessage } from '@/lib/ai/client'
 import {
-    BUFF_REF_ZONES,
     BUFF_SCOPE_LABELS,
     BUFF_ZONE_MAP,
     describeCondition,
     describeZoneConditionBadge,
+    describeZoneRef,
     slotNameFor,
     sanitizeCondition,
     sanitizeZoneCondition
@@ -129,11 +129,7 @@ function zoneSummary(b: GeneratedBuff): string {
         (b.zones ?? [])
             .map((z) => {
                 const label = BUFF_ZONE_MAP.get(z.zoneId)?.label ?? z.zoneId
-                const ref = z.ref
-                    ? `引用${
-                          BUFF_REF_ZONES.find((r) => r.id === z.ref!.targetZoneId)?.label ?? z.ref!.targetZoneId
-                      }×${z.ref.pct}%`
-                    : `${z.override ? '覆盖+' : '+'}${z.value}`
+                const ref = z.ref ? describeZoneRef(z.ref) : `${z.override ? '覆盖+' : '+'}${z.value}`
                 const unit = !z.ref && BUFF_ZONE_MAP.get(z.zoneId)?.unit === '%' ? '%' : ''
                 const cond = describeZoneConditionBadge(sanitizeZoneCondition(z.condition) ?? null)
                 return `${label} ${ref}${unit}${cond ? `[${cond}]` : ''}`
@@ -686,11 +682,10 @@ export default function BuffAiAssistant({
                     : 'buff-editor-ai flex h-full min-h-0 w-96 shrink-0 flex-col border-l border-(--card-border)'
             }
         >
-            {/* 头部：标题 + 动作（生成 / 润色 / 停止 / 清空） */}
+            {/* 头部：图标 + 动作（生成 / 模式切换 / 停止 / 清空） */}
             <div className="flex shrink-0 flex-wrap items-center gap-1.5 border-b border-(--card-border) px-3 py-2">
-                <span className="flex items-center gap-1 mg-title text-xs text-(--accent-text)">
+                <span className="flex items-center text-(--accent-text)" title="AI 生成">
                     <Icon icon="mdi:robot-outline" className="size-4" />
-                    AI 生成
                 </span>
                 <button
                     onClick={onGenerate}
@@ -718,7 +713,7 @@ export default function BuffAiAssistant({
                     }`}
                 >
                     <Icon icon={askMode ? 'mdi:chat-question' : 'mdi:chat-question-outline'} className="size-3.5" />
-                    询问模式{askMode ? '·开' : ''}
+                    当前：{askMode ? '询问模式' : '生成模式'}
                 </button>
                 {busy ? (
                     <button
