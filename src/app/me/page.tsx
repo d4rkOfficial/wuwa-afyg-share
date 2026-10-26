@@ -2,7 +2,7 @@ import Link from 'next/link'
 import { redirect } from 'next/navigation'
 import type { Metadata } from 'next'
 import { Icon } from '@iconify/react'
-import ManageProjectRow from '@/components/manage-project-row'
+import MeProjects from '@/components/me-projects'
 import UsernameEditor from '@/components/username-editor'
 import ClearMyContent from '@/components/clear-my-content'
 import { createClient, hasEnv } from '@/lib/supabase/server'
@@ -59,10 +59,10 @@ export default async function MePage() {
     ]
 
     return (
-        <div className="space-y-4 lg:grid lg:grid-cols-[minmax(0,19rem)_minmax(0,1fr)] lg:items-start lg:gap-5 lg:space-y-0">
+        <div className="space-y-4 lg:grid lg:grid-cols-[minmax(0,19rem)_minmax(0,1fr)] lg:items-start lg:gap-0 lg:space-y-0">
             {/* ── 账号区（移动端在上，桌面端吸顶在左） ── */}
-            <aside className="space-y-3 lg:sticky lg:top-20">
-                <UsernameEditor initial={profile.username} icons={icons} projectCount={projects.length} />
+            <aside className="space-y-3 border-b border-(--card-border) pb-4 lg:sticky lg:top-20 lg:border-b-0 lg:pb-0 lg:pr-5">
+                <UsernameEditor initial={profile.username} icons={icons} />
 
                 {/* 统计：移动端一行四格自动换行，不占满整屏 */}
                 <div className="grid grid-cols-4 gap-1.5">
@@ -99,13 +99,13 @@ export default async function MePage() {
                 </div>
             </aside>
 
-            {/* ── 工程列表 ── */}
-            <section className="min-w-0 space-y-3">
+            {/* ── 工程列表（桌面端与账号区之间用竖分割线） ── */}
+            <section className="min-w-0 space-y-3 lg:border-l lg:border-(--card-border) lg:pl-5">
                 <div className="flex flex-wrap items-end justify-between gap-2 border-b pb-2.5 mg-hairline">
                     <div>
                         <h1 className="mg-title text-xl">我的工程</h1>
                         <p className="mt-0.5 text-xs text-(--muted)">
-                            共 <span className="mg-num text-(--fg)">{projects.length}</span> 个 · 点标题进分享页
+                            点标题进分享页；「编辑」弹窗里可改标题 / 简介 / 标签 / 有效期，以及换码 / 换源 / 保护
                         </p>
                     </div>
                     <Link
@@ -118,7 +118,7 @@ export default async function MePage() {
                 </div>
 
                 {projects.length === 0 ? (
-                    <div className="flex min-h-56 flex-col items-center justify-center gap-3 rounded-sm border border-dashed border-(--card-border) p-8 text-center">
+                    <div className="mx-auto flex min-h-56 w-full max-w-2xl flex-col items-center justify-center gap-3 rounded-sm border border-dashed border-(--card-border) p-8 text-center">
                         <Icon icon="mdi:package-variant-closed" className="size-9 text-(--muted)" />
                         <p className="text-sm text-(--muted)">还没有上传过工程，去分享第一个吧</p>
                         <Link
@@ -130,10 +130,8 @@ export default async function MePage() {
                         </Link>
                     </div>
                 ) : (
-                    <div className="space-y-3">
-                        {projects.map((p) => (
-                            <ManageProjectRow key={p.id} project={p} />
-                        ))}
+                    <div className="mx-auto w-full max-w-2xl">
+                        <MeProjects projects={projects} icons={icons} />
                     </div>
                 )}
             </section>

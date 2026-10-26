@@ -1,7 +1,7 @@
 'use client'
 
-// 清空我的全部工程：二次确认弹窗，需输入「确认删除」才可执行。
-// 保护工程不受影响。
+// 清空未保护的所有工程：二次确认弹窗，需输入「确认删除」才可执行。
+// 已开启保护的工程不受影响（这是「未保护」的由来）。
 
 import { useState, useTransition } from 'react'
 import { useRouter } from 'next/navigation'
@@ -38,7 +38,7 @@ export default function ClearMyContent() {
                 className="inline-flex items-center gap-1.5 rounded-sm border border-(--danger) bg-(--danger) px-3 py-2 text-sm text-(--danger-fg) transition-colors hover:bg-(--card) hover:text-(--danger)"
             >
                 <Icon icon="mdi:delete-sweep-outline" className="size-4" />
-                清空我的全部内容
+                清空未保护的所有工程
             </button>
 
             {open && (
@@ -47,11 +47,11 @@ export default function ClearMyContent() {
                     <div className="mg-card relative w-full max-w-md p-5">
                         <div className="mg-section">
                             <Icon icon="mdi:alert-decagram-outline" className="size-5 shrink-0 text-(--danger)" />
-                            <h3 className="mg-title text-sm">确认清空我的全部内容？</h3>
+                            <h3 className="mg-title text-sm">确认清空未保护的所有工程？</h3>
                         </div>
                         <p className="text-sm leading-relaxed text-(--muted)">
-                            将删除我发布的<strong className="text-(--fg)">全部工程</strong>，删除后无法恢复。
-                            <strong className="text-(--fg)">保护状态的工程不受影响</strong>。
+                            将删除我发布的<strong className="text-(--fg)">全部未保护工程</strong>，删除后无法恢复。
+                            <strong className="text-(--fg)">已开启保护的工程不受影响</strong>。
                         </p>
                         <p className="mg-note mt-2">
                             请输入 <span className="font-mono text-(--accent-text)">{CONFIRM_TEXT}</span> 以确认：

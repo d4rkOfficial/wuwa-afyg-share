@@ -6,6 +6,7 @@ import { useRouter } from 'next/navigation'
 import { Icon } from '@iconify/react'
 import ShareLinkPicker from '@/components/share-link-picker'
 import ExpiryCountdown from '@/components/expiry-countdown'
+import TeamBadges from '@/components/team-badges'
 import TagInput from '@/components/ui/tag-input'
 import ExpiryPicker, { expiryDateToIso } from '@/components/ui/expiry-picker'
 import { PROJECT_TAGS } from '@/lib/consts/project-tags'
@@ -14,13 +15,16 @@ import { deleteProject, regenerateCode, setExpiry, updateProject, replaceProject
 import { setProjectProtected } from '@/lib/actions/project-protection'
 import { formatDate, formatCount } from '@/lib/utils/format'
 import { isExpiredProject, isGracePeriod } from '@/lib/utils/expiry'
+import { teamDisplayNames } from '@/lib/project/extract'
 import type { ProjectListItem } from '@/lib/types/db'
 
 interface Props {
     project: ProjectListItem
+    /** @desc 角色名 → 头像地址（队伍 Badge 用） */
+    icons?: Record<string, string>
 }
 
-export default function ManageProjectRow({ project }: Props) {
+export default function ManageProjectRow({ project, icons }: Props) {
     const router = useRouter()
     const [pending, startTransition] = useTransition()
     const [editing, setEditing] = useState(false)
@@ -42,6 +46,8 @@ export default function ManageProjectRow({ project }: Props) {
     const expired = isExpiredProject(project.expires_at, project.author_name)
     // 宽限期按当前时间判断
     const grace = isGracePeriod(project.expires_at, project.author_name)
+    // 队伍三个角色（锁定名优先）→ Badge
+    const teamNames = teamDisplayNames(project.team_preview)
 
     function run(fn: () => Promise<unknown>, successMsg?: string) {
         toast('操作中…', 'info')
@@ -159,7 +165,9 @@ export default function ManageProjectRow({ project }: Props) {
                             </button>
                         )}
                     </div>
-                    <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-(--muted)">
+                    {/* 队伍 Badge：三个角色位的头像 + 角色名 */}
+                    <TeamBadges names={teamNames} icons={icons} className="mt-2" />
+                    <div className="mt-1.5 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-(--muted)">
                         <span className="font-mono">/{project.code}</span>
                         <span>{formatDate(project.created_at)}</span>
                         <span className="mg-num flex items-center gap-0.5">
@@ -182,40 +190,28 @@ export default function ManageProjectRow({ project }: Props) {
                         <Icon icon="mdi:pencil-outline" className="size-4" />
                         编辑
                     </button>
-                    <button
-                        onClick={() => run(() => regenerateCode(project.id))}
-                        disabled={pending}
-                        title="重新生成分享码"
-                        className="inline-flex items-center gap-1 rounded-sm border border-(--card-border) bg-(--card) px-2.5 py-1.5 text-xs text-(--muted) transition-colors hover:text-(--fg) disabled:opacity-50"
-                    >
-                        <Icon icon="mdi:refresh" className="size-4" />
-                        换码
-                    </button>
-                    <button
-                        onClick={() => setShowReplace(true)}
-                        disabled={pending}
-                        title="换源（替换工程文件）"
-                        className="inline-flex items-center gap-1 rounded-sm border border-(--card-border) bg-(--card) px-2.5 py-1.5 text-xs text-(--muted) transition-colors hover:text-(--fg) disabled:opacity-50"
-                    >
-                        <Icon icon="mdi:swap-horizontal" className="size-4" />
-                        换源
-                    </button>
-                    <button
-                        onClick={() =>
-                            run(() => setProjectProtected(project.id, !project.protected), project.protected ? '已解除保护' : '已开启保护')
-                        }
-                        disabled={pending}
-                        title={project.protected ? '解除保护后可删除' : '保护工程：批量删除、单条删除与过期清理均豁免'}
-                        className="inline-flex items-center gap-1 rounded-sm border border-(--card-border) bg-(--card) px-2.5 py-1.5 text-xs text-(--muted) transition-colors hover:text-(--fg) disabled:opacity-50"
-                    >
-                        <Icon icon={project.protected ? 'mdi:shield-lock-outline' : 'mdi:shield-outline'} className="size-4" />
-                        {project.protected ? '解除保护' : '保护'}
-                    </button>
                 </div>
             </div>
 
+            {/* 编辑工程信息：弹窗（不再就地展开，列表行保持整洁） */}
             {editing && (
-                <div className="mt-4 space-y-3 border-t pt-4 mg-hairline">
+                <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+                    <div className="absolute inset-0 bg-(--overlay)" onClick={() => setEditing(false)} />
+                    <div className="mg-card relative flex max-h-[88vh] w-[min(94vw,34rem)] flex-col overflow-hidden">
+                        <div className="flex shrink-0 items-center justify-between border-b border-(--card-border) px-4 py-3">
+                            <span className="flex items-center gap-2 mg-title text-sm">
+                                <Icon icon="mdi:pencil-outline" className="size-4 shrink-0 text-(--accent-text)" />
+                                编辑工程信息
+                            </span>
+                            <button
+                                onClick={() => setEditing(false)}
+                                className="rounded-sm p-1 text-(--muted) transition-colors hover:text-(--fg)"
+                                aria-label="关闭"
+                            >
+                                <Icon icon="mdi:close" className="size-5" />
+                            </button>
+                        </div>
+                        <div className="min-h-0 flex-1 space-y-3 overflow-y-auto p-4">
                     <input
                         value={title}
                         onChange={(e) => setTitle(e.target.value)}
@@ -230,7 +226,7 @@ export default function ManageProjectRow({ project }: Props) {
                         placeholder="简介"
                         className="w-full rounded-sm border border-(--card-border) bg-(--input-bg) px-3 py-2 text-sm outline-none transition-colors placeholder:text-(--muted) focus:border-(--accent)"
                     />
-                    <TagInput tags={tags} onChange={setTags} options={[...PROJECT_TAGS]} />
+                    <TagInput tags={tags} onChange={setTags} suggestions={[...PROJECT_TAGS]} />
                     <div className="space-y-2 rounded-sm border border-(--card-border) bg-(--card-hover) p-2.5">
                         <span className="text-[11px] text-(--muted)">改期（快捷时长 / 自定义日期）</span>
                         <ExpiryPicker value={expireDate} onChange={setExpireDate} />
@@ -256,20 +252,67 @@ export default function ManageProjectRow({ project }: Props) {
                             </button>
                         </div>
                     </div>
-                    <div className="flex justify-end gap-2">
-                        <button
-                            onClick={() => setEditing(false)}
-                            className="rounded-sm border border-(--card-border) bg-(--card) px-3 py-1.5 text-sm text-(--muted) hover:text-(--fg)"
-                        >
-                            取消
-                        </button>
-                        <button
-                            onClick={onSave}
-                            disabled={pending}
-                            className="rounded-sm px-4 py-1.5 text-sm font-medium border border-(--card-border) bg-(--btn-bg) text-(--btn-text) transition-colors hover:bg-(--card) hover:text-(--fg) disabled:opacity-50"
-                        >
-                            保存
-                        </button>
+                    {/* 其他操作：分享码 / 换源 / 保护（从列表行收进编辑弹窗，行内只留「编辑」） */}
+                    <div className="space-y-2 rounded-sm border border-(--card-border) bg-(--card-hover) p-2.5">
+                        <span className="text-[11px] text-(--muted)">其他操作（分享码 / 换源 / 保护）</span>
+                        <div className="flex flex-wrap items-center gap-2">
+                            <button
+                                onClick={() => run(() => regenerateCode(project.id))}
+                                disabled={pending}
+                                title="重新生成分享码（旧链接立即失效）"
+                                className="inline-flex items-center gap-1 rounded-sm border border-(--card-border) bg-(--card) px-2.5 py-1 text-xs text-(--fg) transition-colors hover:border-(--accent) disabled:opacity-50"
+                            >
+                                <Icon icon="mdi:refresh" className="size-3.5" />
+                                换码
+                            </button>
+                            <button
+                                onClick={() => {
+                                    setEditing(false)
+                                    setShowReplace(true)
+                                }}
+                                disabled={pending}
+                                title="换源（替换工程文件）"
+                                className="inline-flex items-center gap-1 rounded-sm border border-(--card-border) bg-(--card) px-2.5 py-1 text-xs text-(--fg) transition-colors hover:border-(--accent) disabled:opacity-50"
+                            >
+                                <Icon icon="mdi:swap-horizontal" className="size-3.5" />
+                                换源
+                            </button>
+                            <button
+                                onClick={() =>
+                                    run(
+                                        () => setProjectProtected(project.id, !project.protected),
+                                        project.protected ? '已解除保护' : '已开启保护'
+                                    )
+                                }
+                                disabled={pending}
+                                title={project.protected ? '解除保护后可删除' : '保护工程：批量删除、单条删除与过期清理均豁免'}
+                                className="inline-flex items-center gap-1 rounded-sm border border-(--card-border) bg-(--card) px-2.5 py-1 text-xs text-(--fg) transition-colors hover:border-(--accent) disabled:opacity-50"
+                            >
+                                <Icon
+                                    icon={project.protected ? 'mdi:shield-lock-outline' : 'mdi:shield-outline'}
+                                    className="size-3.5"
+                                />
+                                {project.protected ? '解除保护' : '保护'}
+                            </button>
+                        </div>
+                    </div>
+                        </div>
+                        <div className="flex shrink-0 items-center justify-end gap-2 border-t border-(--card-border) px-4 py-3">
+                            <button
+                                onClick={() => setEditing(false)}
+                                className="rounded-sm border border-(--card-border) bg-(--card) px-3 py-1.5 text-sm text-(--muted) hover:text-(--fg)"
+                            >
+                                取消
+                            </button>
+                            <button
+                                onClick={onSave}
+                                disabled={pending}
+                                className="inline-flex items-center gap-1.5 rounded-sm border border-(--card-border) bg-(--btn-bg) px-4 py-1.5 text-sm font-medium text-(--btn-text) transition-colors hover:bg-(--card) hover:text-(--fg) disabled:opacity-50"
+                            >
+                                <Icon icon={pending ? 'mdi:loading' : 'mdi:check'} className={`size-4 ${pending ? 'animate-spin' : ''}`} />
+                                保存
+                            </button>
+                        </div>
                     </div>
                 </div>
             )}

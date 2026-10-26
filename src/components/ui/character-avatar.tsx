@@ -13,16 +13,18 @@ interface Props {
     className?: string
     /** @desc 是否显示描边（默认显示） */
     bordered?: boolean
+    /** @desc 自定义悬停提示（覆盖默认的「用户名 · 角色名」） */
+    hint?: string
 }
 
-export default function CharacterAvatar({ username, icons, className = 'size-6', bordered = true }: Props) {
+export default function CharacterAvatar({ username, icons, className = 'size-6', bordered = true, hint }: Props) {
     const avatar = pickCharacterAvatar(username, icons)
     return (
         <span
             className={`inline-flex shrink-0 items-center justify-center overflow-hidden rounded-sm bg-(--card-hover) ${
                 bordered ? 'border border-(--card-border)' : ''
             } ${className}`}
-            title={avatar ? `${username} · ${avatar.name}` : (username ?? '')}
+            title={hint ?? (avatar ? `${username} · ${avatar.name}` : (username ?? ''))}
         >
             {avatar ? (
                 // eslint-disable-next-line @next/next/no-img-element

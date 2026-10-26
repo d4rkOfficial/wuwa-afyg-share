@@ -12,11 +12,9 @@ interface Props {
     initial: string
     /** @desc 角色名 → 头像地址；改名时头像跟着变 */
     icons?: Record<string, string>
-    /** @desc 已上传工程数（展示用） */
-    projectCount?: number
 }
 
-export default function UsernameEditor({ initial, icons = {}, projectCount }: Props) {
+export default function UsernameEditor({ initial, icons = {} }: Props) {
     const router = useRouter()
     const [username, setUsername] = useState(initial)
     const [editing, setEditing] = useState(false)
@@ -41,7 +39,12 @@ export default function UsernameEditor({ initial, icons = {}, projectCount }: Pr
     return (
         <div className="mg-card p-4">
             <div className="flex items-center gap-3">
-                <CharacterAvatar username={username} icons={icons} className="size-12" />
+                <CharacterAvatar
+                    username={username}
+                    icons={icons}
+                    className="size-12"
+                    hint="头像由用户名映射到游戏角色：同一个用户名在任何页面都是同一个角色"
+                />
                 <div className="min-w-0 flex-1">
                     {editing ? (
                         <input
@@ -52,13 +55,7 @@ export default function UsernameEditor({ initial, icons = {}, projectCount }: Pr
                             className="w-full rounded-sm border border-(--card-border) bg-(--input-bg) px-2.5 py-1.5 text-sm outline-none transition-colors focus:border-(--accent)"
                         />
                     ) : (
-                        <>
-                            <p className="mg-title truncate text-base">{username || '未设置用户名'}</p>
-                            <p className="text-[11px] text-(--muted)">
-                                {typeof projectCount === 'number' ? `${projectCount} 个工程 · ` : ''}
-                                头像由用户名映射到游戏角色
-                            </p>
-                        </>
+                        <p className="mg-title truncate text-xl">{username || '未设置用户名'}</p>
                     )}
                 </div>
                 {!editing && (
