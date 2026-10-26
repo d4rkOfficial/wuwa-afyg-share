@@ -74,6 +74,8 @@ interface Props {
     reasoningEffort?: 'off' | 'low' | 'medium' | 'high'
     /** @desc AI 浏览器直连（不经站点转发代理） */
     aiDirect?: boolean
+    /** @desc 用户自定义的 Buff 命名规则（连接配置里可改） */
+    namingRule?: string
     isAdmin: boolean
     /** @desc 当前实体是否可编辑（编辑锁开着且该实体未被单独锁定；管理员恒为 true） */
     canEdit?: boolean
@@ -130,6 +132,7 @@ export default function BuffEntityEditor({
     slangDict,
     reasoningEffort,
     aiDirect,
+    namingRule,
     isAdmin,
     canEdit = true,
     sessionSeed,
@@ -1136,6 +1139,7 @@ export default function BuffEntityEditor({
                     aiBaseUrl={aiBaseUrl}
                     aiModel={aiModel}
                     aiDirect={aiDirect}
+                    namingRule={namingRule}
                     systemPrompt={systemPrompt}
                     initialTaskPrompt={initialTaskPrompt}
                     toolPrompts={toolPrompts}
@@ -1144,7 +1148,7 @@ export default function BuffEntityEditor({
                     sessionSeed={sessionSeed}
                     onSessionUpdate={onSessionUpdate}
                     sessionShareEnabled={sessionShareEnabled}
-                    getCurrentBuffs={getCurrentBuffs}
+
                     draft={draftApi}
                     onApply={applyBuffList}
                     onMerge={mergeBuffList}

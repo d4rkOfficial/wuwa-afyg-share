@@ -7,6 +7,7 @@ import BuffEntitySidebar from '@/components/admin/buff-entity-sidebar'
 import BuffEntityEditor from '@/components/admin/buff-entity-editor'
 import BuffSnapshotPanel from '@/components/admin/buff-snapshot-panel'
 import { DEFAULT_SYSTEM_PROMPT, DEFAULT_INITIAL_TASK_PROMPT, DEFAULT_SLANG_DICT } from '@/lib/ai/prompts'
+import { NAMING_RULES_TEXT } from '@/lib/ai/prompts.config'
 import {
     loadAiConfig,
     saveAiConfig,
@@ -32,6 +33,7 @@ const TOOL_BASE_STORAGE = 'wuwa-afyg:tool-base'
 const SYSTEM_PROMPT_STORAGE = 'wuwa-afyg:deepseek-system-prompt'
 const INITIAL_TASK_STORAGE = 'wuwa-afyg:deepseek-initial-task'
 const SLANG_DICT_STORAGE = 'wuwa-afyg:deepseek-slang-dict'
+const NAMING_RULE_STORAGE = 'wuwa-afyg:ai-naming-rule'
 const SESSION_SHARE_STORAGE = 'wuwa-afyg:ai-session-share'
 const TOOL_BASE_DEFAULT = 'http://localhost:5173'
 
@@ -62,11 +64,13 @@ export default function BuffSetsAdmin({ rows, isAdmin, buffLocks, entityIcons }:
         readStorage(INITIAL_TASK_STORAGE, DEFAULT_INITIAL_TASK_PROMPT)
     )
     const [slangDict, setSlangDict] = useState(() => readStorage(SLANG_DICT_STORAGE, DEFAULT_SLANG_DICT))
+    // Buff 命名规则：可编辑（AI 生成 / 改名都按这份），空 = 用内置默认
+    const [namingRule, setNamingRule] = useState(() => readStorage(NAMING_RULE_STORAGE, NAMING_RULES_TEXT))
     // 跨实体共享会话：按实体类型分组（system 前缀一致才能命中缓存），默认开启
     const [sessionShare, setSessionShare] = useState(() => readStorage(SESSION_SHARE_STORAGE, '1') === '1')
     const [shareSessions, setShareSessions] = useState<Record<string, ChatMessage[]>>({})
     // 二级弹窗编辑：system / initial / slang
-    const [editingPrompt, setEditingPrompt] = useState<'system' | 'initial' | 'slang' | null>(null)
+    const [editingPrompt, setEditingPrompt] = useState<'system' | 'initial' | 'slang' | 'naming' | null>(null)
     const [draftText, setDraftText] = useState('')
     const [showConfig, setShowConfig] = useState(false)
     const [selected, setSelected] = useState<{ entityType: BuffEntityType; entityName: string } | null>(null)
@@ -106,6 +110,11 @@ export default function BuffSetsAdmin({ rows, isAdmin, buffLocks, entityIcons }:
     function persistSlangDict(value: string) {
         setSlangDict(value)
         localStorage.setItem(SLANG_DICT_STORAGE, value)
+    }
+
+    function persistNamingRule(value: string) {
+        setNamingRule(value)
+        localStorage.setItem(NAMING_RULE_STORAGE, value)
     }
 
     function persistSessionShare(enabled: boolean) {
@@ -149,12 +158,21 @@ export default function BuffSetsAdmin({ rows, isAdmin, buffLocks, entityIcons }:
             minHeight: 200,
             persist: persistSlangDict,
             reset: DEFAULT_SLANG_DICT
+        },
+        {
+            key: 'naming' as const,
+            label: 'Buff 命名规则',
+            hint: 'AI 生成 / 改名都按这份规则；清空则用内置默认',
+            value: namingRule,
+            minHeight: 280,
+            persist: persistNamingRule,
+            reset: NAMING_RULES_TEXT
         }
     ]
 
     const activePromptEditor = PROMPT_EDITORS.find((e) => e.key === editingPrompt) ?? null
 
-    function openPromptEditor(key: 'system' | 'initial' | 'slang') {
+    function openPromptEditor(key: 'system' | 'initial' | 'slang' | 'naming') {
         setDraftText(PROMPT_EDITORS.find((e) => e.key === key)?.value ?? '')
         setEditingPrompt(key)
     }
@@ -248,6 +266,7 @@ export default function BuffSetsAdmin({ rows, isAdmin, buffLocks, entityIcons }:
                                 initialTaskPrompt={initialTaskPrompt}
                                 toolPrompts={{}}
                                 slangDict={slangDict}
+                                namingRule={namingRule}
                                 reasoningEffort={ai?.reasoningEffort ?? 'medium'}
                                 isAdmin={isAdmin}
                                 canEdit={

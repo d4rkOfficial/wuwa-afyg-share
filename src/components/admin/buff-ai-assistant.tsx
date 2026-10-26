@@ -21,7 +21,7 @@ import {
 } from '@/lib/consts/buff-zones'
 import { createClient } from '@/lib/supabase/client'
 import { saveAiConfig } from '@/lib/ai/config'
-import type { BuffDraftApi } from '@/lib/ai/tools'
+import type { AskUserAnswer, AskUserQuestion, BuffDraftApi } from '@/lib/ai/tools'
 import type { GeneratedBuff } from '@/lib/ai/types'
 import type { BuffEntityType } from '@/lib/types/db'
 
@@ -93,7 +93,9 @@ const TOOL_META: Record<string, { label: string; icon: string }> = {
     update_buff: { label: '改细节', icon: 'mdi:pencil-outline' },
     add_buff: { label: '新增', icon: 'mdi:plus-box-outline' },
     remove_buff: { label: '删除', icon: 'mdi:delete-outline' },
-    save_buff_set: { label: '写入', icon: 'mdi:database-export-outline' }
+    save_buff_set: { label: '写入', icon: 'mdi:database-export-outline' },
+    ask_user: { label: '提问', icon: 'mdi:chat-question-outline' },
+    browse_buff_naming: { label: '命名样本', icon: 'mdi:format-quote-close-outline' }
 }
 
 /** @desc 会改动编辑中草稿的工具（据此判断本轮是否走了「直接编辑」而非整份 JSON） */
@@ -192,8 +194,8 @@ interface Props {
     onSessionUpdate?: (messages: ChatMessage[]) => void
     sessionShareEnabled?: boolean
 
-    /** @desc 当前编辑中的 Buff 集（「润色」用它构造请求） */
-    getCurrentBuffs?: () => GeneratedBuff[]
+    /** @desc 用户自定义的 Buff 命名规则（连接配置里可改；空 = 用内置默认） */
+    namingRule?: string
     /** @desc AI 可读写的 Buff 草稿（改名 / 改细节 / 增删 / 直接落库） */
     draft?: BuffDraftApi
     /** @desc 结果应用：整体替换 / 追加合并 */
@@ -213,6 +215,11 @@ interface ConfirmState {
     resolve: (ok: boolean) => void
 }
 
+/** @desc 待作答的提问（ask_user 工具） */
+interface AskState extends AskUserQuestion {
+    resolve: (answer: AskUserAnswer) => void
+}
+
 export default function BuffAiAssistant({
     entityType,
     entityName,
@@ -228,7 +235,7 @@ export default function BuffAiAssistant({
     sessionSeed,
     onSessionUpdate,
     sessionShareEnabled,
-    getCurrentBuffs,
+    namingRule,
     draft,
     onApply,
     onMerge,
@@ -301,8 +308,7 @@ export default function BuffAiAssistant({
      * 同时把每次改动同步回编辑器（`draft.set`），管理员眼前始终是最新草稿。
      */
     const workingDraftRef = useRef<GeneratedBuff[] | null>(null)
-    /** @desc 一键润色：结果自动应用到列表，不停在「应用」按钮上 */
-    const polishRef = useRef(false)
+
     /** @desc 自动滚动：用户向上翻阅时暂停 */
     const autoScrollRef = useRef(true)
     const bodyRef = useRef<HTMLDivElement>(null)
@@ -340,6 +346,42 @@ export default function BuffAiAssistant({
     const patchActivitiesAt = useCallback((index: number, patch: (activities: Activity[]) => Activity[]) => {
         setMessages((prev) => prev.map((m, idx) => (idx === index ? { ...m, activities: patch(m.activities) } : m)))
     }, [])
+
+    /**
+     * @desc 询问模式：开启后模型每一轮都要先 ask_user 向用户确认，
+     * 面板在这一轮里会挂出提问卡片（和危险确认卡同一个位置）。
+     */
+    const [askMode, setAskMode] = useState(false)
+    const [askState, setAskState] = useState<AskState | null>(null)
+    const [askDraft, setAskDraft] = useState('')
+    const askRef = useRef<AskState | null>(null)
+    /** @desc 作答收尾（幂等）：清卡 + resolve；顺带在活动流里留一行记录 */
+    const settleAsk = useCallback(
+        (answer: string | null, skipped = false) => {
+            const card = askRef.current
+            askRef.current = null
+            setAskState(null)
+            setAskDraft('')
+            if (card) {
+                card.resolve({ answer, ...(skipped ? { skipped: true } : {}) })
+                const label = skipped ? '已跳过提问' : answer ? `已作答：${answer}` : '已作答'
+                patchLastActivities((acts) => [...acts, { kind: 'notice', tone: 'info', text: label }])
+            }
+        },
+        [patchLastActivities]
+    )
+    const requestAsk = useCallback(
+        (question: AskUserQuestion) =>
+            new Promise<AskUserAnswer>((resolve) => {
+                // 同一时刻只允许一张提问卡（ask_user 会阻塞回合）
+                if (askRef.current) askRef.current.resolve({ answer: null, skipped: true })
+                const card: AskState = { ...question, resolve }
+                askRef.current = card
+                setAskState(card)
+                setAskDraft('')
+            }),
+        []
+    )
 
     /** @desc 生成事件 → 活动流（实时） */
     const handleEvent = useCallback(
@@ -457,9 +499,9 @@ export default function BuffAiAssistant({
         [patchLastActivities]
     )
 
-    /** @desc 发起一次生成（首轮 / 润色 / 追问共用） */
+    /** @desc 发起一次生成（首轮 / 追问共用） */
     const runRequest = useCallback(
-        async (userMessage: string, nextHistory: ChatMessage[], autoApply = false) => {
+        async (userMessage: string, nextHistory: ChatMessage[]) => {
             if (!apiKey.trim()) {
                 setError('请先在侧栏填入 AI API Key')
                 return
@@ -468,7 +510,6 @@ export default function BuffAiAssistant({
                 setError('请先选择实体名')
                 return
             }
-            polishRef.current = autoApply
             setBusy(true)
             setError(null)
             setDebug(null)
@@ -523,6 +564,9 @@ export default function BuffAiAssistant({
                     history: nextHistory,
                     newUserMessage: userMessage,
                     getBuffSets: queryBuffSets,
+                    namingRule,
+                    askMode,
+                    askUser: requestAsk,
                     draft: draftApi,
                     onConfirm: requestConfirm,
                     seedMessages: sessionShareEnabled ? sessionSeed : undefined,
@@ -546,9 +590,9 @@ export default function BuffAiAssistant({
             } finally {
                 // 回合结束（正常 / 停止 / 报错）：挂着的确认卡一律按「拒绝」收尾，避免 Promise 永久悬挂
                 if (confirmRef.current) settleConfirm(false)
+                if (askRef.current) settleAsk(null, true)
                 setBusy(false)
                 abortRef.current = null
-                polishRef.current = false
             }
         },
         [
@@ -568,8 +612,12 @@ export default function BuffAiAssistant({
             draft,
             requestConfirm,
             settleConfirm,
+            settleAsk,
             directMode,
-            handleEvent
+            handleEvent,
+            namingRule,
+            askMode,
+            requestAsk
         ]
     )
 
@@ -580,18 +628,6 @@ export default function BuffAiAssistant({
         void runRequest('', [])
     }
 
-    /** @desc 一键润色：只重写 buffName，数值 / 乘区 / 条件原样保留 */
-    function onPolish() {
-        const current = getCurrentBuffs?.() ?? []
-        if (current.length === 0) {
-            setError('当前没有 Buff 可润色')
-            return
-        }
-        const msg = `请按命名规范润色以下 Buff 集内每个 buff 的 buffName（格式：[条件]<触发,附加条件>乘区1+乘区2+…+层数；条件标注归属者与所需链/阶，仅叠层>1 时带 N 层，单层不带）。\n要求：保留每个 buff 的 zones/scope/condition/exclusive 完全不变，只重写 buffName；不要增删乘区、不要改数值或条件；不确定规范时调用 get_naming_rules。\n输出完整 buffs JSON。\n\n当前 Buff 集：\n${JSON.stringify(current)}`
-        setHistory([])
-        setMessages([])
-        void runRequest(msg, [], true)
-    }
 
     /** @desc 追问：把上一条 AI 输出记进历史，再带上新指令 */
     function onFollowUp() {
@@ -639,14 +675,6 @@ export default function BuffAiAssistant({
         setResult(null)
     }
 
-    // 润色结果自动应用（不停在按钮上）
-    useEffect(() => {
-        if (!result || busy || !polishRef.current) return
-        onApply(result)
-        setHistory((prev) => [...prev, { role: 'assistant', content: rawContent || JSON.stringify({ buffs: result }) }])
-        setLiveStatus(`润色完成，已应用 ${result.length} 条`)
-        setResult(null)
-    }, [result, busy, rawContent, onApply])
 
     const hasContent = messages.length > 0 || Boolean(result) || Boolean(error)
 
@@ -676,13 +704,21 @@ export default function BuffAiAssistant({
                     {busy ? '生成中…' : '一键生成'}
                 </button>
                 <button
-                    onClick={onPolish}
-                    disabled={busy || !entityName.trim()}
-                    title="按命名规范润色当前 Buff 集的 buff 名（保留乘区 / 数值 / 条件不变）"
-                    className="toolbar-btn toolbar-btn-ghost px-2 py-1 text-[11px]"
+                    onClick={() => setAskMode((v) => !v)}
+                    aria-pressed={askMode}
+                    title={
+                        askMode
+                            ? '询问模式已开启：AI 每一轮都会先向你提问确认（命名风格 / 范围 / 细节），不会直接输出 Buff'
+                            : '询问模式已关闭：AI 会直接生成 Buff；开启后每轮先提问'
+                    }
+                    className={`toolbar-btn px-2 py-1 text-[11px] ${
+                        askMode
+                            ? 'border border-(--accent) bg-(--accent) text-(--accent-fg)'
+                            : 'toolbar-btn-ghost'
+                    }`}
                 >
-                    <Icon icon="mdi:brush-variant" className="size-3.5" />
-                    润色
+                    <Icon icon={askMode ? 'mdi:chat-question' : 'mdi:chat-question-outline'} className="size-3.5" />
+                    询问模式{askMode ? '·开' : ''}
                 </button>
                 {busy ? (
                     <button
@@ -997,6 +1033,63 @@ export default function BuffAiAssistant({
                 )}
             </div>
 
+            {/* 提问卡（ask_user）：询问模式下每一轮都会先问用户，回答后回合继续 */}
+            {askState && (
+                <div className="shrink-0 border-t border-(--card-border) px-3 py-2">
+                    <div className="flex items-start gap-2">
+                        <Icon icon="mdi:chat-question-outline" className="mt-px size-4 shrink-0 text-(--accent-text)" />
+                        <div className="min-w-0 flex-1">
+                            <div className="text-xs font-medium text-(--fg)">AI 提问</div>
+                            <p className="mt-0.5 whitespace-pre-wrap break-words text-[11px] leading-relaxed text-(--fg)">
+                                {askState.question}
+                            </p>
+                        </div>
+                    </div>
+                    {askState.options && askState.options.length > 0 && (
+                        <div className="mt-2 flex flex-wrap gap-1.5">
+                            {askState.options.map((option) => (
+                                <button
+                                    key={option}
+                                    onClick={() => settleAsk(option)}
+                                    className="rounded-sm border border-(--card-border) bg-(--card) px-2 py-1 text-[11px] text-(--fg) transition-colors hover:border-(--accent) hover:text-(--accent-text)"
+                                >
+                                    {option}
+                                </button>
+                            ))}
+                        </div>
+                    )}
+                    {askState.allowText !== false && (
+                        <div className="mt-2 flex items-center gap-1.5">
+                            <input
+                                value={askDraft}
+                                onChange={(e) => setAskDraft(e.target.value)}
+                                onKeyDown={(e) => {
+                                    if (e.key === 'Enter' && askDraft.trim()) settleAsk(askDraft.trim())
+                                }}
+                                placeholder="输入回答，回车提交"
+                                autoFocus
+                                className="min-w-0 flex-1 rounded-sm border border-(--card-border) bg-(--input-bg) px-2 py-1.5 text-xs outline-none focus:border-(--accent)"
+                            />
+                            <button
+                                onClick={() => settleAsk(askDraft.trim())}
+                                disabled={!askDraft.trim()}
+                                className="toolbar-btn toolbar-btn-primary shrink-0 px-2.5 py-1 text-[11px]"
+                            >
+                                回答
+                            </button>
+                        </div>
+                    )}
+                    <div className="mt-1.5 flex justify-end">
+                        <button
+                            onClick={() => settleAsk(null, true)}
+                            className="text-[10px] text-(--muted) transition-colors hover:text-(--fg)"
+                            title="跳过这个问题（AI 会按自己的判断继续）"
+                        >
+                            跳过
+                        </button>
+                    </div>
+                </div>
+            )}
             {/* 危险操作确认（落库类工具）：确认前回合一直阻塞在这里 */}
             {confirmState && (
                 <div className="shrink-0 border-t border-(--card-border) px-3 py-2">
