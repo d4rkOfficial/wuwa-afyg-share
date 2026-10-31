@@ -6,7 +6,7 @@
 
 - 主站：[wuwa-afyg-share.200503.xyz](https://wuwa-afyg-share.200503.xyz)
 - 启动器下载页：[`/launcher`](https://wuwa-afyg-share.200503.xyz/launcher)
-- 相关项目：[椰果工具箱](https://github.com/d4rkOfficial/wuwa-afyg-tool) · [椰果工具箱启动器](https://github.com/d4rkOfficial/coconut-app) · [插件开发 SDK](https://github.com/D4rK6/coconut-app-plugin-sdk) · [轻量版工坊（sqlite）](https://github.com/d4rkOfficial/wuwa-afyg-share-lite) · [白嫖版工坊（GitHub Issues）](https://github.com/CoconutToolBox/wuwa-afyg-share-github)
+- 相关项目：[椰果工具箱](https://github.com/d4rkOfficial/wuwa-afyg-tool) · [椰果工具箱启动器](https://github.com/d4rkOfficial/coconut-app) · [插件开发 SDK](https://github.com/d4rkOfficial/coconut-app-plugin-sdk) · [轻量版工坊（sqlite）](https://github.com/d4rkOfficial/wuwa-afyg-share-lite) · [白嫖版工坊（GitHub Issues）](https://github.com/CoconutToolBox/wuwa-afyg-share-github)
 
 ## 文档
 

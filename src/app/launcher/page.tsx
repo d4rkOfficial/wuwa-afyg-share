@@ -10,7 +10,7 @@ export const metadata: Metadata = {
 }
 
 const LAUNCHER_VERSION = 'v0.1.0'
-const SDK_REPO = 'https://github.com/D4rK6/coconut-app-plugin-sdk'
+const SDK_REPO = 'https://github.com/d4rkOfficial/coconut-app-plugin-sdk'
 const CLONE_CMD = `git clone ${SDK_REPO}.git`
 
 const FILES = [
