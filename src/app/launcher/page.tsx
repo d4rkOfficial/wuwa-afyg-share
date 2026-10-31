@@ -10,7 +10,7 @@ export const metadata: Metadata = {
         '下载椰果工具箱启动器：断网可用的本地工具箱，支持插件扩展。附插件开发 SDK 的上手方式。'
 }
 
-const LAUNCHER_VERSION = 'v0.1.0'
+const LAUNCHER_VERSION = 'v0.1.1'
 const SDK_REPO = 'https://github.com/d4rkOfficial/coconut-app-plugin-sdk'
 const CLONE_CMD = `git clone ${SDK_REPO}.git`
 
