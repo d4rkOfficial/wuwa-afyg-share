@@ -102,17 +102,17 @@ export default async function HomePage({
                     </div>
                     <Link
                         href="/launcher"
-                        aria-label="前往启动器下载页"
-                        title="启动器下载页：断网可用、随时拉表、白嫖免费AI模型，附插件开发 SDK"
+                        aria-label="椰果工具箱启动器下载页"
+                        title="椰果工具箱启动器：断网可用、随时拉表、支持插件拓展"
                         className="group inline-flex items-center gap-2.5 rounded-sm border border-(--card-border) bg-(--btn-bg) px-3 py-2 text-left text-(--btn-text) transition-colors hover:bg-(--card) hover:text-(--fg)"
                     >
-                        <Icon icon="mdi:download-box-outline" className="size-5 shrink-0" />
+                        <Icon icon="mdi:rocket-launch-outline" className="size-5 shrink-0" />
                         <span className="flex min-w-0 flex-col leading-tight">
                             <span className="text-sm font-black tracking-tight whitespace-nowrap">
-                                下载椰果工具箱启动器
+                                椰果工具箱启动器
                             </span>
                             <span className="hidden text-[11px] leading-snug font-medium opacity-70 sm:inline">
-                                断网可用 · 随时拉表 · 白嫖免费AI模型
+                                断网可用、随时拉表、支持插件拓展
                             </span>
                         </span>
                         <Icon
