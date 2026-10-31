@@ -5,7 +5,8 @@
 **业务一句话**：玩家把工具箱导出的工程 JSON 上传到工坊，得到一条带有效期的分享链接；其他玩家在工坊里浏览、克隆这些排轴拉表工程，并一键导入自己的工具箱。工坊同时托管两套**共享数据**——Buff 集与标准词条集——供工具箱一键同步，让全站玩家的 Buff 库与声骸词条口径保持一致。
 
 - 主站：[wuwa-afyg-share.200503.xyz](https://wuwa-afyg-share.200503.xyz)
-- 相关项目：[椰果工具箱](https://github.com/d4rkOfficial/wuwa-afyg-tool) · [轻量版工坊（sqlite）](https://github.com/d4rkOfficial/wuwa-afyg-share-lite) · [白嫖版工坊（GitHub Issues）](https://github.com/CoconutToolBox/wuwa-afyg-share-github)
+- 启动器下载页：[`/launcher`](https://wuwa-afyg-share.200503.xyz/launcher)
+- 相关项目：[椰果工具箱](https://github.com/d4rkOfficial/wuwa-afyg-tool) · [椰果工具箱启动器](https://github.com/d4rkOfficial/coconut-app) · [插件开发 SDK](https://github.com/D4rK6/coconut-app-plugin-sdk) · [轻量版工坊（sqlite）](https://github.com/d4rkOfficial/wuwa-afyg-share-lite) · [白嫖版工坊（GitHub Issues）](https://github.com/CoconutToolBox/wuwa-afyg-share-github)
 
 ## 文档
 
@@ -38,6 +39,17 @@
 - **管理员管理** — 按用户名授权；权限链模型：仅授出者可撤销自己的授权，被撤销的管理员其授出的权限连坐收回
 - **清空内容** — 用户可清空自己的全部工程；管理员可按用户名删除任意用户的全部工程（保护工程除外），均需二次确认
 - **AI 协作** — 站点内置 AI 助手（Buff 集生成/润色、命名规范、术语速查），走站内流式代理，密钥保存在浏览器本地
+
+## 启动器下载页
+
+首页刊头按钮 → `/launcher` 落地页：版本 / 特性、`.exe` 与 `.msi` 两个下载卡片、三步上手说明、
+以及插件 SDK 的 `git clone` 指引。下载由 `/download`（便携 exe）与 `/download/msi`（安装包）
+两个 Route Handler 从 `public/downloads/` 取文件、以附件形式返回。
+
+换新构建时覆盖这两个文件（文件名不要改，路由按名字取），并同步落地页的 `LAUNCHER_VERSION`：
+
+- `public/downloads/椰果工具箱启动器.exe` ← `coconut-app/src-tauri/target/release/coconut-app.exe`
+- `public/downloads/椰果工具箱启动器.msi` ← `coconut-app/src-tauri/target/release/bundle/msi/椰果工具箱_<版本>_x64_zh-CN.msi`
 
 ## 与椰果工具箱的联动
 
