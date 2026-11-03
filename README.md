@@ -43,13 +43,14 @@
 ## 启动器下载页
 
 首页刊头按钮 → `/launcher` 落地页：版本 / 特性、`.exe` 与 `.msi` 两个下载卡片、三步上手说明、
-以及插件 SDK 的 `git clone` 指引。下载由 `/download`（便携 exe）与 `/download/msi`（安装包）
-两个 Route Handler 从 `public/downloads/` 取文件、以附件形式返回。
+以及插件 SDK 的 `git clone` 指引。两个入口路径不变，但实际都返回 zip（内含对应启动器文件 +
+`free-models.js` 免费模型插件产物），由 `/download` / `/download/msi` Route Handler 从
+`public/downloads/` 取压缩包、以附件形式返回。
 
-换新构建时覆盖这两个文件（文件名不要改，路由按名字取），并同步落地页的 `LAUNCHER_VERSION`：
+换新构建时用新文件重新压缩覆盖 zip（文件名不要改，路由按名字取），并同步落地页的 `LAUNCHER_VERSION`：
 
-- `public/downloads/椰果工具箱启动器.exe` ← `coconut-app/src-tauri/target/release/coconut-app.exe`
-- `public/downloads/椰果工具箱启动器.msi` ← `coconut-app/src-tauri/target/release/bundle/msi/椰果工具箱_<版本>_x64_zh-CN.msi`
+- `public/downloads/椰果工具箱启动器-exe.zip`（`coconut-app.exe` + `free-models.js`）← `coconut-app/dist/coconut-app.exe` + `coconut-app-plugin-sdk/dist/free-models.js`
+- `public/downloads/椰果工具箱启动器-msi.zip`（`椰果工具箱_<版本>_x64_zh-CN.msi` + `free-models.js`）← MSI 构建产物 + `coconut-app-plugin-sdk/dist/free-models.js`
 
 ## 与椰果工具箱的联动
 

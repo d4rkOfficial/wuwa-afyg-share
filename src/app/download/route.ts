@@ -1,12 +1,12 @@
 import { respondWithLauncher } from '@/lib/download/launcher'
 
-// .exe：最小化单文件可执行程序（确保依赖全齐时下载这个）
+// 路径保持 /download；实际返回 zip（内含 exe + 免费模型插件）
 export const dynamic = 'force-dynamic'
 
 const FILE = {
-    fileName: '椰果工具箱启动器.exe',
-    asciiName: 'ye-guo-toolbox-launcher.exe',
-    missingHint: '启动器文件缺失，请稍后重试或改用 .msi 安装包。'
+    fileName: '椰果工具箱启动器-exe.zip',
+    asciiName: 'ye-guo-toolbox-launcher-exe.zip',
+    missingHint: '启动器压缩包缺失，请稍后重试。'
 }
 
 export async function GET(request: Request) {

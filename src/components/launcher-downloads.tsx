@@ -38,6 +38,8 @@ export default function LauncherDownloads() {
     const [supported, setSupported] = useState(true)
 
     useEffect(() => {
+        // SSR 先按「支持」渲染，挂载后再纠正；这里必须同步读一次 navigator。
+        // eslint-disable-next-line react-hooks/set-state-in-effect
         setSupported(isWindows())
     }, [])
 
