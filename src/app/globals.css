@@ -581,6 +581,11 @@ html.light .theme-icon-light {
         align-items: stretch;
     }
 
+    /* 编辑时收起实体侧栏：不要让 main 继续落在原来的 16rem 第一列 */
+    .workbench-editor.workbench-single {
+        grid-template-columns: minmax(0, 1fr);
+    }
+
     .workbench-editor .workbench-sidebar,
     .workbench-editor .workbench-main {
         height: var(--workbench-h);

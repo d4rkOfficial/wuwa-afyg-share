@@ -57,7 +57,6 @@ export default function BuffSetsAdmin({ rows, folders = [], isAdmin, buffLocks, 
     // AI 连接配置（IndexedDB 持久化；加载后供编辑器使用）
     const [ai, setAi] = useState<AiConfig | null>(null)
     const [aiDraft, setAiDraft] = useState<AiConfig>({ ...DEFAULT_AI_CONFIG })
-    const [aiSaving, setAiSaving] = useState(false)
     const [systemPrompt, setSystemPrompt] = useState(() =>
         readStorage(SYSTEM_PROMPT_STORAGE, DEFAULT_SYSTEM_PROMPT)
     )
@@ -76,6 +75,7 @@ export default function BuffSetsAdmin({ rows, folders = [], isAdmin, buffLocks, 
     const [showConfig, setShowConfig] = useState(false)
     const [selected, setSelected] = useState<{ entityType: BuffEntityType; entityName: string } | null>(null)
     const [editingKey, setEditingKey] = useState<string | null>(null)
+    const [entitySidebarCollapsed, setEntitySidebarCollapsed] = useState(false)
 
     useEffect(() => {
         loadAiConfig().then((c) => {
@@ -91,11 +91,14 @@ export default function BuffSetsAdmin({ rows, folders = [], isAdmin, buffLocks, 
     }
 
     async function handleSaveAi() {
-        setAiSaving(true)
         const c = await saveAiConfig({ ...aiDraft })
         setAi({ ...c })
-        setAiSaving(false)
-        toast('AI 配置已保存', 'success')
+    }
+
+    /** @desc 关闭 AGENT 配置即保存，不再需要底部保存按钮 */
+    function closeConfig() {
+        setShowConfig(false)
+        void handleSaveAi()
     }
 
     function persistSystemPrompt(value: string) {
@@ -192,6 +195,8 @@ export default function BuffSetsAdmin({ rows, folders = [], isAdmin, buffLocks, 
         }
         setSelected(entity)
         setEditingKey(entityKey(entity.entityType, entity.entityName))
+        // 进入编辑后默认收起实体侧栏，把宽度让给编辑区；顶栏按钮可随时展开
+        setEntitySidebarCollapsed(true)
     }
 
     /** @desc 管理员逐个实体开关条目级锁 */
@@ -237,25 +242,27 @@ export default function BuffSetsAdmin({ rows, folders = [], isAdmin, buffLocks, 
                     {isAdmin && <BuffSnapshotPanel />}
                     <button onClick={() => setShowConfig(true)} className="toolbar-btn toolbar-btn-ghost">
                         <span className="flex items-center gap-1.5">
-                            <Icon icon="mdi:cog-outline" className="size-4" />
-                            连接配置
+                            <Icon icon="mdi:robot-outline" className="size-4" />
+                            AGENT配置
                         </span>
                     </button>
                 </span>
             </div>
 
             {/* 工作台：左侧实体 sidebar + 右侧就地编辑器（不再用弹窗）；两栏等高 */}
-            <div className="workbench workbench-editor">
-                <BuffEntitySidebar
-                    existingCountMap={existingCountMap}
-                    selectedKey={editingKey}
-                    onSelect={handleSelect}
-                    isAdmin={isAdmin}
-                    locks={buffLocks}
-                    lockPending={lockPending}
-                    onToggleLock={toggleEntityLock}
-                    entityIcons={entityIcons}
-                />
+            <div className={`workbench workbench-editor${entitySidebarCollapsed ? ' workbench-single' : ''}`}>
+                {!entitySidebarCollapsed && (
+                    <BuffEntitySidebar
+                        existingCountMap={existingCountMap}
+                        selectedKey={editingKey}
+                        onSelect={handleSelect}
+                        isAdmin={isAdmin}
+                        locks={buffLocks}
+                        lockPending={lockPending}
+                        onToggleLock={toggleEntityLock}
+                        entityIcons={entityIcons}
+                    />
+                )}
 
                 <section className="workbench-main">
                     {selected && initial ? (
@@ -274,6 +281,8 @@ export default function BuffSetsAdmin({ rows, folders = [], isAdmin, buffLocks, 
                                 namingRule={namingRule}
                                 reasoningEffort={ai?.reasoningEffort ?? 'medium'}
                                 isAdmin={isAdmin}
+                                entitySidebarCollapsed={entitySidebarCollapsed}
+                                onToggleEntitySidebar={() => setEntitySidebarCollapsed((v) => !v)}
                                 canEdit={
                                     isAdmin ||
                                     !buffLocks[entityKey(selected.entityType, selected.entityName)]
@@ -284,10 +293,12 @@ export default function BuffSetsAdmin({ rows, folders = [], isAdmin, buffLocks, 
                                 onEntityDeleted={() => {
                                     setSelected(null)
                                     setEditingKey(null)
+                                    setEntitySidebarCollapsed(false)
                                 }}
                                 onclose={() => {
                                     setSelected(null)
                                     setEditingKey(null)
+                                    setEntitySidebarCollapsed(false)
                                 }}
                             />
                         </div>
@@ -303,26 +314,32 @@ export default function BuffSetsAdmin({ rows, folders = [], isAdmin, buffLocks, 
                 </section>
             </div>
 
-            {/* 连接配置弹窗（整个弹窗随内容滚动） */}
+            {/* AGENT 配置弹窗：横屏双列；关闭即自动保存 */}
             {showConfig && (
-                <div className="fixed inset-0 z-50 overflow-y-auto">
-                    <div className="fixed inset-0 bg-(--overlay) " onClick={() => setShowConfig(false)} />
-                        <div className="relative mx-auto my-8 w-[calc(100vw-2rem)] max-w-xl mg-card p-4 ">
-                            <div className="mb-3 flex items-center justify-between">
-                                <span className="flex items-center gap-2 mg-title text-sm">
-                                    <Icon icon="mdi:cog-outline" className="size-4 shrink-0 text-(--accent-text)" />
-                                    连接配置
-                                </span>
-                                <button onClick={() => setShowConfig(false)} className="rounded-sm p-1 text-(--muted) hover:text-(--fg)">
-                                    <Icon icon="mdi:close" className="size-5" />
-                                </button>
-                            </div>
+                <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+                    <div className="absolute inset-0 bg-(--overlay)" onClick={closeConfig} />
+                    <div className="relative flex max-h-[86vh] w-[min(96vw,1040px)] flex-col overflow-hidden mg-card p-0">
+                        <div className="flex shrink-0 items-center justify-between border-b border-(--card-border) px-4 py-3">
+                            <span className="flex items-center gap-2 mg-title text-sm">
+                                <Icon icon="mdi:robot-outline" className="size-4 shrink-0 text-(--accent-text)" />
+                                AGENT配置
+                            </span>
+                            <button
+                                onClick={closeConfig}
+                                className="rounded-sm p-1 text-(--muted) hover:bg-(--card-hover) hover:text-(--fg)"
+                            >
+                                <Icon icon="mdi:close" className="size-5" />
+                            </button>
+                        </div>
 
-                            <div className="space-y-3">
+                        <div className="grid min-h-0 flex-1 gap-4 overflow-y-auto p-4 md:grid-cols-2">
+                            <section className="space-y-3 rounded-sm border border-(--card-border) bg-(--input-bg)/40 p-3">
+                                <h3 className="flex items-center gap-1.5 border-b border-(--card-border) pb-2 text-xs font-bold text-(--fg)">
+                                    <Icon icon="mdi:connection" className="size-3.5 text-(--accent-text)" />
+                                    模型连接
+                                </h3>
                                 <label className="flex flex-col gap-1 text-xs text-(--muted)">
-                                    <span className="flex items-center justify-between">
-                                        AI 服务地址
-                                    </span>
+                                    <span>AI 服务地址</span>
                                     <input
                                         type="url"
                                         value={aiDraft.baseUrl}
@@ -333,9 +350,7 @@ export default function BuffSetsAdmin({ rows, folders = [], isAdmin, buffLocks, 
                                     <p className="text-[10px] text-(--muted)">支持任意 OpenAI 兼容端点（需支持 POST /chat/completions）</p>
                                 </label>
                                 <label className="flex flex-col gap-1 text-xs text-(--muted)">
-                                    <span className="flex items-center justify-between">
-                                        模型名
-                                    </span>
+                                    <span>模型名</span>
                                     <input
                                         type="text"
                                         value={aiDraft.model}
@@ -345,7 +360,7 @@ export default function BuffSetsAdmin({ rows, folders = [], isAdmin, buffLocks, 
                                     />
                                 </label>
                                 <label className="flex flex-col gap-1 text-xs text-(--muted)">
-                                    AI API Key
+                                    <span>AI API Key</span>
                                     <input
                                         type="password"
                                         value={aiDraft.apiKey}
@@ -353,13 +368,11 @@ export default function BuffSetsAdmin({ rows, folders = [], isAdmin, buffLocks, 
                                         placeholder="sk-..."
                                         className="w-full rounded-sm border border-(--card-border) bg-(--input-bg) px-2 py-1.5 text-sm outline-none focus:border-(--accent)"
                                     />
-                                    <p className="text-[10px] text-(--muted)">
-                                        填所选提供商的 API Key（格式 / 获取方式按其官方文档）
-                                    </p>
+                                    <p className="text-[10px] text-(--muted)">填所选提供商的 API Key（格式 / 获取方式按其官方文档）</p>
                                 </label>
                                 <div className="flex flex-col gap-1">
                                     <span className="text-xs text-(--muted)">思考强度</span>
-                                    <div className="flex items-center gap-1">
+                                    <div className="flex flex-wrap items-center gap-1">
                                         {(['off', 'low', 'medium', 'high'] as const).map((level) => (
                                             <button
                                                 key={level}
@@ -397,20 +410,16 @@ export default function BuffSetsAdmin({ rows, folders = [], isAdmin, buffLocks, 
                                         </button>
                                     </div>
                                     <p className="text-[10px] text-(--muted)">
-                                        直连不经 `/api/ai/stream` 转发（少一跳、不受平台时长限制），但端点必须自己允许 CORS；
-                                        失败时改回代理即可。也可在编辑面板右上角快速切换。
+                                        直连不经 /api/ai/stream 转发（少一跳、不受平台时长限制），但端点必须自己允许 CORS；失败时改回代理即可。
                                     </p>
                                 </div>
-                                <div className="flex justify-end">
-                                    <button
-                                        onClick={handleSaveAi}
-                                        disabled={aiSaving}
-                                        className="inline-flex items-center gap-1.5 rounded-sm px-4 py-1.5 text-xs font-medium border border-(--card-border) bg-(--btn-bg) text-(--btn-text) transition-colors hover:bg-(--card) hover:text-(--fg) transition-all  disabled:opacity-50"
-                                    >
-                                        <Icon icon="mdi:content-save-outline" className="size-3.5" />
-                                        {aiSaving ? '保存中…' : '保存 AI 配置'}
-                                    </button>
-                                </div>
+                            </section>
+
+                            <section className="space-y-3 rounded-sm border border-(--card-border) bg-(--input-bg)/40 p-3">
+                                <h3 className="flex items-center gap-1.5 border-b border-(--card-border) pb-2 text-xs font-bold text-(--fg)">
+                                    <Icon icon="mdi:text-box-edit-outline" className="size-3.5 text-(--accent-text)" />
+                                    提示词与行为
+                                </h3>
                                 {PROMPT_EDITORS.map((editor) => {
                                     const summary = editor.value.trim().replace(/\s+/g, ' ').slice(0, 60)
                                     return (
@@ -434,7 +443,7 @@ export default function BuffSetsAdmin({ rows, folders = [], isAdmin, buffLocks, 
                                             </div>
                                             <button
                                                 onClick={() => openPromptEditor(editor.key)}
-                                                className="inline-flex shrink-0 items-center gap-1 rounded-sm px-2.5 py-1 text-xs font-medium border border-(--card-border) bg-(--btn-bg) text-(--btn-text) transition-colors hover:bg-(--card) hover:text-(--fg) transition-all "
+                                                className="inline-flex shrink-0 items-center gap-1 rounded-sm border border-(--card-border) bg-(--btn-bg) px-2.5 py-1 text-xs font-medium text-(--btn-text) transition-colors hover:bg-(--card) hover:text-(--fg)"
                                             >
                                                 <Icon icon="mdi:pencil-outline" className="size-3.5" />
                                                 编辑
@@ -461,25 +470,27 @@ export default function BuffSetsAdmin({ rows, folders = [], isAdmin, buffLocks, 
                                         </button>
                                     </div>
                                     <p className="text-[10px] text-(--muted)">
-                                        连续生成时复用上一实体会话前缀（按实体类型分组，保留全部历史轮次），命中 AI 缓存、省 token
+                                        连续生成时复用上一实体会话前缀（按实体类型分组，保留全部历史轮次），命中 AI 缓存、省 token。
                                     </p>
                                 </div>
-                                <p className="text-[10px] text-(--muted)">
-                                    提示词与词典仅存本机浏览器。可在编辑时对生成结果追问。
+                                <p className="rounded-sm border border-(--card-border) bg-(--input-bg) px-2.5 py-2 text-[10px] leading-relaxed text-(--muted)">
+                                    提示词与词典仅存本机浏览器，可在编辑时对生成结果追问。
                                 </p>
-                            </div>
+                            </section>
+                        </div>
 
-                             <div className="mt-3 flex justify-end border-t border-(--card-border) pt-3">
-                                <button
-                                    onClick={() => setShowConfig(false)}
-                                    className="rounded-sm px-4 py-1.5 text-sm font-medium border border-(--card-border) bg-(--btn-bg) text-(--btn-text) transition-colors hover:bg-(--card) hover:text-(--fg) transition-all "
-                                >
-                                    完成
-                                </button>
-                            </div>
+                        <div className="flex shrink-0 items-center justify-between border-t border-(--card-border) px-4 py-3">
+                            <span className="text-[10px] text-(--muted)">关闭时自动保存到本机浏览器</span>
+                            <button
+                                onClick={closeConfig}
+                                className="rounded-sm border border-(--card-border) bg-(--btn-bg) px-4 py-1.5 text-sm font-medium text-(--btn-text) transition-colors hover:bg-(--card) hover:text-(--fg)"
+                            >
+                                完成
+                            </button>
                         </div>
                     </div>
-                )}
+                </div>
+            )}
 
                 {/* 二级弹窗：提示词/任务指令/黑话词典编辑 */}
                 {activePromptEditor && (

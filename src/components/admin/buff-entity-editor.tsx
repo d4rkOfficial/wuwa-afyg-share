@@ -26,12 +26,13 @@ import {
     slotNameFor
 } from '@/lib/consts/buff-zones'
 import type { BuffEntityType, BuffFolderRow, BuffScope, BuffSetRow, BuffCondition } from '@/lib/types/db'
-import { buffFolderName, buffLeafName, joinBuffPath, sanitizeLeafName } from '@/lib/buff-names'
+import { buffFolderName, buffLeafName } from '@/lib/buff-names'
 import type { GeneratedBuff } from '@/lib/ai/types'
 import type { ChatMessage } from '@/lib/ai/client'
 import type { BuffDraftApi } from '@/lib/ai/tools'
 import BuffRefModal from '@/components/admin/buff-ref-modal'
 import BuffAiAssistant from '@/components/admin/buff-ai-assistant'
+import BuffPathInput from '@/components/admin/buff-path-input'
 
 function gcd(a: number, b: number): number {
     a = Math.abs(a)
@@ -81,6 +82,9 @@ interface Props {
     isAdmin: boolean
     /** @desc 当前实体是否可编辑（编辑锁开着且该实体未被单独锁定；管理员恒为 true） */
     canEdit?: boolean
+    /** @desc 左侧实体侧栏是否收起（由管理页持有，编辑区只负责渲染切换按钮） */
+    entitySidebarCollapsed?: boolean
+    onToggleEntitySidebar?: () => void
     // 跨实体共享会话（省 token / 缓存命中）
     sessionSeed?: ChatMessage[]
     onSessionUpdate?: (messages: ChatMessage[]) => void
@@ -137,6 +141,8 @@ export default function BuffEntityEditor({
     namingRule,
     isAdmin,
     canEdit = true,
+    entitySidebarCollapsed = false,
+    onToggleEntitySidebar,
     sessionSeed,
     onSessionUpdate,
     sessionShareEnabled,
@@ -178,9 +184,6 @@ export default function BuffEntityEditor({
         }))
     )
 
-    const [folders, setFolders] = useState<BuffFolderRow[]>(initial.folders ?? [])
-    const [newFolderName, setNewFolderName] = useState('')
-    const [folderEdit, setFolderEdit] = useState<{ oldName: string; name: string } | null>(null)
 
     const canSave = entityName.trim().length > 0
 
@@ -211,10 +214,7 @@ export default function BuffEntityEditor({
     const activeZones = activeBuff?.zones ?? []
 
     const folderNames = [
-        ...new Set([
-            ...folders.map((folder) => folder.name),
-            ...buffs.map((buff) => buffFolderName(buff.buffName)).filter(Boolean)
-        ])
+        ...new Set(buffs.map((buff) => buffFolderName(buff.buffName)).filter(Boolean))
     ]
 
     const buffsInFolder = (folder: string) =>
@@ -223,61 +223,6 @@ export default function BuffEntityEditor({
     const rootBuffs = buffs
         .map((buff, index) => ({ buff, index }))
         .filter((item) => !buffFolderName(item.buff.buffName))
-
-    function moveBuffToFolder(idx: number, folder: string | null) {
-        setBuffs((prev) =>
-            prev.map((buff, i) =>
-                i === idx ? { ...buff, buffName: joinBuffPath(folder, buffLeafName(buff.buffName)) } : buff
-            )
-        )
-    }
-
-    function createFolder() {
-        const name = sanitizeLeafName(newFolderName)
-        if (!name || folders.some((folder) => folder.name === name)) return
-        setFolders((prev) => [...prev, { entity_type: entityType, entity_name: entityName, name, sort_order: prev.length }])
-        setNewFolderName('')
-    }
-
-    function renameFolder(oldName: string, nextName: string) {
-        const name = sanitizeLeafName(nextName)
-        if (!name || name === oldName) {
-            setFolderEdit(null)
-            return
-        }
-        setBuffs((prev) =>
-            prev.map((buff) =>
-                buffFolderName(buff.buffName) === oldName
-                    ? { ...buff, buffName: joinBuffPath(name, buffLeafName(buff.buffName)) }
-                    : buff
-            )
-        )
-        setFolders((prev) => prev.map((folder) => (folder.name === oldName ? { ...folder, name } : folder)))
-        setFolderEdit(null)
-    }
-
-    function deleteFolder(name: string) {
-        setBuffs((prev) =>
-            prev.map((buff) =>
-                buffFolderName(buff.buffName) === name
-                    ? { ...buff, buffName: buffLeafName(buff.buffName) }
-                    : buff
-            )
-        )
-        setFolders((prev) => prev.filter((folder) => folder.name !== name))
-    }
-
-    function moveFolder(name: string, delta: -1 | 1) {
-        setFolders((prev) => {
-            const index = prev.findIndex((folder) => folder.name === name)
-            const target = index + delta
-            if (index < 0 || target < 0 || target >= prev.length) return prev
-            const next = [...prev]
-            const [item] = next.splice(index, 1)
-            next.splice(target, 0, item)
-            return next.map((folder, i) => ({ ...folder, sort_order: i }))
-        })
-    }
 
     function renderBuffRow(buff: BuffRow, idx: number) {
         const active = idx === activeBuffIdx
@@ -314,19 +259,6 @@ export default function BuffEntityEditor({
                             .join(' · ') || '无乘区'}
                     </span>
                 </button>
-                <select
-                    value={buffFolderName(buff.buffName)}
-                    onChange={(e) => moveBuffToFolder(idx, e.currentTarget.value || null)}
-                    className="w-14 shrink-0 rounded-sm border border-(--card-border) bg-(--input-bg) px-1 py-0.5 text-[10px]"
-                    title="移动到文件夹"
-                >
-                    <option value="">根</option>
-                    {folderNames.map((folder) => (
-                        <option key={folder} value={folder}>
-                            {folder}
-                        </option>
-                    ))}
-                </select>
             </div>
         )
     }
@@ -572,8 +504,7 @@ export default function BuffEntityEditor({
             upsertBuffEntity({
                 entityType,
                 entityName: name,
-                buffs: payload as Parameters<typeof upsertBuffEntity>[0]['buffs'],
-                folders: folders.map((folder, index) => ({ name: folder.name, sortOrder: index }))
+                buffs: payload as Parameters<typeof upsertBuffEntity>[0]['buffs']
             })
         ).then((ok) => {
             if (ok) {
@@ -598,8 +529,7 @@ export default function BuffEntityEditor({
         const res = await upsertBuffEntity({
             entityType,
             entityName: name,
-            buffs: payload as Parameters<typeof upsertBuffEntity>[0]['buffs'],
-            folders: folders.map((folder, index) => ({ name: folder.name, sortOrder: index }))
+            buffs: payload as Parameters<typeof upsertBuffEntity>[0]['buffs']
         })
         const error = (res as { error?: string } | undefined)?.error
         if (error) return { ok: false, error }
@@ -734,8 +664,14 @@ export default function BuffEntityEditor({
             setActiveBuffIdx(nextIdx >= 0 ? nextIdx : 0)
             setExpandedZoneIdx(null)
         },
-        getFolders: () => folders,
-        setFolders: (list) => setFolders(list),
+        getFolders: () =>
+            folderNames.map((name, index) => ({
+                entity_type: entityType,
+                entity_name: entityName,
+                name,
+                sort_order: index
+            })),
+        setFolders: () => {},
         save: saveDraftDirect
     }
 
@@ -761,6 +697,17 @@ export default function BuffEntityEditor({
                     <span className="text-xs text-(--muted)">
                         <span className="mg-num">{buffs.length}</span> 条 Buff
                     </span>
+                    <button
+                        type="button"
+                        onClick={onToggleEntitySidebar}
+                        className="rounded-sm p-1 text-(--muted) transition-colors hover:bg-(--card-hover) hover:text-(--fg)"
+                        title={entitySidebarCollapsed ? '展开左侧实体列表' : '收起左侧实体列表'}
+                    >
+                        <Icon
+                            icon={entitySidebarCollapsed ? 'mdi:chevron-right' : 'mdi:chevron-left'}
+                            className="size-4"
+                        />
+                    </button>
                     <div className="flex overflow-hidden rounded-sm border border-(--card-border)">
                         {[
                             { key: 'edit' as const, label: '手工编辑', icon: 'mdi:pencil-outline' },
@@ -832,26 +779,6 @@ export default function BuffEntityEditor({
                             新增
                         </button>
                     </div>
-                    <div className="flex shrink-0 items-center gap-1 border-b border-(--card-border) px-2 py-1.5">
-                        <Icon icon="mdi:folder-plus-outline" className="size-3.5 shrink-0 text-(--muted)" />
-                        <input
-                            value={newFolderName}
-                            onChange={(e) => setNewFolderName(e.target.value)}
-                            onKeyDown={(e) => {
-                                if (e.key === 'Enter') createFolder()
-                            }}
-                            placeholder="新建文件夹"
-                            className="min-w-0 flex-1 bg-transparent text-xs outline-none placeholder:text-(--muted)"
-                        />
-                        <button
-                            onClick={createFolder}
-                            disabled={!newFolderName.trim()}
-                            className="shrink-0 text-(--muted) hover:text-(--accent-text) disabled:opacity-30"
-                            title="新建一级文件夹"
-                        >
-                            <Icon icon="mdi:check" className="size-3.5" />
-                        </button>
-                    </div>
                     <div className="min-h-0 flex-1 space-y-1 overflow-y-auto p-1.5">
                         {buffs.length === 0 ? (
                             <div className="py-6 text-center mg-note">暂无 Buff，点击上方新增</div>
@@ -861,52 +788,8 @@ export default function BuffEntityEditor({
                                     <div key={folder} className="space-y-0.5">
                                         <div className="flex items-center gap-1 px-1 py-0.5 text-[10px] font-bold text-(--muted)">
                                             <Icon icon="mdi:folder-outline" className="size-3.5 shrink-0" />
-                                            {folderEdit?.oldName === folder ? (
-                                                <input
-                                                    autoFocus
-                                                    value={folderEdit.name}
-                                                    onChange={(e) =>
-                                                        setFolderEdit({ oldName: folder, name: e.target.value })
-                                                    }
-                                                    onBlur={() => renameFolder(folder, folderEdit.name)}
-                                                    onKeyDown={(e) => {
-                                                        if (e.key === 'Enter') renameFolder(folder, folderEdit.name)
-                                                        if (e.key === 'Escape') setFolderEdit(null)
-                                                    }}
-                                                    className="min-w-0 flex-1 rounded-sm border border-(--card-border) bg-(--input-bg) px-1 py-0.5 text-[10px] outline-none"
-                                                />
-                                            ) : (
-                                                <span className="min-w-0 flex-1 truncate">{folder}</span>
-                                            )}
+                                            <span className="min-w-0 flex-1 truncate">{folder}</span>
                                             <span className="shrink-0">{buffsInFolder(folder).length}</span>
-                                            <button
-                                                onClick={() => setFolderEdit({ oldName: folder, name: folder })}
-                                                className="shrink-0 hover:text-(--accent-text)"
-                                                title="重命名文件夹"
-                                            >
-                                                <Icon icon="mdi:pencil-outline" className="size-3" />
-                                            </button>
-                                            <button
-                                                onClick={() => moveFolder(folder, -1)}
-                                                className="shrink-0 hover:text-(--accent-text)"
-                                                title="上移文件夹"
-                                            >
-                                                <Icon icon="mdi:arrow-up" className="size-3" />
-                                            </button>
-                                            <button
-                                                onClick={() => moveFolder(folder, 1)}
-                                                className="shrink-0 hover:text-(--accent-text)"
-                                                title="下移文件夹"
-                                            >
-                                                <Icon icon="mdi:arrow-down" className="size-3" />
-                                            </button>
-                                            <button
-                                                onClick={() => deleteFolder(folder)}
-                                                className="shrink-0 hover:text-(--danger)"
-                                                title="删除文件夹（成员移回根）"
-                                            >
-                                                <Icon icon="mdi:delete-outline" className="size-3" />
-                                            </button>
                                         </div>
                                         {buffsInFolder(folder).map((item) => renderBuffRow(item.buff, item.index))}
                                     </div>
@@ -926,24 +809,15 @@ export default function BuffEntityEditor({
                     </div>
                 </div>
 
-                {/* 右侧工作区：手工编辑（含乘区，捆绑在一起） 或 AI 工作区，二者互斥 */}
-                {rightView === 'edit' ? (
+                {/* 右侧工作区：手工编辑 / AI 工作区都保持挂载，切换只隐藏，避免丢失聊天与编辑状态 */}
+                <div className={rightView === 'edit' ? 'flex min-h-0 min-w-0 flex-1 flex-col' : 'hidden'}>
                 <div className="buff-editor-main flex min-w-0 flex-1 flex-col">
                     {activeBuff && activeBuffIdx !== null ? (
                         <>
                             <div className="flex shrink-0 flex-wrap items-center gap-2 border-b border-(--card-border) px-3 py-2">
-                                <input
-                                    value={buffLeafName(activeBuff.buffName)}
-                                    onChange={(e) =>
-                                        updateActiveBuff({
-                                            buffName: joinBuffPath(
-                                                buffFolderName(activeBuff.buffName),
-                                                sanitizeLeafName(e.target.value)
-                                            )
-                                        })
-                                    }
-                                    placeholder="Buff 名"
-                                    className="min-w-0 flex-1 rounded-sm border border-(--card-border) bg-(--input-bg) px-2 py-1 text-sm outline-none focus:border-(--accent)"
+                                <BuffPathInput
+                                    value={activeBuff.buffName}
+                                    onCommit={(value) => updateActiveBuff({ buffName: value })}
                                 />
                                 <div className="flex shrink-0 overflow-hidden rounded-sm border border-(--card-border)">
                                     {SCOPE_TABS.map((t) => (
@@ -1322,8 +1196,9 @@ export default function BuffEntityEditor({
                         </div>
                     )}
                 </div>
+                </div>
 
-                ) : (
+                <div className={rightView === 'ai' ? 'flex min-h-0 min-w-0 flex-1 flex-col' : 'hidden'}>
                 <BuffAiAssistant
                     variant="inline"
                     entityType={entityType}
@@ -1346,7 +1221,7 @@ export default function BuffEntityEditor({
                     onApply={applyBuffList}
                     onMerge={mergeBuffList}
                 />
-                )}
+                </div>
             </div>
 
             {refTargetIdx !== null && (
