@@ -3,6 +3,7 @@ import {
     DEFAULT_SYSTEM_PROMPT,
     DEFAULT_INITIAL_TASK_PROMPT,
     DEFAULT_SLANG_DICT,
+    BUFF_NAME_LEAF_RULE_TEXT,
     CONDITION_CHAIN_RULES_TEXT,
     CONDITION_REFINE_RULES_TEXT,
     CONDITION_COMMON_RULES_TEXT
@@ -32,10 +33,11 @@ export interface RenderSystemContext {
 }
 
 export function renderSystemPrompt(template: string, ctx: RenderSystemContext = {}): string {
-    return template
+    const rendered = template
         .replaceAll('{ZONE_LIST}', ZONE_LIST_TEXT)
         .replaceAll('{REF_ZONE_LIST}', REF_ZONE_LIST_TEXT)
         .replaceAll('{CONDITION_RULES}', renderConditionRules(ctx.entityType))
+    return `${rendered}\n\n${BUFF_NAME_LEAF_RULE_TEXT}`
 }
 
 export interface RenderUserContext {

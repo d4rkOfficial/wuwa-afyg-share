@@ -14,6 +14,7 @@ import {
     sanitizeZoneCondition
 } from '@/lib/consts/buff-zones'
 import type { BuffScope } from '@/lib/types/db'
+import { sanitizeLeafName } from '@/lib/buff-names'
 
 /** @desc 默认服务地址 / 模型（可在「连接配置」改成任意 OpenAI 兼容端点与模型） */
 const DEFAULT_BASE = 'https://api.deepseek.com'
@@ -285,12 +286,16 @@ export async function chatCompletionStream(
     }
 }
 
-// 只保留白名单乘区、合法数值，避免脏数据
-export function sanitizeBuffs(buffs: GeneratedBuff[]): GeneratedBuff[] {
+/**
+ * @desc 只保留白名单乘区、合法数值，避免脏数据。
+ * `leafOnly` 用于 AI 生成结果：buffName 一律压成单段短名，模型误写 `\` 时转成 `/`，不建文件夹。
+ * 草稿编辑工具保持默认（允许操作已有的全名路径）。
+ */
+export function sanitizeBuffs(buffs: GeneratedBuff[], options: { leafOnly?: boolean } = {}): GeneratedBuff[] {
     const out: GeneratedBuff[] = []
     const seen = new Set<string>()
     for (const b of buffs) {
-        const name = b.buffName?.trim()
+        const name = options.leafOnly ? sanitizeLeafName(b.buffName ?? '') : b.buffName?.trim()
         if (!name || seen.has(name)) continue
         const zones = sanitizeZones(b.zones)
         if (!zones.length) continue
