@@ -4,16 +4,14 @@
 import { createClient, hasEnv } from '@/lib/supabase/server'
 import { rebuildSnapshotState, type SnapshotDiff } from '@/lib/buff-snapshots/diff'
 import { buffSetsToSql } from '@/lib/buff-snapshots/export-sql'
-import { upgradeBuffSetRowV2 } from '@/lib/buff-snapshots/migrate-v2'
-import type { BuffSetRow } from '@/lib/types/db'
+import type { BuffFolderRow, BuffSetRow, BuffSnapshotState } from '@/lib/types/db'
 
 export const dynamic = 'force-dynamic'
 
-const BUFF_COLUMNS = 'entity_type, entity_name, buff_name, scope, exclusive, condition, buff_set'
+const BUFF_COLUMNS =
+    'id, entity_type, entity_name, buff_name, scope, exclusive, condition, buff_set, sort_order'
+const FOLDER_COLUMNS = 'id, entity_type, entity_name, name, sort_order'
 const SNAPSHOT_COLUMNS = 'id, created_at, note, is_root, state, diff'
-
-/** @desc 导出前把行升级到 v2：导出的 SQL 直接给外部库执行，不该带老结构 */
-const toV2 = (row: BuffSetRow): BuffSetRow => upgradeBuffSetRowV2(row).row
 
 export async function GET() {
     if (!hasEnv()) return Response.json({ error: '服务未配置' }, { status: 503 })
@@ -21,7 +19,7 @@ export async function GET() {
     const supabase = await createClient()
 
     // 优先：最新快照状态（根 + 版本链重建，null = 重建到最新）
-    let rows: BuffSetRow[] | null = null
+    let state: BuffSnapshotState | null = null
     let source = '最新快照'
     const { data: chainData } = await supabase
         .from('buff_set_snapshot')
@@ -30,24 +28,33 @@ export async function GET() {
     const chain = ((chainData ?? []) as Array<{
         id: string
         is_root: boolean
-        state: BuffSetRow[] | null
+        state: BuffSnapshotState | null
         diff: SnapshotDiff | null
     }>).map((s) => ({
         ...s,
-        state: Array.isArray(s.state) ? s.state.map(toV2) : s.state
+        state: s.state && !Array.isArray(s.state) ? s.state : null
     }))
     if (chain.length > 0 && chain.some((s) => s.is_root)) {
-        rows = rebuildSnapshotState(chain, null)?.map(toV2) ?? null
+        state = rebuildSnapshotState(chain, null)
     }
 
     // 兜底：无快照时导出当前实时数据
-    if (!rows) {
+    if (!state) {
         source = '实时数据（暂无快照）'
-        const { data } = await supabase.from('buff_sets').select(BUFF_COLUMNS)
-        rows = ((data ?? []) as BuffSetRow[]).map(toV2)
+        const [{ data: buffData }, { data: folderData }] = await Promise.all([
+            supabase.from('buff_sets').select(BUFF_COLUMNS).order('sort_order', { ascending: true }),
+            supabase.from('buff_folders').select(FOLDER_COLUMNS).order('sort_order', { ascending: true })
+        ])
+        state = {
+            buffs: (buffData ?? []) as BuffSetRow[],
+            folders: (folderData ?? []) as BuffFolderRow[]
+        }
     }
 
-    const sql = buffSetsToSql(rows, { source, exportedAt: new Date().toISOString() })
+    const sql = buffSetsToSql(state.buffs, state.folders, {
+        source,
+        exportedAt: new Date().toISOString()
+    })
 
     const d = new Date()
     const date = `${d.getFullYear()}${String(d.getMonth() + 1).padStart(2, '0')}${String(d.getDate()).padStart(2, '0')}`

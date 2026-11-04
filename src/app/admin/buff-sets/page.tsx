@@ -4,7 +4,7 @@ import BuffSetsAdmin from '@/components/admin/buff-sets-admin'
 import { createClient, hasEnv } from '@/lib/supabase/server'
 import { getViewerLocks } from '@/lib/edit-locks'
 import { getEntityIcons } from '@/lib/data/avatar-icons'
-import type { BuffSetRow } from '@/lib/types/db'
+import type { BuffFolderRow, BuffSetRow } from '@/lib/types/db'
 
 export const metadata: Metadata = {
     title: 'Buff 集编辑'
@@ -35,12 +35,20 @@ export default async function AdminBuffSetsPage() {
         )
     }
 
-    const { data } = await supabase
-        .from('buff_sets')
-        .select('entity_type, entity_name, buff_name, scope, exclusive, condition, buff_set')
-        .order('entity_type', { ascending: true })
-        .order('entity_name', { ascending: true })
+    const [{ data }, { data: folderData }] = await Promise.all([
+        supabase
+            .from('buff_sets')
+            .select('id, entity_type, entity_name, buff_name, scope, exclusive, condition, buff_set, sort_order')
+            .order('entity_type', { ascending: true })
+            .order('entity_name', { ascending: true })
+            .order('sort_order', { ascending: true }),
+        supabase
+            .from('buff_folders')
+            .select('id, entity_type, entity_name, name, sort_order')
+            .order('sort_order', { ascending: true })
+    ])
     const rows = (data ?? []) as BuffSetRow[]
+    const folders = (folderData ?? []) as BuffFolderRow[]
     // 实体列表图标（角色 / 武器 / 首位声骸 / 套装）
     const entityIcons = await getEntityIcons()
 
@@ -50,7 +58,13 @@ export default async function AdminBuffSetsPage() {
                 <h1 className="mg-title text-2xl md:text-3xl">{isAdmin ? 'Buff 集管理' : 'Buff 集编辑'}</h1>
             </div>
 
-            <BuffSetsAdmin rows={rows} isAdmin={isAdmin} buffLocks={locks.buffLocks} entityIcons={entityIcons} />
+            <BuffSetsAdmin
+                rows={rows}
+                folders={folders}
+                isAdmin={isAdmin}
+                buffLocks={locks.buffLocks}
+                entityIcons={entityIcons}
+            />
         </div>
     )
 }

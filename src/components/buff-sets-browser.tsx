@@ -13,10 +13,13 @@ import {
     slotNameFor
 } from '@/lib/consts/buff-zones'
 import type { EntityIconMaps } from '@/lib/data/avatar-icons'
-import type { BuffEntityType, BuffSetRow } from '@/lib/types/db'
+import type { BuffEntityType, BuffFolderRow, BuffSetRow } from '@/lib/types/db'
+import { buffFolderName, buffLeafName } from '@/lib/buff-names'
 
 interface Props {
     rows: BuffSetRow[]
+    /** @desc 一级文件夹（含空文件夹）；成员按 buff_name 前缀归属 */
+    folders?: BuffFolderRow[]
     /** @desc 四类实体的名字 → 图标地址（角色 / 武器 / 首位声骸 / 套装都要有图标） */
     entityIcons?: EntityIconMaps
 }
@@ -38,6 +41,7 @@ interface Entity {
     entityType: BuffEntityType
     group: 'character' | 'weapon' | 'echo' | 'set'
     pieces: number[]
+    folders: string[]
     buffs: BuffSetRow[]
 }
 
@@ -80,9 +84,21 @@ function EntityIcon({
     )
 }
 
-export default function BuffSetsBrowser({ rows, entityIcons }: Props) {
+export default function BuffSetsBrowser({ rows, folders = [], entityIcons }: Props) {
     const [search, setSearch] = useState('')
     const [selectedKey, setSelectedKey] = useState<string | null>(null)
+    const foldersByKey = useMemo(() => {
+        const map = new Map<string, string[]>()
+        for (const folder of folders) {
+            const key = isSetType(folder.entity_type)
+                ? `set:${folder.entity_name}`
+                : `${folder.entity_type}:${folder.entity_name}`
+            const list = map.get(key) ?? []
+            if (!list.includes(folder.name)) list.push(folder.name)
+            map.set(key, list)
+        }
+        return map
+    }, [folders])
 
     // 按实体聚合：套装同名的不同件数合并成一条（件数作为子信息）
     const entities = useMemo<Entity[]>(() => {
@@ -98,11 +114,15 @@ export default function BuffSetsBrowser({ rows, entityIcons }: Props) {
                     entityType: row.entity_type,
                     group: groupOf(row.entity_type),
                     pieces: [],
+                    folders: [],
                     buffs: []
                 }
                 map.set(key, entity)
             }
             entity.buffs.push(row)
+            for (const folderName of foldersByKey.get(key) ?? []) {
+                if (!entity.folders.includes(folderName)) entity.folders.push(folderName)
+            }
             if (set) {
                 const n = Number(row.entity_type[0])
                 if (Number.isFinite(n) && !entity.pieces.includes(n)) entity.pieces.push(n)
@@ -110,10 +130,16 @@ export default function BuffSetsBrowser({ rows, entityIcons }: Props) {
         }
         for (const entity of map.values()) {
             entity.pieces.sort((a, b) => a - b)
-            entity.buffs.sort((a, b) => a.buff_name.localeCompare(b.buff_name, 'zh'))
+            entity.buffs.sort((a, b) => (a.sort_order ?? 0) - (b.sort_order ?? 0) || a.buff_name.localeCompare(b.buff_name, 'zh'))
+            const names = new Set(entity.folders)
+            for (const buff of entity.buffs) {
+                const name = buffFolderName(buff.buff_name)
+                if (name) names.add(name)
+            }
+            entity.folders = [...names].sort((a, b) => a.localeCompare(b, 'zh-Hans-CN', { numeric: true }))
         }
         return [...map.values()].sort((a, b) => a.entityName.localeCompare(b.entityName, 'zh'))
-    }, [rows])
+    }, [rows, foldersByKey])
 
     const q = search.trim()
     const grouped = useMemo(() => {
@@ -124,6 +150,17 @@ export default function BuffSetsBrowser({ rows, entityIcons }: Props) {
     const selected = entities.find((e) => e.key === selectedKey) ?? null
     const selectedIcon = selected ? iconFor(selected.group, selected.entityName, entityIcons) : undefined
     const selectedGroup = selected ? GROUPS.find((g) => g.key === selected.group) : undefined
+
+    const selectedGroups = useMemo(() => {
+        if (!selected) return []
+        const groups = selected.folders.map((name) => ({
+            name,
+            buffs: selected.buffs.filter((buff) => buffFolderName(buff.buff_name) === name)
+        }))
+        const rootBuffs = selected.buffs.filter((buff) => !buffFolderName(buff.buff_name))
+        if (rootBuffs.length > 0) groups.push({ name: '', buffs: rootBuffs })
+        return groups
+    }, [selected])
 
     const scopeCounts = useMemo(() => {
         if (!selected) return []
@@ -257,81 +294,102 @@ export default function BuffSetsBrowser({ rows, entityIcons }: Props) {
                             </div>
                         </header>
 
-                        {/* Buff 卡片 */}
-                        <div className="grid grid-cols-1 gap-3 xl:grid-cols-2">
-                            {selected.buffs.map((buff, index) => {
-                                const piece = isSetType(buff.entity_type) ? Number(buff.entity_type[0]) : null
-                                const conditionText = buff.condition ? describeCondition(buff.condition, slotNameFor(buff.entity_type)) : ''
-                                return (
-                                    <article
-                                        key={`${buff.entity_type}/${buff.entity_name}/${buff.buff_name}/${index}`}
-                                        className="mg-card p-3.5 transition-colors hover:border-(--accent)"
-                                    >
-                                        <div className="mb-2.5 flex flex-wrap items-center gap-1.5">
-                                            <h3 className="mg-title min-w-0 flex-1 truncate text-sm">
-                                                {buff.buff_name}
-                                            </h3>
-                                            <span className="rounded-sm bg-(--accent) px-1.5 py-0.5 text-[10px] text-(--accent-fg)">
-                                                {BUFF_SCOPE_LABELS[buff.scope] ?? buff.scope}
-                                            </span>
-                                            {piece && (
-                                                <span className="rounded-sm border border-(--card-border) px-1.5 py-0.5 text-[10px] text-(--muted)">
-                                                    {piece} 件
-                                                </span>
-                                            )}
-                                            {conditionText && (
-                                                <span
-                                                    className="max-w-40 truncate rounded-sm border border-(--card-border) px-1.5 py-0.5 text-[10px] text-(--accent-text)"
-                                                    title={`链/阶门槛：${conditionText}`}
+                        {/* Buff 卡片：按一级文件夹分组，根 Buff 在最后 */}
+                        <div className="space-y-4">
+                            {selectedGroups.map((group) => (
+                                <section key={group.name || '__root__'}>
+                                    <h3 className="mb-2 flex items-center gap-1.5 text-xs font-medium text-(--muted)">
+                                        <Icon
+                                            icon={group.name ? 'mdi:folder-outline' : 'mdi:format-list-bulleted'}
+                                            className="size-3.5 shrink-0"
+                                        />
+                                        <span className="min-w-0 flex-1 truncate">{group.name || '未归组'}</span>
+                                        <span className="mg-num">{group.buffs.length}</span>
+                                    </h3>
+                                    <div className="grid grid-cols-1 gap-3 xl:grid-cols-2">
+                                        {group.buffs.map((buff, index) => {
+                                            const piece = isSetType(buff.entity_type)
+                                                ? Number(buff.entity_type[0])
+                                                : null
+                                            const conditionText = buff.condition
+                                                ? describeCondition(buff.condition, slotNameFor(buff.entity_type))
+                                                : ''
+                                            return (
+                                                <article
+                                                    key={`${buff.entity_type}/${buff.entity_name}/${buff.buff_name}/${index}`}
+                                                    className="mg-card p-3.5 transition-colors hover:border-(--accent)"
                                                 >
-                                                    {conditionText}
-                                                </span>
-                                            )}
-                                        </div>
+                                                    <div className="mb-2.5 flex flex-wrap items-center gap-1.5">
+                                                        <h3
+                                                            className="mg-title min-w-0 flex-1 truncate text-sm"
+                                                            title={buff.buff_name}
+                                                        >
+                                                            {buffLeafName(buff.buff_name)}
+                                                        </h3>
+                                                        <span className="rounded-sm bg-(--accent) px-1.5 py-0.5 text-[10px] text-(--accent-fg)">
+                                                            {BUFF_SCOPE_LABELS[buff.scope] ?? buff.scope}
+                                                        </span>
+                                                        {piece && (
+                                                            <span className="rounded-sm border border-(--card-border) px-1.5 py-0.5 text-[10px] text-(--muted)">
+                                                                {piece} 件
+                                                            </span>
+                                                        )}
+                                                        {conditionText && (
+                                                            <span
+                                                                className="max-w-40 truncate rounded-sm border border-(--card-border) px-1.5 py-0.5 text-[10px] text-(--accent-text)"
+                                                                title={`链/阶门槛：${conditionText}`}
+                                                            >
+                                                                {conditionText}
+                                                            </span>
+                                                        )}
+                                                    </div>
 
-                                        <ul className="space-y-1">
-                                            {buff.buff_set.map((zone, i) => {
-                                                const badge = describeZoneConditionBadge(zone.condition)
-                                                return (
-                                                    <li
-                                                        key={`${zone.zoneId}-${i}`}
-                                                        className="flex items-center gap-2 rounded-sm bg-(--card-hover) px-2 py-1 text-xs"
-                                                    >
-                                                        <span className="min-w-0 flex-1 truncate text-(--muted)">
-                                                            {zoneLabel(zone.zoneId)}
-                                                        </span>
-                                                        {badge && (
-                                                            <span
-                                                                className="shrink-0 rounded-sm px-1 py-0.5 text-[10px] text-(--accent-text)"
-                                                                style={{
-                                                                    background:
-                                                                        'color-mix(in srgb, var(--accent) 16%, transparent)'
-                                                                }}
-                                                                title={`该乘区条件：${describeCondition(zone.condition)}`}
-                                                            >
-                                                                {badge}
-                                                            </span>
-                                                        )}
-                                                        {zone.ref && (
-                                                            <span
-                                                                className="min-w-0 shrink truncate text-[10px] text-(--info)"
-                                                                title={`引用 / 转模：${describeZoneRef(zone.ref)}`}
-                                                            >
-                                                                {describeZoneRef(zone.ref)}
-                                                            </span>
-                                                        )}
-                                                        <span className="mg-num shrink-0 text-(--fg)">
-                                                            {zone.ref
-                                                                ? '—'
-                                                                : `${zone.override ? '覆盖+' : '+'}${zone.value}`}
-                                                        </span>
-                                                    </li>
-                                                )
-                                            })}
-                                        </ul>
-                                    </article>
-                                )
-                            })}
+                                                    <ul className="space-y-1">
+                                                        {buff.buff_set.map((zone, i) => {
+                                                            const badge = describeZoneConditionBadge(zone.condition)
+                                                            return (
+                                                                <li
+                                                                    key={`${zone.zoneId}-${i}`}
+                                                                    className="flex items-center gap-2 rounded-sm bg-(--card-hover) px-2 py-1 text-xs"
+                                                                >
+                                                                    <span className="min-w-0 flex-1 truncate text-(--muted)">
+                                                                        {zoneLabel(zone.zoneId)}
+                                                                    </span>
+                                                                    {badge && (
+                                                                        <span
+                                                                            className="shrink-0 rounded-sm px-1 py-0.5 text-[10px] text-(--accent-text)"
+                                                                            style={{
+                                                                                background:
+                                                                                    'color-mix(in srgb, var(--accent) 16%, transparent)'
+                                                                            }}
+                                                                            title={`该乘区条件：${describeCondition(zone.condition)}`}
+                                                                        >
+                                                                            {badge}
+                                                                        </span>
+                                                                    )}
+                                                                    {zone.ref && (
+                                                                        <span
+                                                                            className="min-w-0 shrink truncate text-[10px] text-(--info)"
+                                                                            title={`引用 / 转模：${describeZoneRef(zone.ref)}`}
+                                                                        >
+                                                                            {describeZoneRef(zone.ref)}
+                                                                        </span>
+                                                                    )}
+                                                                    <span className="mg-num shrink-0 text-(--fg)">
+                                                                        {zone.ref
+                                                                            ? '—'
+                                                                            : `${zone.override ? '覆盖+' : '+'}${zone.value}`}
+                                                                    </span>
+                                                                </li>
+                                                            )
+                                                        })}
+                                                    </ul>
+                                                </article>
+                                            )
+                                        })}
+                                    </div>
+                                </section>
+                            ))}
                         </div>
                     </div>
                 )}

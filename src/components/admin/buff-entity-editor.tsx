@@ -25,7 +25,8 @@ import {
     describeZoneConditionBadge,
     slotNameFor
 } from '@/lib/consts/buff-zones'
-import type { BuffEntityType, BuffScope, BuffSetRow, BuffCondition } from '@/lib/types/db'
+import type { BuffEntityType, BuffFolderRow, BuffScope, BuffSetRow, BuffCondition } from '@/lib/types/db'
+import { buffFolderName, buffLeafName, joinBuffPath, sanitizeLeafName } from '@/lib/buff-names'
 import type { GeneratedBuff } from '@/lib/ai/types'
 import type { ChatMessage } from '@/lib/ai/client'
 import type { BuffDraftApi } from '@/lib/ai/tools'
@@ -62,6 +63,7 @@ interface Props {
         entityType: BuffEntityType
         entityName: string
         buffs: BuffSetRow[]
+        folders?: BuffFolderRow[]
     }
 
     apiKey: string
@@ -176,6 +178,9 @@ export default function BuffEntityEditor({
         }))
     )
 
+    const [folders, setFolders] = useState<BuffFolderRow[]>(initial.folders ?? [])
+    const [newFolderName, setNewFolderName] = useState('')
+    const [folderEdit, setFolderEdit] = useState<{ oldName: string; name: string } | null>(null)
 
     const canSave = entityName.trim().length > 0
 
@@ -204,6 +209,127 @@ export default function BuffEntityEditor({
 
     const activeBuff = activeBuffIdx !== null ? buffs[activeBuffIdx] : null
     const activeZones = activeBuff?.zones ?? []
+
+    const folderNames = [
+        ...new Set([
+            ...folders.map((folder) => folder.name),
+            ...buffs.map((buff) => buffFolderName(buff.buffName)).filter(Boolean)
+        ])
+    ]
+
+    const buffsInFolder = (folder: string) =>
+        buffs.map((buff, index) => ({ buff, index })).filter((item) => buffFolderName(item.buff.buffName) === folder)
+
+    const rootBuffs = buffs
+        .map((buff, index) => ({ buff, index }))
+        .filter((item) => !buffFolderName(item.buff.buffName))
+
+    function moveBuffToFolder(idx: number, folder: string | null) {
+        setBuffs((prev) =>
+            prev.map((buff, i) =>
+                i === idx ? { ...buff, buffName: joinBuffPath(folder, buffLeafName(buff.buffName)) } : buff
+            )
+        )
+    }
+
+    function createFolder() {
+        const name = sanitizeLeafName(newFolderName)
+        if (!name || folders.some((folder) => folder.name === name)) return
+        setFolders((prev) => [...prev, { entity_type: entityType, entity_name: entityName, name, sort_order: prev.length }])
+        setNewFolderName('')
+    }
+
+    function renameFolder(oldName: string, nextName: string) {
+        const name = sanitizeLeafName(nextName)
+        if (!name || name === oldName) {
+            setFolderEdit(null)
+            return
+        }
+        setBuffs((prev) =>
+            prev.map((buff) =>
+                buffFolderName(buff.buffName) === oldName
+                    ? { ...buff, buffName: joinBuffPath(name, buffLeafName(buff.buffName)) }
+                    : buff
+            )
+        )
+        setFolders((prev) => prev.map((folder) => (folder.name === oldName ? { ...folder, name } : folder)))
+        setFolderEdit(null)
+    }
+
+    function deleteFolder(name: string) {
+        setBuffs((prev) =>
+            prev.map((buff) =>
+                buffFolderName(buff.buffName) === name
+                    ? { ...buff, buffName: buffLeafName(buff.buffName) }
+                    : buff
+            )
+        )
+        setFolders((prev) => prev.filter((folder) => folder.name !== name))
+    }
+
+    function moveFolder(name: string, delta: -1 | 1) {
+        setFolders((prev) => {
+            const index = prev.findIndex((folder) => folder.name === name)
+            const target = index + delta
+            if (index < 0 || target < 0 || target >= prev.length) return prev
+            const next = [...prev]
+            const [item] = next.splice(index, 1)
+            next.splice(target, 0, item)
+            return next.map((folder, i) => ({ ...folder, sort_order: i }))
+        })
+    }
+
+    function renderBuffRow(buff: BuffRow, idx: number) {
+        const active = idx === activeBuffIdx
+        return (
+            <div
+                key={idx}
+                className={`flex items-center gap-1 rounded-sm px-1.5 py-1 transition-colors ${
+                    active ? 'bg-(--accent) text-(--accent-fg)' : 'text-(--fg) hover:bg-(--card-hover)'
+                }`}
+            >
+                <button
+                    onClick={() => {
+                        setActiveBuffIdx(idx)
+                        setExpandedZoneIdx(null)
+                        setRightView('edit')
+                    }}
+                    className="min-w-0 flex-1 text-left"
+                >
+                    <span className="block truncate text-xs font-medium">
+                        {buffLeafName(buff.buffName).trim() || '（未命名）'}
+                    </span>
+                    <span
+                        className={`block truncate text-[10px] ${
+                            active ? 'text-(--accent-fg) opacity-80' : 'text-(--muted)'
+                        }`}
+                    >
+                        {buff.zones
+                            .map(
+                                (z) =>
+                                    `${BUFF_ZONE_MAP.get(z.zoneId)?.label ?? z.zoneId}+${
+                                        z.ref ? '引用' : z.value
+                                    }${zoneConditionBadge(z.condition) ? `[${zoneConditionBadge(z.condition)}]` : ''}`
+                            )
+                            .join(' · ') || '无乘区'}
+                    </span>
+                </button>
+                <select
+                    value={buffFolderName(buff.buffName)}
+                    onChange={(e) => moveBuffToFolder(idx, e.currentTarget.value || null)}
+                    className="w-14 shrink-0 rounded-sm border border-(--card-border) bg-(--input-bg) px-1 py-0.5 text-[10px]"
+                    title="移动到文件夹"
+                >
+                    <option value="">根</option>
+                    {folderNames.map((folder) => (
+                        <option key={folder} value={folder}>
+                            {folder}
+                        </option>
+                    ))}
+                </select>
+            </div>
+        )
+    }
     /** @desc 各乘区当前条目数（右栏「添加乘区」用；同一乘区可多条） */
     const zoneCounts = (() => {
         const map = new Map<string, number>()
@@ -446,7 +572,8 @@ export default function BuffEntityEditor({
             upsertBuffEntity({
                 entityType,
                 entityName: name,
-                buffs: payload as Parameters<typeof upsertBuffEntity>[0]['buffs']
+                buffs: payload as Parameters<typeof upsertBuffEntity>[0]['buffs'],
+                folders: folders.map((folder, index) => ({ name: folder.name, sortOrder: index }))
             })
         ).then((ok) => {
             if (ok) {
@@ -471,7 +598,8 @@ export default function BuffEntityEditor({
         const res = await upsertBuffEntity({
             entityType,
             entityName: name,
-            buffs: payload as Parameters<typeof upsertBuffEntity>[0]['buffs']
+            buffs: payload as Parameters<typeof upsertBuffEntity>[0]['buffs'],
+            folders: folders.map((folder, index) => ({ name: folder.name, sortOrder: index }))
         })
         const error = (res as { error?: string } | undefined)?.error
         if (error) return { ok: false, error }
@@ -606,6 +734,8 @@ export default function BuffEntityEditor({
             setActiveBuffIdx(nextIdx >= 0 ? nextIdx : 0)
             setExpandedZoneIdx(null)
         },
+        getFolders: () => folders,
+        setFolders: (list) => setFolders(list),
         save: saveDraftDirect
     }
 
@@ -676,7 +806,7 @@ export default function BuffEntityEditor({
                     {buffs.length === 0 && <option value="">（暂无 Buff）</option>}
                     {buffs.map((buff, idx) => (
                         <option key={idx} value={idx}>
-                            {buff.buffName.trim() || '（未命名）'}
+                            {buffLeafName(buff.buffName).trim() || '（未命名）'}
                         </option>
                     ))}
                 </select>
@@ -702,44 +832,96 @@ export default function BuffEntityEditor({
                             新增
                         </button>
                     </div>
+                    <div className="flex shrink-0 items-center gap-1 border-b border-(--card-border) px-2 py-1.5">
+                        <Icon icon="mdi:folder-plus-outline" className="size-3.5 shrink-0 text-(--muted)" />
+                        <input
+                            value={newFolderName}
+                            onChange={(e) => setNewFolderName(e.target.value)}
+                            onKeyDown={(e) => {
+                                if (e.key === 'Enter') createFolder()
+                            }}
+                            placeholder="新建文件夹"
+                            className="min-w-0 flex-1 bg-transparent text-xs outline-none placeholder:text-(--muted)"
+                        />
+                        <button
+                            onClick={createFolder}
+                            disabled={!newFolderName.trim()}
+                            className="shrink-0 text-(--muted) hover:text-(--accent-text) disabled:opacity-30"
+                            title="新建一级文件夹"
+                        >
+                            <Icon icon="mdi:check" className="size-3.5" />
+                        </button>
+                    </div>
                     <div className="min-h-0 flex-1 space-y-1 overflow-y-auto p-1.5">
                         {buffs.length === 0 ? (
                             <div className="py-6 text-center mg-note">暂无 Buff，点击上方新增</div>
                         ) : (
-                            buffs.map((buff, idx) => (
-                                <button
-                                    key={idx}
-                                    onClick={() => {
-                                        setActiveBuffIdx(idx)
-                                        setExpandedZoneIdx(null)
-                                        // 选中条目即回到手工编辑区（在 AI 工作区里点条目也能继续改）
-                                        setRightView('edit')
-                                    }}
-                                    className={`w-full rounded-sm px-2 py-1.5 text-left transition-colors ${
-                                        idx === activeBuffIdx
-                                            ? 'bg-(--accent) text-(--accent-fg)'
-                                            : 'text-(--fg) hover:bg-(--card-hover)'
-                                    }`}
-                                >
-                                    <span className="block truncate text-xs font-medium">
-                                        {buff.buffName.trim() || '（未命名）'}
-                                    </span>
-                                    <span
-                                        className={`block truncate text-[10px] ${
-                                            idx === activeBuffIdx ? 'text-(--accent-fg) opacity-80' : 'text-(--muted)'
-                                        }`}
-                                    >
-                                        {buff.zones
-                                            .map(
-                                                (z) =>
-                                                    `${BUFF_ZONE_MAP.get(z.zoneId)?.label ?? z.zoneId}+${
-                                                        z.ref ? '引用' : z.value
-                                                    }${zoneConditionBadge(z.condition) ? `[${zoneConditionBadge(z.condition)}]` : ''}`
-                                            )
-                                            .join(' · ') || '无乘区'}
-                                    </span>
-                                </button>
-                            ))
+                            <>
+                                {folderNames.map((folder) => (
+                                    <div key={folder} className="space-y-0.5">
+                                        <div className="flex items-center gap-1 px-1 py-0.5 text-[10px] font-bold text-(--muted)">
+                                            <Icon icon="mdi:folder-outline" className="size-3.5 shrink-0" />
+                                            {folderEdit?.oldName === folder ? (
+                                                <input
+                                                    autoFocus
+                                                    value={folderEdit.name}
+                                                    onChange={(e) =>
+                                                        setFolderEdit({ oldName: folder, name: e.target.value })
+                                                    }
+                                                    onBlur={() => renameFolder(folder, folderEdit.name)}
+                                                    onKeyDown={(e) => {
+                                                        if (e.key === 'Enter') renameFolder(folder, folderEdit.name)
+                                                        if (e.key === 'Escape') setFolderEdit(null)
+                                                    }}
+                                                    className="min-w-0 flex-1 rounded-sm border border-(--card-border) bg-(--input-bg) px-1 py-0.5 text-[10px] outline-none"
+                                                />
+                                            ) : (
+                                                <span className="min-w-0 flex-1 truncate">{folder}</span>
+                                            )}
+                                            <span className="shrink-0">{buffsInFolder(folder).length}</span>
+                                            <button
+                                                onClick={() => setFolderEdit({ oldName: folder, name: folder })}
+                                                className="shrink-0 hover:text-(--accent-text)"
+                                                title="重命名文件夹"
+                                            >
+                                                <Icon icon="mdi:pencil-outline" className="size-3" />
+                                            </button>
+                                            <button
+                                                onClick={() => moveFolder(folder, -1)}
+                                                className="shrink-0 hover:text-(--accent-text)"
+                                                title="上移文件夹"
+                                            >
+                                                <Icon icon="mdi:arrow-up" className="size-3" />
+                                            </button>
+                                            <button
+                                                onClick={() => moveFolder(folder, 1)}
+                                                className="shrink-0 hover:text-(--accent-text)"
+                                                title="下移文件夹"
+                                            >
+                                                <Icon icon="mdi:arrow-down" className="size-3" />
+                                            </button>
+                                            <button
+                                                onClick={() => deleteFolder(folder)}
+                                                className="shrink-0 hover:text-(--danger)"
+                                                title="删除文件夹（成员移回根）"
+                                            >
+                                                <Icon icon="mdi:delete-outline" className="size-3" />
+                                            </button>
+                                        </div>
+                                        {buffsInFolder(folder).map((item) => renderBuffRow(item.buff, item.index))}
+                                    </div>
+                                ))}
+                                {rootBuffs.length > 0 && (
+                                    <div className="space-y-0.5">
+                                        <div className="flex items-center gap-1 px-1 py-0.5 text-[10px] font-bold text-(--muted)">
+                                            <Icon icon="mdi:format-list-bulleted" className="size-3.5 shrink-0" />
+                                            <span className="min-w-0 flex-1 truncate">未归组</span>
+                                            <span className="shrink-0">{rootBuffs.length}</span>
+                                        </div>
+                                        {rootBuffs.map((item) => renderBuffRow(item.buff, item.index))}
+                                    </div>
+                                )}
+                            </>
                         )}
                     </div>
                 </div>
@@ -751,8 +933,15 @@ export default function BuffEntityEditor({
                         <>
                             <div className="flex shrink-0 flex-wrap items-center gap-2 border-b border-(--card-border) px-3 py-2">
                                 <input
-                                    value={activeBuff.buffName}
-                                    onChange={(e) => updateActiveBuff({ buffName: e.target.value })}
+                                    value={buffLeafName(activeBuff.buffName)}
+                                    onChange={(e) =>
+                                        updateActiveBuff({
+                                            buffName: joinBuffPath(
+                                                buffFolderName(activeBuff.buffName),
+                                                sanitizeLeafName(e.target.value)
+                                            )
+                                        })
+                                    }
                                     placeholder="Buff 名"
                                     className="min-w-0 flex-1 rounded-sm border border-(--card-border) bg-(--input-bg) px-2 py-1 text-sm outline-none focus:border-(--accent)"
                                 />

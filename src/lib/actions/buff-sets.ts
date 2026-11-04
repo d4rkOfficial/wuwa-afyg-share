@@ -17,6 +17,7 @@ import {
     type BuffConditionScope
 } from '@/lib/consts/buff-zones'
 import type { BuffEntityType, BuffCondition, BuffScope, BuffRefOwner } from '@/lib/types/db'
+import { buffFolderName, normalizeShareBuffName, sanitizeLeafName } from '@/lib/buff-names'
 
 export interface ActionResult<T = undefined> {
     data?: T
@@ -142,6 +143,43 @@ function normalizeScope(scope: unknown): BuffScope {
     return scope && BUFF_SCOPES.includes(scope as BuffScope) ? (scope as BuffScope) : 'team'
 }
 
+export interface InputEntityFolder {
+    name: string
+    sortOrder?: number
+}
+
+/** @desc 文件夹只存短名/排序；成员由 buff_name 的 `文件夹\` 前缀表达 */
+function sanitizeFolders(
+    buffs: ReadonlyArray<{ buffName: string }>,
+    input: readonly InputEntityFolder[] | undefined
+): Array<{ name: string; sort_order: number }> {
+    const provided = new Map<string, number>()
+    for (const [index, folder] of (input ?? []).entries()) {
+        const name = sanitizeLeafName(String(folder?.name ?? ''))
+        if (!name || name.includes('\\')) continue
+        if (!provided.has(name)) provided.set(name, Number(folder.sortOrder) || index)
+    }
+    for (const buff of buffs) {
+        const folder = buffFolderName(buff.buffName)
+        if (folder && !provided.has(folder)) provided.set(folder, provided.size)
+    }
+    return [...provided.entries()]
+        .sort((a, b) => a[1] - b[1] || a[0].localeCompare(b[0], 'zh-Hans-CN'))
+        .map(([name], index) => ({ name, sort_order: index }))
+}
+
+/** @desc 清洗全名：工坊最多一级文件夹；空名/重复全名直接拒绝 */
+function sanitizeBuffNames(buffs: readonly InputEntityBuff[]): Array<InputEntityBuff & { buffName: string }> {
+    const seen = new Set<string>()
+    return buffs.map((buff) => {
+        const buffName = normalizeShareBuffName(buff.buffName)
+        if (!buffName) throw new Error('Buff 名不能为空')
+        if (seen.has(buffName)) throw new Error(`Buff 全名重复：${buffName}`)
+        seen.add(buffName)
+        return { ...buff, buffName }
+    })
+}
+
 // 条件按挂载层级清洗：实例级保留链/阶硬门槛（链阶互斥），乘区级只保留类型/属性
 function sanitizeConditionForScope(cond: unknown, scope: BuffConditionScope): BuffCondition | null {
     const clean = sanitizeCondition(cond, scope)
@@ -154,12 +192,26 @@ export async function upsertBuffSet(input: InputBuff): Promise<ActionResult> {
         return { error: '无效的实体类型' }
     }
     const entityName = input.entityName.trim().slice(0, 60)
-    const buffName = input.buffName.trim().slice(0, 80)
+    const buffName = normalizeShareBuffName(input.buffName).slice(0, 200)
     if (!entityName || !buffName) return { error: '实体名与增益名不能为空' }
 
     const auth = await withBuffSetWrite(entityType, entityName)
     if (auth.error || !auth.supabase) return { error: auth.error ?? '无权限' }
     const supabase = auth.supabase
+
+    const folder = buffFolderName(buffName)
+    if (folder) {
+        const { error: folderError } = await supabase.from('buff_folders').upsert(
+            {
+                entity_type: entityType,
+                entity_name: entityName,
+                name: folder,
+                sort_order: 0
+            },
+            { onConflict: 'entity_type,entity_name,name', ignoreDuplicates: true }
+        )
+        if (folderError) return { error: folderError.message }
+    }
 
     const { error } = await supabase.from('buff_sets').upsert(
         {
@@ -169,7 +221,8 @@ export async function upsertBuffSet(input: InputBuff): Promise<ActionResult> {
             scope: normalizeScope(input.scope),
             exclusive: !!input.exclusive,
             condition: sanitizeConditionForScope(input.condition, 'buff'),
-            buff_set: sanitizeZones(input.zones)
+            buff_set: sanitizeZones(input.zones),
+            sort_order: 0
         },
         { onConflict: 'entity_type,entity_name,buff_name' }
     )
@@ -212,6 +265,8 @@ export interface UpsertEntityInput {
     entityType: BuffEntityType
     entityName: string
     buffs: InputEntityBuff[]
+    /** @desc 一级文件夹（含空文件夹）；未列出的 Buff 前缀会自动补入 */
+    folders?: InputEntityFolder[]
 }
 
 export async function upsertBuffEntity(input: UpsertEntityInput): Promise<ActionResult<{ saved: number }>> {
@@ -226,17 +281,29 @@ export async function upsertBuffEntity(input: UpsertEntityInput): Promise<Action
     if (auth.error || !auth.supabase) return { error: auth.error ?? '无权限' }
     const supabase = auth.supabase
 
-    // 整体替换：先删除该实体全部行，再写回
+    // 整体替换：先删除该实体全部行与文件夹，再写回
     const { error: delErr } = await supabase
         .from('buff_sets')
         .delete()
         .eq('entity_type', entityType)
         .eq('entity_name', entityName)
     if (delErr) return { error: delErr.message }
+    const { error: folderDelErr } = await supabase
+        .from('buff_folders')
+        .delete()
+        .eq('entity_type', entityType)
+        .eq('entity_name', entityName)
+    if (folderDelErr) return { error: folderDelErr.message }
 
-    const buffs = (input.buffs ?? [])
+    let cleanBuffs: Array<InputEntityBuff & { buffName: string }>
+    try {
+        cleanBuffs = sanitizeBuffNames(input.buffs ?? [])
+    } catch (e) {
+        return { error: e instanceof Error ? e.message : 'Buff 名无效' }
+    }
+    const buffs = cleanBuffs
         .map((b) => ({
-            buffName: b.buffName.trim().slice(0, 80),
+            buffName: b.buffName,
             scope: normalizeScope(b.scope),
             exclusive: !!b.exclusive,
             condition: sanitizeConditionForScope(b.condition, 'buff'),
@@ -244,15 +311,29 @@ export async function upsertBuffEntity(input: UpsertEntityInput): Promise<Action
         }))
         .filter((b) => b.buffName && b.zones.length > 0)
 
+    const folders = sanitizeFolders(buffs, input.folders)
+    if (folders.length > 0) {
+        const { error } = await supabase.from('buff_folders').insert(
+            folders.map((folder) => ({
+                entity_type: entityType,
+                entity_name: entityName,
+                name: folder.name,
+                sort_order: folder.sort_order
+            }))
+        )
+        if (error) return { error: error.message }
+    }
+
     if (buffs.length > 0) {
-        const rows = buffs.map((b) => ({
+        const rows = buffs.map((b, index) => ({
             entity_type: entityType,
             entity_name: entityName,
             buff_name: b.buffName,
             scope: b.scope,
             exclusive: b.exclusive,
             condition: b.condition,
-            buff_set: b.zones
+            buff_set: b.zones,
+            sort_order: index
         }))
         const { error } = await supabase.from('buff_sets').insert(rows)
         if (error) return { error: error.message }
@@ -277,6 +358,12 @@ export async function deleteBuffEntity(
         .eq('entity_type', entityType)
         .eq('entity_name', entityName)
     if (error) return { error: error.message }
+    const { error: folderError } = await supabase
+        .from('buff_folders')
+        .delete()
+        .eq('entity_type', entityType)
+        .eq('entity_name', entityName)
+    if (folderError) return { error: folderError.message }
     revalidatePath('/buff-sets')
     revalidatePath('/admin/buff-sets')
     return {}

@@ -82,23 +82,37 @@ GET /api/buff-sets?entity_type=character&entity_name=散华&q=攻击
 | `entity_name` | 否 | 实体名精确匹配 |
 | `q` | 否 | 模糊搜索实体名或 Buff 名 |
 
-响应（`buff_set` 为乘区数值数组，字段与工具箱 Buff 库一致）：
+响应（`buff_set` 为乘区数值数组；`buff_name` 是**全名** `文件夹A\短名`，`folders` 为一级文件夹）：
 
 ```json
 {
   "buffSets": [
     {
+      "id": "uuid",
       "entity_type": "character",
       "entity_name": "散华",
-      "buff_name": "散 第5段普攻时 暴击率",
+      "buff_name": "锁 同奏\\1阶",
       "scope": "self",
       "exclusive": false,
       "condition": { "chain": 6 },
-      "buff_set": [{ "zoneId": "critRate", "value": 15 }]
+      "buff_set": [{ "zoneId": "critRate", "value": 15 }],
+      "sort_order": 0
     }
-  ]
+  ],
+  "folders": [
+    {
+      "id": "uuid",
+      "entity_type": "character",
+      "entity_name": "散华",
+      "name": "锁 同奏",
+      "sort_order": 0
+    }
+  ],
+  "total": 1
 }
 ```
+
+> 文件夹成员按 `buff_name` 的 `文件夹A\` 前缀归属；`folders` 只负责空文件夹与排序。短名/文件夹名允许 `/`，禁止 `\`。
 
 工具箱用法：「主页 → Buff 集 → 从工坊同步」。同步语义为**按实体整份覆盖**——工坊侧存在的实体会覆盖工具箱内同实体的「工坊来源」数据，工具箱本地自定义的实体不受影响；工坊已下线的实体在工具箱内一并移除。
 

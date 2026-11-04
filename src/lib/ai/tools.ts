@@ -23,7 +23,8 @@ import { renderConditionRules } from '@/lib/ai/prompts'
 import { analyzeCharacterTerms } from '@/lib/ai/terms'
 import { sanitizeBuffs } from '@/lib/ai/client'
 import type { GeneratedBuff } from '@/lib/ai/types'
-import type { BuffEntityType, BuffSetRow } from '@/lib/types/db'
+import type { BuffEntityType, BuffFolderRow, BuffSetRow } from '@/lib/types/db'
+import { buffFolderName, buffLeafName, joinBuffPath, sanitizeLeafName } from '@/lib/buff-names'
 
 export interface ToolDefinition {
     type: 'function'
@@ -361,6 +362,83 @@ const BASE_TOOLS: ToolDefinition[] = [
     {
         type: 'function',
         function: {
+            name: 'list_buff_folders',
+            description: '列出当前编辑实体草稿的一级文件夹（含空文件夹/排序）以及每条 Buff 的全名。仅管理员编辑器内可用。',
+            parameters: { type: 'object', properties: {} }
+        }
+    },
+    {
+        type: 'function',
+        function: {
+            name: 'create_buff_folder',
+            description: '在当前编辑实体的草稿中新建一级文件夹；需要用户确认。文件夹名不能含反斜杠。',
+            parameters: {
+                type: 'object',
+                properties: { name: { type: 'string', description: '文件夹短名' } },
+                required: ['name']
+            }
+        }
+    },
+    {
+        type: 'function',
+        function: {
+            name: 'rename_buff_folder',
+            description: '重命名当前编辑实体草稿的文件夹；成员 Buff 全名级联更新；需要用户确认。',
+            parameters: {
+                type: 'object',
+                properties: {
+                    oldName: { type: 'string', description: '原文件夹短名' },
+                    name: { type: 'string', description: '新文件夹短名' }
+                },
+                required: ['oldName', 'name']
+            }
+        }
+    },
+    {
+        type: 'function',
+        function: {
+            name: 'delete_buff_folder',
+            description: '删除当前编辑实体草稿的文件夹；成员 Buff 移回根目录，不删除 Buff；需要用户确认。',
+            parameters: {
+                type: 'object',
+                properties: { name: { type: 'string', description: '文件夹短名' } },
+                required: ['name']
+            }
+        }
+    },
+    {
+        type: 'function',
+        function: {
+            name: 'move_buff_to_folder',
+            description: '把草稿中的一条 Buff 移入一级文件夹（folder 为空 = 根）；短名不变、全名级联更新；需要用户确认。',
+            parameters: {
+                type: 'object',
+                properties: {
+                    buffName: { type: 'string', description: '当前 Buff 全名' },
+                    folder: { type: 'string', description: '目标文件夹短名；空 = 根' }
+                },
+                required: ['buffName']
+            }
+        }
+    },
+    {
+        type: 'function',
+        function: {
+            name: 'reorder_buff_folder',
+            description: '把草稿中的一级文件夹上移/下移一位（delta=-1/1）；需要用户确认。',
+            parameters: {
+                type: 'object',
+                properties: {
+                    name: { type: 'string', description: '文件夹短名' },
+                    delta: { type: 'number', description: '-1 上移 / 1 下移' }
+                },
+                required: ['name', 'delta']
+            }
+        }
+    },
+    {
+        type: 'function',
+        function: {
             name: 'add_buff',
             description: '在当前编辑实体的 Buff 草稿里新增一条 Buff（同名字条已存在时会被拒绝，请先改用 update_buff）。仅管理员编辑器内可用。',
             parameters: {
@@ -446,7 +524,13 @@ export const DRAFT_TOOL_NAMES = new Set<string>([
     'update_buff',
     'add_buff',
     'remove_buff',
-    'save_buff_set'
+    'save_buff_set',
+    'list_buff_folders',
+    'create_buff_folder',
+    'rename_buff_folder',
+    'delete_buff_folder',
+    'move_buff_to_folder',
+    'reorder_buff_folder'
 ])
 
 /**
@@ -512,6 +596,10 @@ export interface BuffDraftApi {
     get(): GeneratedBuff[]
     /** @desc 整份替换草稿（编辑器会重新渲染列表） */
     set(list: GeneratedBuff[]): void
+    /** @desc 当前草稿的一级文件夹（空文件夹/排序） */
+    getFolders(): BuffFolderRow[]
+    /** @desc 整份替换草稿文件夹（不改 Buff 名，改名/移动需同时改 Buff 全名） */
+    setFolders(list: BuffFolderRow[]): void
     /**
      * @desc 直接写入数据库（管理员才有实现）。
      * @param list 可选：写入这份内容而不是编辑器当前状态
@@ -521,7 +609,14 @@ export interface BuffDraftApi {
 }
 
 /** @desc 会**落库**的危险工具：执行前必须经用户确认（只改草稿的工具不在此列，管理员仍可手动撤销） */
-const DANGEROUS_TOOLS = new Set<string>(['save_buff_set'])
+const DANGEROUS_TOOLS = new Set<string>([
+    'save_buff_set',
+    'create_buff_folder',
+    'rename_buff_folder',
+    'delete_buff_folder',
+    'move_buff_to_folder',
+    'reorder_buff_folder'
+])
 
 // ── 执行器 ───────────────────────────────────────────────────
 /** @desc 确认卡里给管理员看的一行摘要（工具名 + 关键参数） */
@@ -637,7 +732,8 @@ export async function executeTool(ctx: ToolContext, name: string, args: Record<s
                     entityName: curName,
                     total: draft.length,
                     saved: false,
-                    buffs: draft
+                    buffs: draft,
+                    folders: ctx.draft.getFolders()
                 })
             }
             if (!getBuffSets) return JSON.stringify({ error: '无法查询数据库' })
@@ -823,6 +919,113 @@ export async function executeTool(ctx: ToolContext, name: string, args: Record<s
             const next = list.filter((b) => b.buffName.trim() !== buffName)
             ctx.draft!.set(next)
             return JSON.stringify({ ok: true, removed: buffName, total: next.length })
+        }
+        case 'list_buff_folders': {
+            const draftErr = requireDraft(ctx)
+            if (typeof draftErr === 'string') return draftErr
+            return JSON.stringify({
+                folders: ctx.draft!.getFolders(),
+                buffs: ctx.draft!.get().map((b) => ({ buffName: b.buffName, shortName: buffLeafName(b.buffName) }))
+            })
+        }
+        case 'create_buff_folder': {
+            const draftErr = requireDraft(ctx)
+            if (typeof draftErr === 'string') return draftErr
+            const name = sanitizeLeafName(str(args.name))
+            if (!name) return JSON.stringify({ error: '文件夹名不能为空' })
+            const folders = ctx.draft!.getFolders()
+            if (folders.some((folder) => folder.name === name)) return JSON.stringify({ error: `文件夹已存在：${name}` })
+            ctx.draft!.setFolders([
+                ...folders,
+                {
+                    entity_type: curType as BuffEntityType,
+                    entity_name: curName,
+                    name,
+                    sort_order: folders.length
+                }
+            ])
+            return JSON.stringify({ ok: true, created: name })
+        }
+        case 'rename_buff_folder': {
+            const draftErr = requireDraft(ctx)
+            if (typeof draftErr === 'string') return draftErr
+            const oldName = sanitizeLeafName(str(args.oldName))
+            const name = sanitizeLeafName(str(args.name))
+            if (!oldName || !name) return JSON.stringify({ error: 'oldName / name 都不能为空' })
+            const folders = ctx.draft!.getFolders()
+            if (!folders.some((folder) => folder.name === oldName)) return JSON.stringify({ error: `文件夹不存在：${oldName}` })
+            if (folders.some((folder) => folder.name === name)) return JSON.stringify({ error: `文件夹已存在：${name}` })
+            const list = ctx.draft!.get().map((buff) =>
+                buffFolderName(buff.buffName) === oldName
+                    ? { ...buff, buffName: joinBuffPath(name, buffLeafName(buff.buffName)) }
+                    : buff
+            )
+            ctx.draft!.set(list)
+            ctx.draft!.setFolders(folders.map((folder) => (folder.name === oldName ? { ...folder, name } : folder)))
+            return JSON.stringify({ ok: true, renamed: { oldName, name } })
+        }
+        case 'delete_buff_folder': {
+            const draftErr = requireDraft(ctx)
+            if (typeof draftErr === 'string') return draftErr
+            const name = sanitizeLeafName(str(args.name))
+            if (!name) return JSON.stringify({ error: '文件夹名不能为空' })
+            const folders = ctx.draft!.getFolders()
+            if (!folders.some((folder) => folder.name === name)) return JSON.stringify({ error: `文件夹不存在：${name}` })
+            const list = ctx.draft!.get().map((buff) =>
+                buffFolderName(buff.buffName) === name
+                    ? { ...buff, buffName: buffLeafName(buff.buffName) }
+                    : buff
+            )
+            ctx.draft!.set(list)
+            ctx.draft!.setFolders(folders.filter((folder) => folder.name !== name))
+            return JSON.stringify({ ok: true, deleted: name })
+        }
+        case 'move_buff_to_folder': {
+            const draftErr = requireDraft(ctx)
+            if (typeof draftErr === 'string') return draftErr
+            const buffName = str(args.buffName)
+            const folder = sanitizeLeafName(str(args.folder))
+            if (!buffName) return JSON.stringify({ error: '缺少 buffName' })
+            const list = ctx.draft!.get()
+            const hit = list.find((buff) => buff.buffName === buffName)
+            if (!hit) return JSON.stringify({ error: notFoundMessage(buffName, list) })
+            const next = list.map((buff) =>
+                buff === hit ? { ...buff, buffName: joinBuffPath(folder, buffLeafName(buff.buffName)) } : buff
+            )
+            ctx.draft!.set(next)
+            if (folder) {
+                const folders = ctx.draft!.getFolders()
+                if (!folders.some((item) => item.name === folder)) {
+                    ctx.draft!.setFolders([
+                        ...folders,
+                        {
+                            entity_type: curType as BuffEntityType,
+                            entity_name: curName,
+                            name: folder,
+                            sort_order: folders.length
+                        }
+                    ])
+                }
+            }
+            return JSON.stringify({ ok: true, moved: hit.buffName, to: folder || null })
+        }
+        case 'reorder_buff_folder': {
+            const draftErr = requireDraft(ctx)
+            if (typeof draftErr === 'string') return draftErr
+            const name = sanitizeLeafName(str(args.name))
+            const delta = Number(args.delta) === 1 ? 1 : -1
+            if (!name) return JSON.stringify({ error: '文件夹名不能为空' })
+            const folders = ctx.draft!.getFolders()
+            const index = folders.findIndex((folder) => folder.name === name)
+            const target = index + delta
+            if (index < 0 || target < 0 || target >= folders.length) {
+                return JSON.stringify({ error: '文件夹不存在或已经到边界' })
+            }
+            const next = [...folders]
+            const [item] = next.splice(index, 1)
+            next.splice(target, 0, item)
+            ctx.draft!.setFolders(next.map((folder, i) => ({ ...folder, sort_order: i })))
+            return JSON.stringify({ ok: true, moved: name, delta })
         }
         case 'save_buff_set': {
             const draftErr = requireDraft(ctx)

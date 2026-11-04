@@ -170,7 +170,14 @@ export default function BuffSnapshotPanel() {
         })
     }
 
-    const diffTotal = diff ? diff.added.length + diff.modified.length + diff.removed.length : 0
+    const diffTotal = diff
+        ? diff.added.length +
+          diff.modified.length +
+          diff.removed.length +
+          diff.folders.added.length +
+          diff.folders.modified.length +
+          diff.folders.removed.length
+        : 0
 
     return (
         <>
@@ -367,6 +374,16 @@ export default function BuffSnapshotPanel() {
                                         <span className="text-(--danger)">
                                             删除 <span className="mg-num">{diff.removed.length}</span>
                                         </span>
+                                        {diff.folders.added.length + diff.folders.modified.length + diff.folders.removed.length >
+                                            0 && (
+                                            <span className="ml-2 text-(--muted)">
+                                                · 文件夹{' '}
+                                                <span className="mg-num">
+                                                    +{diff.folders.added.length} ~{diff.folders.modified.length} -
+                                                    {diff.folders.removed.length}
+                                                </span>
+                                            </span>
+                                        )}
                                     </div>
                                     <div className="space-y-1 p-2 text-xs">
                                         {diffTotal === 0 && <p className="px-2 py-3 text-center text-(--muted)">无差异，当前状态与快照一致</p>}
@@ -397,6 +414,22 @@ export default function BuffSnapshotPanel() {
                                             <div key={`r${i}`} className="flex items-start gap-1.5 rounded-sm px-2 py-1">
                                                 <span className={`shrink-0 font-black tracking-tight ${KIND_CLS.remove}`}>-</span>
                                                 <span className="text-(--muted) line-through">{rowLabel(r.old)}</span>
+                                            </div>
+                                        ))}
+                                        {diff.folders.added.map((folder, i) => (
+                                            <div key={`fa${i}`} className="flex items-start gap-1.5 rounded-sm px-2 py-1">
+                                                <span className={`shrink-0 font-black tracking-tight ${KIND_CLS.add}`}>+</span>
+                                                <span className="text-(--fg)">
+                                                    {folder.entity_name} · 文件夹 {folder.name}
+                                                </span>
+                                            </div>
+                                        ))}
+                                        {diff.folders.removed.map((folder, i) => (
+                                            <div key={`fr${i}`} className="flex items-start gap-1.5 rounded-sm px-2 py-1">
+                                                <span className={`shrink-0 font-black tracking-tight ${KIND_CLS.remove}`}>-</span>
+                                                <span className="text-(--muted) line-through">
+                                                    {folder.old.entity_name} · 文件夹 {folder.old.name}
+                                                </span>
                                             </div>
                                         ))}
                                     </div>

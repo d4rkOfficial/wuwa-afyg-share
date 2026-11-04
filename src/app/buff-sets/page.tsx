@@ -6,7 +6,7 @@ import { createClient, hasEnv } from '@/lib/supabase/server'
 import { getViewerLocks } from '@/lib/edit-locks'
 import { getEntityIcons } from '@/lib/data/avatar-icons'
 import { upgradeBuffSetRowV2 } from '@/lib/buff-snapshots/migrate-v2'
-import type { BuffSetRow } from '@/lib/types/db'
+import type { BuffFolderRow, BuffSetRow } from '@/lib/types/db'
 
 export const dynamic = 'force-dynamic'
 
@@ -14,13 +14,23 @@ export default async function BuffSetsPage() {
     if (!hasEnv()) return <SetupNotice />
 
     const supabase = await createClient()
-    const { data, error } = await supabase
-        .from('buff_sets')
-        .select('entity_type, entity_name, buff_name, scope, exclusive, condition, buff_set')
+    const [{ data, error }, { data: folderData }] = await Promise.all([
+        supabase
+            .from('buff_sets')
+            .select('id, entity_type, entity_name, buff_name, scope, exclusive, condition, buff_set, sort_order')
+            .order('sort_order', { ascending: true }),
+        supabase
+            .from('buff_folders')
+            .select('id, entity_type, entity_name, name, sort_order')
+            .order('sort_order', { ascending: true })
+    ])
 
     // 读取边界归一化：v1 形状仍可能出现在这里（刚用旧快照还原过），按 v2 规则就地归一化后再渲染。
     // 纯函数、不写库，页面永远按 v2 展示。
     const rows = ((data ?? []) as BuffSetRow[]).map((r) => upgradeBuffSetRowV2(r).row)
+    const folders = ((folderData ?? []) as BuffFolderRow[]).filter((folder) =>
+        rows.some((row) => row.entity_type === folder.entity_type && row.entity_name === folder.entity_name)
+    )
 
     const {
         data: { user }
@@ -92,7 +102,7 @@ export default async function BuffSetsPage() {
                     <p className="text-(--muted)">暂时还没有收录任何 Buff 集</p>
                 </div>
             ) : (
-                <BuffSetsBrowser rows={rows} entityIcons={entityIcons} />
+                <BuffSetsBrowser rows={rows} folders={folders} entityIcons={entityIcons} />
             )}
         </div>
     )

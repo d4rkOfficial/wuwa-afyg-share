@@ -6,8 +6,7 @@
 import { revalidatePath } from 'next/cache'
 import { requireAdmin } from '@/lib/supabase/admin'
 import { diffBuffSets, rebuildSnapshotState, serializeSnapshotState, type SnapshotDiff } from '@/lib/buff-snapshots/diff'
-import { upgradeBuffSetRowV2 } from '@/lib/buff-snapshots/migrate-v2'
-import type { BuffSetRow } from '@/lib/types/db'
+import type { BuffFolderRow, BuffSetRow, BuffSnapshotState } from '@/lib/types/db'
 
 export interface ActionResult<T = undefined> {
     data?: T
@@ -20,23 +19,32 @@ async function withAdmin() {
     return { supabase: r.supabase, error: null as string | null }
 }
 
-const BUFF_COLUMNS = 'entity_type, entity_name, buff_name, scope, exclusive, condition, buff_set'
+const BUFF_COLUMNS =
+    'id, entity_type, entity_name, buff_name, scope, exclusive, condition, buff_set, sort_order'
+const FOLDER_COLUMNS = 'id, entity_type, entity_name, name, sort_order'
 const SNAPSHOT_COLUMNS = 'id, created_by, created_at, note, is_root, state, diff, prev_id'
 
-/**
- * @desc 读取边界统一归一化。库内数据已是当前结构，但**版本快照存的是 diff**，
- * `rebuildSnapshotState` 重建出来的行、以及用旧快照还原时写回的行，都可能带历史形状。
- * 不归一化会让「对比」把结构差异误报成大量内容差异。纯函数，不写库。
- */
-const toV2 = (row: BuffSetRow): BuffSetRow => upgradeBuffSetRowV2(row).row
-
-async function fetchAllBuffSets(supabase: Awaited<ReturnType<typeof withAdmin>>['supabase']): Promise<BuffSetRow[]> {
-    const { data } = await supabase
-        .from('buff_sets')
-        .select(BUFF_COLUMNS)
-        .order('entity_type', { ascending: true })
-        .order('entity_name', { ascending: true })
-    return ((data ?? []) as BuffSetRow[]).map(toV2)
+async function fetchAllState(
+    supabase: Awaited<ReturnType<typeof withAdmin>>['supabase']
+): Promise<BuffSnapshotState> {
+    const [{ data: buffData }, { data: folderData }] = await Promise.all([
+        supabase
+            .from('buff_sets')
+            .select(BUFF_COLUMNS)
+            .order('entity_type', { ascending: true })
+            .order('entity_name', { ascending: true })
+            .order('sort_order', { ascending: true }),
+        supabase
+            .from('buff_folders')
+            .select(FOLDER_COLUMNS)
+            .order('entity_type', { ascending: true })
+            .order('entity_name', { ascending: true })
+            .order('sort_order', { ascending: true })
+    ])
+    return {
+        buffs: (buffData ?? []) as BuffSetRow[],
+        folders: (folderData ?? []) as BuffFolderRow[]
+    }
 }
 
 interface ChainSnapshot {
@@ -45,18 +53,19 @@ interface ChainSnapshot {
     created_at: string
     note: string
     is_root: boolean
-    state: BuffSetRow[] | null
+    state: BuffSnapshotState | null
     diff: SnapshotDiff | null
 }
 
 // 读取快照链（按创建时间升序：根在前、版本依次在后）。
-// 只有**根快照**带全量 state（版本快照的 state 恒为 NULL，见 check 约束 buff_set_snapshot_shape），
-// 这里只就地升级根的 state 以保证 diff 口径一致；版本快照的 diff 形状不动。
 async function loadChain(supabase: Awaited<ReturnType<typeof withAdmin>>['supabase']): Promise<ChainSnapshot[]> {
-    const { data } = await supabase.from('buff_set_snapshot').select(SNAPSHOT_COLUMNS).order('created_at', { ascending: true })
+    const { data } = await supabase
+        .from('buff_set_snapshot')
+        .select(SNAPSHOT_COLUMNS)
+        .order('created_at', { ascending: true })
     return ((data ?? []) as ChainSnapshot[]).map((s) => ({
         ...s,
-        state: Array.isArray(s.state) ? s.state.map(toV2) : s.state
+        state: s.state && !Array.isArray(s.state) ? s.state : null
     }))
 }
 
@@ -108,24 +117,28 @@ export async function saveBuffSnapshot(noteRaw: string): Promise<ActionResult<{ 
     const root = chain.find((s) => s.is_root)
 
     if (!root) {
-        // 无根：原原本本复制整个 Buff 集
-        const rows = await fetchAllBuffSets(supabase)
+        const state = await fetchAllState(supabase)
         const { error } = await supabase.rpc('save_buff_set_snapshot', {
-            p_state: serializeSnapshotState(rows),
+            p_state: serializeSnapshotState(state),
             p_diff: null,
             p_note: note
         })
         if (error) return { error: error.message }
         revalidatePath('/admin/buff-sets')
-        return { data: { rows: rows.length, mode: 'root' } }
+        return { data: { rows: state.buffs.length + state.folders.length, mode: 'root' } }
     }
 
-    // 有根：重建最新版本状态 → 计算差异 → 追加版本
     const latestId = chain[chain.length - 1].id
-    const prevState = rebuildSnapshotState(chain, latestId) ?? []
-    const current = await fetchAllBuffSets(supabase)
+    const prevState = rebuildSnapshotState(chain, latestId) ?? { buffs: [], folders: [] }
+    const current = await fetchAllState(supabase)
     const diff = diffBuffSets(prevState, current)
-    const diffCount = diff.added.length + diff.modified.length + diff.removed.length
+    const diffCount =
+        diff.added.length +
+        diff.modified.length +
+        diff.removed.length +
+        diff.folders.added.length +
+        diff.folders.modified.length +
+        diff.folders.removed.length
     if (diffCount === 0) return { error: '当前 Buff 集与最新快照无差异，无需创建新版本' }
 
     const { error } = await supabase.rpc('save_buff_set_snapshot', {
@@ -153,12 +166,12 @@ export async function getBuffSnapshotDiff(
     const targetState = rebuildSnapshotState(chain, targetId)
     if (!targetState) return { error: '暂无根快照' }
 
-    const current = await fetchAllBuffSets(supabase)
+    const current = await fetchAllState(supabase)
     return {
         data: {
             target: { isRoot: target.is_root, note: target.note, createdAt: target.created_at },
             diff: diffBuffSets(targetState, current),
-            currentCount: current.length
+            currentCount: current.buffs.length
         }
     }
 }

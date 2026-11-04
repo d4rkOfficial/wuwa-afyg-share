@@ -47,6 +47,10 @@ supabase/migrations/init.sql
 > 同样幂等）。已经部署过的库若不想整份重跑 `init.sql`，只执行这一个文件即可。
 > 没执行时站点会自动退回「仅管理员可编辑」（读不到锁表按锁定处理），不会误放开写权限。
 >
+> **Buff 文件夹 / 全名 / 快照 v2**：`init.sql` 之后必须执行 `supabase/migrations/buff-folders-v2.sql`。
+> 线上旧数据迁移先跑 `scripts/buff-migration/buff-migration.mjs backup / preview`，审阅映射后再执行
+> `.tmp/backups/migrate-buff-folders-*.sql`（预演脚本先跑 `*-dryrun-*.sql`）。
+>
 > 跑完后若 PostgREST 仍报 `Could not find the function public.xxx in the schema cache`，
 > 是 schema 缓存未刷新：在 SQL Editor 执行 `notify pgrst, 'reload schema';`，或等几秒重试。
 

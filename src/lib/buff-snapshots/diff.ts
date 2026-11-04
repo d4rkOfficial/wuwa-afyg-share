@@ -1,8 +1,7 @@
-// Buff 集快照 diff 引擎（纯函数，无 IO）
-// 根快照存全量基准；版本快照存相对前一状态的差异（{added, modified, removed}）。
-// 任意版本状态 = 根 state + 按链顺序依次 applyDiff；差异只在对比/创建时现算，不落库。
+// Buff 集快照 diff 引擎（v2：state = { buffs, folders }，纯函数，无 IO）
+// 根快照存全量基准；版本快照存相对前一状态的差异；任意版本 = 根 state + 按链顺序 applyDiff。
 
-import type { BuffSetRow } from '@/lib/types/db'
+import type { BuffFolderRow, BuffSetRow, BuffSnapshotState } from '@/lib/types/db'
 
 export interface SnapshotDiffModified {
     old: BuffSetRow
@@ -13,18 +12,33 @@ export interface SnapshotDiffRemoved {
     old: BuffSetRow
 }
 
+export interface FolderDiffModified {
+    old: BuffFolderRow
+    new: BuffFolderRow
+}
+
+export interface FolderDiffRemoved {
+    old: BuffFolderRow
+}
+
 export interface SnapshotDiff {
     added: BuffSetRow[]
     modified: SnapshotDiffModified[]
     removed: SnapshotDiffRemoved[]
+    folders: {
+        added: BuffFolderRow[]
+        modified: FolderDiffModified[]
+        removed: FolderDiffRemoved[]
+    }
 }
 
-// 行键：仅作为内存 Map 的去重键，绝不可被序列化进 PostgreSQL jsonb。
-// 早期实现把 key 也塞进 SnapshotDiff 的 modified/removed 数组，结果 \u0000
-// 转义序列被 PG 的 jsonb 解析器拒绝并抛 "unsupported Unicode escape sequence"，
-// 导致追加版本快照失败。applyDiff 已通过 m.new / r.old 现场重算键，无需持久化 key。
+// 行键只作为内存 Map 去重键，不序列化进 PostgreSQL jsonb（\u0000 会被 PG 拒绝）
 export function buffRowKey(row: Pick<BuffSetRow, 'entity_type' | 'entity_name' | 'buff_name'>): string {
     return `${row.entity_type}\u0000${row.entity_name}\u0000${row.buff_name}`
+}
+
+export function folderRowKey(row: Pick<BuffFolderRow, 'entity_type' | 'entity_name' | 'name'>): string {
+    return `${row.entity_type}\u0000${row.entity_name}\u0000${row.name}`
 }
 
 // 深层稳定序列化（对象键排序），避免 jsonb/JSON.parse 键序差异产生假 diff
@@ -39,7 +53,6 @@ function stableStringify(v: unknown): string {
 }
 
 // 规范化行：buff_set 按 zoneId 排序，同 zoneId 的多条贡献条目再按内容排序
-// （编辑/生成顺序可能不同，比较前归一化；同一乘区可有多条，各带自己的条件）
 function canonicalRow(row: BuffSetRow): unknown {
     return {
         entity_type: row.entity_type,
@@ -59,10 +72,14 @@ export function buffRowsEqual(a: BuffSetRow, b: BuffSetRow): boolean {
     return stableStringify(canonicalRow(a)) === stableStringify(canonicalRow(b))
 }
 
+export function folderRowsEqual(a: BuffFolderRow, b: BuffFolderRow): boolean {
+    return a.name === b.name && (a.sort_order ?? 0) === (b.sort_order ?? 0)
+}
+
 // base = 基准状态（快照），current = 当前实时状态
-export function diffBuffSets(base: BuffSetRow[], current: BuffSetRow[]): SnapshotDiff {
-    const baseMap = new Map(base.map((r) => [buffRowKey(r), r]))
-    const currentMap = new Map(current.map((r) => [buffRowKey(r), r]))
+export function diffBuffSets(base: BuffSnapshotState, current: BuffSnapshotState): SnapshotDiff {
+    const baseMap = new Map(base.buffs.map((r) => [buffRowKey(r), r]))
+    const currentMap = new Map(current.buffs.map((r) => [buffRowKey(r), r]))
 
     const added: BuffSetRow[] = []
     const modified: SnapshotDiffModified[] = []
@@ -77,41 +94,75 @@ export function diffBuffSets(base: BuffSetRow[], current: BuffSetRow[]): Snapsho
         if (!currentMap.has(key)) removed.push({ old: row })
     }
 
-    return { added, modified, removed }
+    const baseFolders = new Map(base.folders.map((r) => [folderRowKey(r), r]))
+    const currentFolders = new Map(current.folders.map((r) => [folderRowKey(r), r]))
+    const folderDiff = {
+        added: [] as BuffFolderRow[],
+        modified: [] as FolderDiffModified[],
+        removed: [] as FolderDiffRemoved[]
+    }
+    for (const [key, row] of currentFolders) {
+        const baseRow = baseFolders.get(key)
+        if (!baseRow) folderDiff.added.push(row)
+        else if (!folderRowsEqual(baseRow, row)) folderDiff.modified.push({ old: baseRow, new: row })
+    }
+    for (const [key, row] of baseFolders) {
+        if (!currentFolders.has(key)) folderDiff.removed.push({ old: row })
+    }
+
+    return { added, modified, removed, folders: folderDiff }
 }
 
-// 快照 state 序列化：行数组（JSON 可序列化，直接传给 RPC jsonb 参数）
-export function serializeSnapshotState(rows: BuffSetRow[]): unknown {
-    return rows.map((r) => ({
-        entity_type: r.entity_type,
-        entity_name: r.entity_name,
-        buff_name: r.buff_name,
-        scope: r.scope,
-        exclusive: !!r.exclusive,
-        condition: r.condition ?? null,
-        buff_set: r.buff_set
-    }))
+// 快照 state 序列化（JSON 可序列化，直接传给 RPC jsonb 参数）
+export function serializeSnapshotState(state: BuffSnapshotState): unknown {
+    return {
+        buffs: state.buffs.map((r) => ({
+            entity_type: r.entity_type,
+            entity_name: r.entity_name,
+            buff_name: r.buff_name,
+            scope: r.scope,
+            exclusive: !!r.exclusive,
+            condition: r.condition ?? null,
+            buff_set: r.buff_set,
+            sort_order: r.sort_order ?? 0
+        })),
+        folders: state.folders.map((r) => ({
+            entity_type: r.entity_type,
+            entity_name: r.entity_name,
+            name: r.name,
+            sort_order: r.sort_order ?? 0
+        }))
+    }
 }
 
-// 应用 diff 到基准状态（链式重建用）：added 加入 / modified 替换 / removed 删除
-export function applyDiff(base: BuffSetRow[], diff: SnapshotDiff): BuffSetRow[] {
-    const map = new Map(base.map((r) => [buffRowKey(r), r]))
-    for (const row of diff.added ?? []) map.set(buffRowKey(row), row)
-    for (const m of diff.modified ?? []) map.set(buffRowKey(m.new), m.new)
-    for (const r of diff.removed ?? []) map.delete(buffRowKey(r.old))
-    return [...map.values()]
+// 应用 diff 到基准状态（链式重建用）
+export function applyDiff(base: BuffSnapshotState, diff: SnapshotDiff): BuffSnapshotState {
+    const buffs = new Map(base.buffs.map((r) => [buffRowKey(r), r]))
+    for (const row of diff.added ?? []) buffs.set(buffRowKey(row), row)
+    for (const m of diff.modified ?? []) buffs.set(buffRowKey(m.new), m.new)
+    for (const r of diff.removed ?? []) buffs.delete(buffRowKey(r.old))
+
+    const folders = new Map(base.folders.map((r) => [folderRowKey(r), r]))
+    for (const row of diff.folders?.added ?? []) folders.set(folderRowKey(row), row)
+    for (const m of diff.folders?.modified ?? []) folders.set(folderRowKey(m.new), m.new)
+    for (const r of diff.folders?.removed ?? []) folders.delete(folderRowKey(r.old))
+
+    return { buffs: [...buffs.values()], folders: [...folders.values()] }
 }
 
 // 由根 state 与版本链重建任意快照的完整状态
-// chain：按创建时间升序（根在前、版本依次在后）；targetId 为根或 null 时返回根状态
 export function rebuildSnapshotState(
-    chain: Array<{ id: string; is_root: boolean; state: BuffSetRow[] | null; diff: SnapshotDiff | null }>,
+    chain: Array<{ id: string; is_root: boolean; state: BuffSnapshotState | null; diff: SnapshotDiff | null }>,
     targetId: string | null
-): BuffSetRow[] | null {
+): BuffSnapshotState | null {
     const root = chain.find((s) => s.is_root)
     if (!root) return null
-    if (!targetId || targetId === root.id) return [...(root.state ?? [])]
-    let state = [...(root.state ?? [])]
+    const empty: BuffSnapshotState = { buffs: [], folders: [] }
+    const rootState = root.state ?? empty
+    if (!targetId || targetId === root.id) {
+        return { buffs: [...rootState.buffs], folders: [...rootState.folders] }
+    }
+    let state = { buffs: [...rootState.buffs], folders: [...rootState.folders] }
     for (const snap of chain) {
         if (snap.is_root || !snap.diff) continue
         state = applyDiff(state, snap.diff)

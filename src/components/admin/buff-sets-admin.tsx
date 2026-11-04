@@ -18,10 +18,11 @@ import { toast } from '@/components/ui/toast'
 import { setBuffSetLock } from '@/lib/actions/edit-locks'
 import type { ChatMessage } from '@/lib/ai/client'
 import type { EntityIconMaps } from '@/lib/data/avatar-icons'
-import type { BuffEntityType, BuffSetRow } from '@/lib/types/db'
+import type { BuffEntityType, BuffFolderRow, BuffSetRow } from '@/lib/types/db'
 
 interface Props {
     rows: BuffSetRow[]
+    folders?: BuffFolderRow[]
     isAdmin: boolean
     /** @desc 被管理员单独锁定的 buff 实体（key = `类型/名称`）；锁定的条目普通用户不能编辑 */
     buffLocks: Record<string, boolean>
@@ -50,7 +51,7 @@ function entityKey(entityType: string, entityName: string) {
     return `${entityType}/${entityName}`
 }
 
-export default function BuffSetsAdmin({ rows, isAdmin, buffLocks, entityIcons }: Props) {
+export default function BuffSetsAdmin({ rows, folders = [], isAdmin, buffLocks, entityIcons }: Props) {
     const router = useRouter()
     const [lockPending, startTransition] = useTransition()
     // AI 连接配置（IndexedDB 持久化；加载后供编辑器使用）
@@ -215,6 +216,10 @@ export default function BuffSetsAdmin({ rows, isAdmin, buffLocks, entityIcons }:
               buffs: rows.filter(
                   (r) =>
                       r.entity_type === selected.entityType && r.entity_name === selected.entityName
+              ),
+              folders: folders.filter(
+                  (folder) =>
+                      folder.entity_type === selected.entityType && folder.entity_name === selected.entityName
               )
           }
         : null

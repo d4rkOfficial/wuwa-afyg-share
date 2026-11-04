@@ -1,6 +1,6 @@
 import { createClient, hasEnv } from '@/lib/supabase/server'
 import { CORS_HEADERS, handleOptions } from '@/lib/api/cors'
-import type { BuffEntityType, BuffSetRow } from '@/lib/types/db'
+import type { BuffEntityType, BuffFolderRow, BuffSetRow } from '@/lib/types/db'
 
 export { handleOptions as OPTIONS }
 
@@ -26,13 +26,16 @@ export async function GET(req: Request) {
 
     let query = supabase
         .from('buff_sets')
-        .select('entity_type, entity_name, buff_name, scope, exclusive, condition, buff_set')
+        .select('id, entity_type, entity_name, buff_name, scope, exclusive, condition, buff_set, sort_order')
 
     if (entityType && ENTITY_TYPES.has(entityType)) query = query.eq('entity_type', entityType)
     if (entityName) query = query.eq('entity_name', entityName)
     if (q) query = query.or(`entity_name.ilike.%${q}%,buff_name.ilike.%${q}%`)
 
-    query = query.order('entity_type', { ascending: true }).order('entity_name', { ascending: true })
+    query = query
+        .order('entity_type', { ascending: true })
+        .order('entity_name', { ascending: true })
+        .order('sort_order', { ascending: true })
 
     const { data, error } = await query
 
@@ -41,5 +44,22 @@ export async function GET(req: Request) {
     const buffSets: BuffSetRow[] = ((data ?? []) as BuffSetRow[]).filter((row) =>
         ENTITY_TYPES.has(row.entity_type)
     )
-    return Response.json({ buffSets, total: buffSets.length }, { headers: CORS_HEADERS })
+    const entityKeys = new Set(buffSets.map((row) => `${row.entity_type}/${row.entity_name}`))
+
+    let folderQuery = supabase
+        .from('buff_folders')
+        .select('id, entity_type, entity_name, name, sort_order')
+        .order('sort_order', { ascending: true })
+    if (entityType && ENTITY_TYPES.has(entityType)) folderQuery = folderQuery.eq('entity_type', entityType)
+    if (entityName) folderQuery = folderQuery.eq('entity_name', entityName)
+    const { data: folderData, error: folderError } = await folderQuery
+    if (folderError) return Response.json({ error: folderError.message }, { status: 500, headers: CORS_HEADERS })
+    const folders: BuffFolderRow[] = ((folderData ?? []) as BuffFolderRow[]).filter(
+        (row) => ENTITY_TYPES.has(row.entity_type) && entityKeys.has(`${row.entity_type}/${row.entity_name}`)
+    )
+
+    return Response.json(
+        { buffSets, folders, total: buffSets.length },
+        { headers: CORS_HEADERS }
+    )
 }

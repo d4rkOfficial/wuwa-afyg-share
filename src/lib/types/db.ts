@@ -88,13 +88,33 @@ export interface BuffZoneValue {
 }
 
 export interface BuffSetRow {
+    /** @desc 稳定 id（迁移后由数据库生成；旧快照/旧客户端可缺省） */
+    id?: string
     entity_type: BuffEntityType
     entity_name: string
+    /** @desc 全名：`文件夹A\buff名`；根 Buff 直接是短名 */
     buff_name: string
     scope: BuffScope
     exclusive: boolean
     condition?: BuffCondition | null
     buff_set: BuffZoneValue[]
+    /** @desc 实体内的排序（文件夹在前、根 Buff 在后） */
+    sort_order?: number
+}
+
+/** @desc 一级文件夹：只存名字/排序/空文件夹；成员按 buff_name 的 `文件夹\` 前缀归属 */
+export interface BuffFolderRow {
+    id?: string
+    entity_type: BuffEntityType
+    entity_name: string
+    name: string
+    sort_order: number
+}
+
+/** @desc 快照 state v2：Buff + 文件夹 */
+export interface BuffSnapshotState {
+    buffs: BuffSetRow[]
+    folders: BuffFolderRow[]
 }
 
 // ── 标准词条集（0004_standard_substat_sets.sql）──
@@ -161,7 +181,7 @@ export interface BuffSnapshotRow {
     created_by: string | null
     created_at: string
     note: string
-    state: BuffSetRow[]
+    state: BuffSnapshotState
 }
 
 // 管理员授权边（0003_admin_grants.sql；granted_by null = 根管理员）

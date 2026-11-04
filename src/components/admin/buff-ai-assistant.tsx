@@ -156,9 +156,10 @@ async function queryBuffSets(queryType?: string, queryName?: string, query?: str
     const supabase = createClient()
     let q = supabase
         .from('buff_sets')
-        .select('entity_type, entity_name, buff_name, scope, exclusive, condition, buff_set')
+        .select('id, entity_type, entity_name, buff_name, scope, exclusive, condition, buff_set, sort_order')
         .order('entity_type', { ascending: true })
         .order('entity_name', { ascending: true })
+        .order('sort_order', { ascending: true })
     if (queryType) q = q.eq('entity_type', queryType)
     if (queryName) q = q.eq('entity_name', queryName)
     if (query) {
@@ -167,7 +168,19 @@ async function queryBuffSets(queryType?: string, queryName?: string, query?: str
     }
     const { data, error } = await q.limit(200)
     if (error) return { error: error.message }
-    return { total: (data ?? []).length, buffSets: data ?? [] }
+    const buffSets = data ?? []
+    const keys = new Set(buffSets.map((row: { entity_type: string; entity_name: string }) => `${row.entity_type}/${row.entity_name}`))
+    let folderQuery = supabase
+        .from('buff_folders')
+        .select('id, entity_type, entity_name, name, sort_order')
+        .order('sort_order', { ascending: true })
+    if (queryType) folderQuery = folderQuery.eq('entity_type', queryType)
+    if (queryName) folderQuery = folderQuery.eq('entity_name', queryName)
+    const { data: folderData } = await folderQuery
+    const folders = (folderData ?? []).filter((row: { entity_type: string; entity_name: string }) =>
+        keys.has(`${row.entity_type}/${row.entity_name}`)
+    )
+    return { total: buffSets.length, buffSets, folders }
 }
 
 interface Props {
@@ -543,6 +556,8 @@ export default function BuffAiAssistant({
                               workingDraftRef.current = list
                               draft.set(list)
                           },
+                          getFolders: () => draft.getFolders(),
+                          setFolders: (list) => draft.setFolders(list),
                           save: () => draft.save(workingDraftRef.current ?? undefined)
                       }
                     : undefined
