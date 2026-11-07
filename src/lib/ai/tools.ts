@@ -42,6 +42,46 @@ function validEntityType(v: unknown): v is BuffEntityType {
 }
 
 // ── 默认工具 schema ──────────────────────────────────────────
+
+/**
+ * @desc 乘区贡献条目的完整 schema（diff_buffs / update_buff / add_buff 共用）。
+ * 必须带上 `ref`：此前 add_buff 的 zones 只写了 `{type:'object'}`，模型不知道能传引用，
+ * 转模 buff 就写不进去（只能退化成普通乘区）。
+ */
+const ZONE_ITEM_SCHEMA = {
+    type: 'object',
+    properties: {
+        zoneId: { type: 'string', description: '乘区 id（见系统提示的乘区表，接受旧 id）' },
+        value: { type: 'number', description: '乘区数值；引用/转模条目填 0（数值由转模算出）' },
+        override: { type: 'boolean', description: '是否覆盖（带引用的条目自动取消覆盖）' },
+        condition: {
+            type: 'object',
+            description:
+                '乘区级生效条件（可选，只允许伤害类型 / 伤害属性；链阶只能挂在 Buff 实例级）：{"damageTypes":["共鸣技能伤害"]}、{"elements":["导电"]}，两者之间为"且"',
+            properties: {
+                elements: { type: 'array', items: { type: 'string' } },
+                damageTypes: { type: 'array', items: { type: 'string' } }
+            }
+        },
+        ref: {
+            type: 'object',
+            description:
+                '引用 / 转模（不确定字段时先调用 get_ref_rules）。线性转模写 pct；离散转模（每 X 转 Y）写 discrete+divisor+multiplier，不用 pct',
+            properties: {
+                targetZoneId: { type: 'string', description: '引用目标（引用乘区白名单）' },
+                pct: { type: 'number', description: '线性转模百分比（离散转模可省略，缺省 0）' },
+                threshold: { type: 'number', description: '只对超出该阈值的部分生效' },
+                lower: { type: 'number' },
+                upper: { type: 'number' },
+                discrete: { type: 'boolean' },
+                divisor: { type: 'number' },
+                multiplier: { type: 'number' },
+                refOwner: { type: 'string', enum: ['self', 'owner'] }
+            }
+        }
+    }
+} as const
+
 const BASE_TOOLS: ToolDefinition[] = [
     {
         type: 'function',
@@ -184,23 +224,7 @@ const BASE_TOOLS: ToolDefinition[] = [
                                     type: 'array',
                                     description:
                                         '乘区贡献条目列表：同一乘区可出现多次，各带自己的数值 / 引用 / 覆盖 / 乘区级条件',
-                                    items: {
-                                        type: 'object',
-                                        properties: {
-                                            zoneId: { type: 'string' },
-                                            value: { type: 'number' },
-                                            override: { type: 'boolean' },
-                                            condition: {
-                                                type: 'object',
-                                                description:
-                                                    '乘区级生效条件（可选，只允许伤害类型 / 伤害属性；链阶只能挂在 Buff 实例级）：{"damageTypes":["共鸣技能伤害"]}、{"elements":["导电"]}，两者之间为"且"',
-                                                properties: {
-                                                    elements: { type: 'array', items: { type: 'string' } },
-                                                    damageTypes: { type: 'array', items: { type: 'string' } }
-                                                }
-                                            }
-                                        }
-                                    }
+                                    items: ZONE_ITEM_SCHEMA
                                 }
                             }
                         }
@@ -322,37 +346,7 @@ const BASE_TOOLS: ToolDefinition[] = [
                         type: 'array',
                         description:
                             '可选：**整份替换**的乘区贡献条目列表（不传则保留原值）。同一乘区可多条，各带自己的条件 / 引用 / 覆盖',
-                        items: {
-                            type: 'object',
-                            properties: {
-                                zoneId: { type: 'string' },
-                                value: { type: 'number' },
-                                override: { type: 'boolean' },
-                                condition: {
-                                    type: 'object',
-                                    description: '乘区级生效条件：{"damageTypes":["共鸣技能伤害"]} / {"elements":["导电"]}',
-                                    properties: {
-                                        elements: { type: 'array', items: { type: 'string' } },
-                                        damageTypes: { type: 'array', items: { type: 'string' } }
-                                    }
-                                },
-                                ref: {
-                                    type: 'object',
-                                    description: '引用 / 转模（不确定字段时先调用 get_ref_rules）',
-                                    properties: {
-                                        targetZoneId: { type: 'string' },
-                                        pct: { type: 'number' },
-                                        threshold: { type: 'number' },
-                                        lower: { type: 'number' },
-                                        upper: { type: 'number' },
-                                        discrete: { type: 'boolean' },
-                                        divisor: { type: 'number' },
-                                        multiplier: { type: 'number' },
-                                        refOwner: { type: 'string', enum: ['self', 'owner'] }
-                                    }
-                                }
-                            }
-                        }
+                        items: ZONE_ITEM_SCHEMA
                     }
                 },
                 required: ['buffName']
@@ -448,7 +442,11 @@ const BASE_TOOLS: ToolDefinition[] = [
                     scope: { type: 'string', enum: ['self', 'self_except', 'team', 'effect_only'] },
                     exclusive: { type: 'boolean' },
                     condition: { type: 'object', description: '实例级生效条件（可选）', properties: {} },
-                    zones: { type: 'array', description: '乘区贡献条目列表（至少一条）', items: { type: 'object' } }
+                    zones: {
+                        type: 'array',
+                        description: '乘区贡献条目列表（至少一条）；引用/转模条目 value 填 0 并写 ref',
+                        items: ZONE_ITEM_SCHEMA
+                    }
                 },
                 required: ['buffName', 'zones']
             }

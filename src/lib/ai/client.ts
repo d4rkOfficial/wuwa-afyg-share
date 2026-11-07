@@ -320,7 +320,10 @@ function sanitizeZones(zones: GeneratedBuff['zones'] | undefined): GeneratedZone
     for (const z of Array.isArray(zones) ? zones : []) {
         if (!z) continue
         const zoneId = resolveBuffZoneId(typeof z.zoneId === 'string' ? z.zoneId.trim() : '')
-        if (!BUFF_ZONE_MAP.has(zoneId) || !Number.isFinite(z.value)) continue
+        if (!BUFF_ZONE_MAP.has(zoneId)) continue
+        // 缺 value 时按 0 处理（转模条目 value 本来就是 0；与服务端 buff-sets.ts 一致，
+        // 不能因为模型漏写 value 就把整条乘区（连同 ref）丢掉）
+        const value = Number.isFinite(z.value) ? (z.value as number) : 0
         // 层数类乘区（集谐干涉/同奏增益等）只填固定层数，丢弃模型误输出的引用
         const ref = !ZONE_NO_REF_IDS.has(zoneId) && sanitizeRef(z.ref) ? sanitizeRef(z.ref) : undefined
         const override = !!z.override && !ref && !ZONE_NO_OVERRIDE_IDS.has(zoneId)
@@ -330,7 +333,7 @@ function sanitizeZones(zones: GeneratedBuff['zones'] | undefined): GeneratedZone
         seen.add(key)
         out.push({
             zoneId,
-            value: z.value,
+            value,
             ...(override ? { override: true } : {}),
             ...(ref ? { ref } : {}),
             ...(condition ? { condition } : {})
@@ -352,10 +355,17 @@ function sanitizeZones(zones: GeneratedBuff['zones'] | undefined): GeneratedZone
 // 只保留白名单引用乘区、合法数值
 function sanitizeRef(ref: GeneratedZoneRef | undefined): GeneratedZoneRef | undefined {
     if (!ref || !BUFF_REF_ZONE_MAP.has(ref.targetZoneId)) return undefined
-    if (!Number.isFinite(ref.pct)) return undefined
+    /**
+     * @desc pct 只对「线性转模」有意义。离散转模（discrete + divisor + multiplier）按
+     * 「每 divisor 转 multiplier」取整档，本来就**不该带 pct**——prompt 里的转模样例也不写 pct。
+     * 这里曾要求 pct 必须是数字，于是「每 100 攻击转 5%」这类转模在 AI 写入 / 应用时被整条丢掉，
+     * 表现为「编辑工具写不进 ref，只能把转模写成普通乘区」。缺省按 0 处理（与服务端
+     * buff-sets.ts 的 sanitizeRef 口径一致）。
+     */
+    const pct = Number.isFinite(ref.pct) ? (ref.pct as number) : 0
     const clean: GeneratedZoneRef = {
         targetZoneId: ref.targetZoneId,
-        pct: ref.pct
+        pct
     }
     if (Number.isFinite(ref.threshold)) clean.threshold = ref.threshold
     if (Number.isFinite(ref.lower)) clean.lower = ref.lower

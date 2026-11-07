@@ -51,13 +51,17 @@ const mergeZoneConditions = (a: BuffCondition, b: BuffCondition): BuffCondition 
     return Object.keys(out).length > 0 ? out : null
 }
 
-/** @desc 引用清洗：目标必须在引用白名单内、pct 必须是数字，且该乘区允许引用 */
+/**
+ * @desc 引用清洗：目标必须在引用白名单内，且该乘区允许引用。
+ * pct 缺省按 0（离散转模只写 discrete + divisor + multiplier，本就不带 pct，
+ * 旧校验要求 pct 必须是数字会把这类转模整条丢掉）。
+ */
 function sanitizeRefV2(raw: unknown, zoneId: string): BuffZoneRef | undefined {
     if (ZONE_NO_REF_IDS.has(zoneId)) return undefined
     const r = asRecord(raw)
     const targetZoneId = typeof r.targetZoneId === 'string' ? r.targetZoneId : ''
-    const pct = typeof r.pct === 'number' && Number.isFinite(r.pct) ? r.pct : NaN
-    if (!targetZoneId || !Number.isFinite(pct)) return undefined
+    if (!targetZoneId) return undefined
+    const pct = typeof r.pct === 'number' && Number.isFinite(r.pct) ? r.pct : 0
     const out: BuffZoneRef = { targetZoneId, pct }
     if (typeof r.threshold === 'number' && Number.isFinite(r.threshold)) out.threshold = r.threshold
     if (typeof r.lower === 'number' && Number.isFinite(r.lower)) out.lower = r.lower
