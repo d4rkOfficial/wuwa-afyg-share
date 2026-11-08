@@ -1,0 +1,982 @@
+/* 设计系统 v2 · 核心层（全局加载）
+   按路由专用的样式见 wk-plaza / wk-data / wk-me / wk-editor / wk-rows / wk-overlay.css
+
+   令牌挂在 :root 与 html.light 上（而不是 .wk 上）：
+   这样 html / body 的底色也能与页面壳同源，避免顶栏与页面外围出现两层颜色。
+   尺度（字号/控件高/圆角/间距）与主题无关，统一放 :root。
+   ══════════════════════════════════════════════════════════════════════════ */
+
+/* ── 默认（墨夜）：深色主题 ────────────────────────────────────────────── */
+:root {
+    /* 表面 */
+    --wk-bg: #14120f;
+    --wk-s1: #1b1815;
+    --wk-s2: #241f1a;
+    --wk-s3: #2c261f;
+    --wk-input: #17140f;
+
+    /* 线条：装饰 / 控件（后者必须 ≥3:1） */
+    --wk-line: #322d26;
+    --wk-ctrl-line: #787064;
+
+    /* 文字 */
+    --wk-fg: #ece7dd;
+    --wk-fg-2: #c3bcaf;
+    --wk-fg-3: #a09a8e;
+
+    /* 强调 */
+    --wk-accent: #c95762;
+    --wk-accent-text: #e0a3a8;
+    --wk-accent-solid: #a84a53;
+    --wk-accent-fg: #fdfcf9;
+
+    --wk-danger: #e08585;
+    --wk-ok: #7fbf9a;
+    --wk-warn: #d9b26a;
+
+    /* 元素/属性色（角色徽标、配队卡片用；由工具箱同一套色板衍生） */
+    --element-冷凝: #86b5cf;
+    --element-热熔: #d9a07a;
+    --element-导电: #ab8fc4;
+    --element-气动: #86c0a4;
+    --element-衍射: #d6c07a;
+    --element-湮灭: #cf8fa6;
+    --element-物理: #b9b3a8;
+
+    --wk-focus: #c95762;   /* 墨夜：与 --wk-accent 同值，焦点环即品牌色 */
+
+    --wk-scrim: rgba(6, 5, 4, 0.7);
+    /* 投影一律「硬」的：模糊半径恒为 0，只用 1–6px 的硬偏移叠出厚度。
+       小于 4px 的偏移在深色底上几乎看不见，所以墨夜靠「内阴影高光 + 硬偏移」共同拉出层次。 */
+    --wk-elev-1: 0 1px 0 rgba(0, 0, 0, 0.55), 0 2px 0 rgba(0, 0, 0, 0.22);
+    --wk-elev-2: 0 2px 0 rgba(0, 0, 0, 0.6), 0 6px 0 rgba(0, 0, 0, 0.24);
+    /* 按钮投影：实心按钮用它立起来（比 elev-1 明显） */
+    --wk-btn-shadow: 0 1px 0 rgba(0, 0, 0, 0.6);
+    /* 内阴影：inset-1 = 内凹（输入框 / 编辑区 / 分段容器），
+       inset-2 = 上缘高光 + 下缘压暗（卡片 / 浮层 / 选中项） */
+    --wk-inset-1: inset 0 1px 0 rgba(0, 0, 0, 0.5), inset 0 -1px 0 rgba(255, 255, 255, 0.035);
+    --wk-inset-2: inset 0 1px 0 rgba(255, 255, 255, 0.06), inset 0 -1px 0 rgba(0, 0, 0, 0.28);
+    /* 反方向（向上的）硬阴影：粘底的操作条用，把它从内容里掀起来 */
+    --wk-elev-up: 0 -1px 0 var(--wk-line), 0 -3px 0 rgba(0, 0, 0, 0.4);
+
+    /* 尺度（两主题共用） */
+    --wk-t-meta: 12px;
+    --wk-t-body: 14px;
+    --wk-t-lead: 16px;
+    --wk-t-sec: 20px;
+    --wk-t-page: 26px;
+    --wk-t-display: 34px;
+
+    --wk-h-sm: 32px;
+    --wk-h-md: 36px;
+
+    --wk-r-1: 4px;
+    --wk-r-2: 8px;
+
+    --wk-row: 44px;
+    --wk-trow: 40px;
+    --wk-thead: 36px;
+
+    --wk-gap: 12px;
+    --wk-pad: 16px;
+
+    --wk-max: 1040px;
+}
+
+/* ── 纸（浅色主题）：暖纸底 ──────────────────────────────────────────────── */
+html.light {
+    /* 页面底色（--wk-bg）保持原样；下面这几个是**组件表面**色阶，
+       把奶黄的饱和度降下来（s2 的 R−B 从 14 收到 9），页面不再是"整片奶油"。
+       对比度复核：fg-3 在 s2 上 4.64:1、控件描边在 s2 上 3.19:1，都还在线上。 */
+    --wk-bg: #f4f1ea;
+    --wk-s1: #fcfbf9;
+    --wk-s2: #edeae4;
+    --wk-s3: #fefefc;
+    --wk-input: #fefefc;
+
+    --wk-line: #e0d9cd;
+    --wk-ctrl-line: #8a8175;
+
+    --wk-fg: #23201c;
+    --wk-fg-2: #4a443c;
+    --wk-fg-3: #6f675c;
+
+    --wk-accent: #a8454f;
+    --wk-accent-text: #a8454f;
+    --wk-accent-solid: #9c3b45;
+    --wk-accent-fg: #fdfcf9;
+
+    --wk-danger: #a8443f;
+    --wk-ok: #3f7a5c;
+    --wk-warn: #8a6a2f;
+
+    /* 属性色：深色主题那组直接用在纸上只有 ~2:1，这里换同色相压深版 */
+    --element-冷凝: #41718a;
+    --element-热熔: #a05f36;
+    --element-导电: #76558f;
+    --element-气动: #40795c;
+    --element-衍射: #7d6629;
+    --element-湮灭: #a0516a;
+    --element-物理: #6b6459;
+
+    --wk-focus: #a8454f;   /* 纸：与 --wk-accent 同值 */
+
+    --wk-scrim: rgba(52, 46, 40, 0.42);
+    /* 同上：模糊半径恒为 0。纸上用暖墨色硬阴影，像压了一层纸 */
+    --wk-elev-1: 0 1px 0 rgba(35, 33, 30, 0.17), 0 2px 0 rgba(35, 33, 30, 0.06);
+    --wk-elev-2: 0 2px 0 rgba(35, 33, 30, 0.18), 0 6px 0 rgba(35, 33, 30, 0.07);
+    --wk-btn-shadow: 0 1px 0 rgba(35, 33, 30, 0.2);
+    --wk-inset-1: inset 0 1px 0 rgba(35, 33, 30, 0.07), inset 0 -1px 0 rgba(255, 255, 255, 0.7);
+    --wk-inset-2: inset 0 1px 0 rgba(255, 255, 255, 0.95), inset 0 -1px 0 rgba(35, 33, 30, 0.06);
+    --wk-elev-up: 0 -1px 0 var(--wk-line), 0 -3px 0 rgba(35, 33, 30, 0.1);
+}
+
+/* ── 作用域：字体与底色（令牌已在 :root / html.light 上）────────────────── */
+.wk {
+    color: var(--wk-fg);
+    background: var(--wk-bg);
+    /* 全站唯一字族：FangXinShu，包括数字与代码。
+       兜底只用于字体加载失败，不主动引入无衬线 / 等宽字体。
+       FangXinShu 没有等宽数字（无 tnum），数字对齐一律靠「定宽列 + 右对齐」。 */
+    font-family: 'FangXinShu', 'Songti SC', SimSun, serif;
+    font-size: var(--wk-t-body);
+    line-height: 1.55;
+    letter-spacing: 0.01em;
+    -webkit-font-smoothing: antialiased;
+}
+
+/* ── 页面壳 ─────────────────────────────────────────────────────────────── */
+.wk-page {
+    background: var(--wk-bg);
+}
+
+.wk-container {
+    margin: 0 auto;
+    width: 100%;
+    min-width: 0;
+    max-width: var(--wk-max);
+    padding: 24px var(--wk-pad) 48px;
+}
+
+@media (min-width: 768px) {
+    .wk-container {
+        padding: 32px 24px 48px;
+    }
+}
+
+/* ── 排版 ───────────────────────────────────────────────────────────────── */
+.wk h1, .wk h2, .wk h3, .wk h4, .wk p { margin: 0; }
+
+.wk h1, .wk h2, .wk h3, .wk h4 { font-weight: 600; line-height: 1.3; letter-spacing: -0.01em; }
+
+.wk-meta { font-size: var(--wk-t-meta); color: var(--wk-fg-3); }
+
+.wk-label { font-size: var(--wk-t-meta); color: var(--wk-fg-3); letter-spacing: 0.06em; }
+
+.wk a { color: var(--wk-accent-text); text-decoration: none; }
+
+.wk a:hover { text-decoration: underline; text-underline-offset: 3px; }
+
+/* 数字列：仿心书无等宽数字（无 tnum），对齐只能靠布局 —— 定宽列 + 右对齐 */
+.wk-num { text-align: right; }
+
+/* ── 简介的 Markdown 正文（详情页）──────────────────────────────────────── */
+.wk-md {
+    display: grid;
+    gap: 10px;
+    color: var(--wk-fg-2);
+    line-height: 1.75;
+}
+
+.wk-md p,
+.wk-md li,
+.wk-md blockquote { overflow-wrap: anywhere; }
+
+.wk-md li > span { display: inline; }
+
+.wk-md .wk-md-h {
+    color: var(--wk-fg);
+    font-weight: 600;
+    line-height: 1.4;
+}
+
+.wk-md ul,
+.wk-md ol {
+    display: grid;
+    gap: 4px;
+    margin: 0;
+    padding-left: 22px;
+}
+
+.wk-md ul { list-style: disc; }
+.wk-md ol { list-style: decimal; }
+
+.wk-md blockquote {
+    margin: 0;
+    padding-left: 12px;
+    border-left: 3px solid var(--wk-line);
+    color: var(--wk-fg-3);
+}
+
+.wk-md code {
+    border-radius: var(--wk-r-1);
+    background: var(--wk-s2);
+    padding: 1px 5px;
+    font-family: inherit;
+    font-size: var(--wk-t-meta);
+}
+
+.wk-md pre {
+    margin: 0;
+    overflow-x: auto;
+    border: 1px solid var(--wk-line);
+    border-radius: var(--wk-r-1);
+    background: var(--wk-s2);
+    padding: 10px 12px;
+}
+
+.wk-md pre code {
+    background: transparent;
+    padding: 0;
+}
+
+.wk-md hr {
+    height: 1px;
+    margin: 4px 0;
+    border: 0;
+    background: var(--wk-line);
+}
+
+.wk-md a {
+    color: var(--wk-accent-text);
+    text-decoration: underline;
+    text-underline-offset: 2px;
+}
+
+.wk-md strong { color: var(--wk-fg); font-weight: 600; }
+
+/* ── 焦点：全站唯一可见性来源，2px outline，不依赖边框存在 ──────────────── */
+.wk :focus-visible {
+    outline: 2px solid var(--wk-focus);
+    outline-offset: 2px;
+}
+
+/* 表单控件：焦点环贴住描边，避免"双环 + 空隙"的原生观感；
+   环色与描边色同为品牌绛红（--wk-focus 已对齐 --wk-accent） */
+.wk-input:focus-visible,
+.wk-textarea:focus-visible,
+.wk-select:focus-visible,
+.wk-dd-trigger:focus-visible {
+    outline-offset: 0;
+}
+
+/* ── 按钮：2 档高度，同一行不得混用；主操作每屏唯一 ─────────────────────── */
+.wk-btn {
+    display: inline-flex;
+    height: var(--wk-h-md);
+    flex-shrink: 0;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    padding: 0 14px;
+    border: 1px solid var(--wk-ctrl-line);
+    border-radius: var(--wk-r-1);
+    /* 默认按钮＝有底色的实心片：表面色 + 一档投影，不再是"只有描边" */
+    background: var(--wk-s1);
+    box-shadow: var(--wk-btn-shadow);
+    color: var(--wk-fg);
+    font-family: inherit;
+    font-size: var(--wk-t-body);
+    line-height: 1;
+    white-space: nowrap;
+    cursor: pointer;
+    transition:
+        background-color 120ms ease-out,
+        border-color 120ms ease-out,
+        color 120ms ease-out,
+        box-shadow 120ms ease-out;
+}
+
+.wk-btn:hover:not(:disabled) {
+    background: var(--wk-s2);
+    border-color: var(--wk-fg-3);
+}
+
+.wk-btn:disabled { opacity: 0.45; cursor: not-allowed; }
+
+.wk-btn--sm { height: var(--wk-h-sm); padding: 0 10px; font-size: var(--wk-t-meta); }
+
+.wk-btn--icon { width: var(--wk-h-md); padding: 0; }
+
+.wk-btn--icon.wk-btn--sm { width: var(--wk-h-sm); }
+
+.wk-btn--primary {
+    border-color: transparent;
+    background: var(--wk-accent-solid);
+    color: var(--wk-accent-fg);
+    box-shadow: var(--wk-btn-shadow);
+}
+
+.wk-btn--primary:hover:not(:disabled) { background: var(--wk-accent); border-color: transparent; }
+
+/* 三级操作：浅底色（s2）、无边框、无阴影。
+   硬规则：按钮不允许「既没有边框也没有背景」——它靠底色表达可点。
+   注意继承自 .wk-btn 的描边必须显式置透明，否则会带上默认描边。 */
+.wk-btn--quiet {
+    border-color: transparent;
+    background: var(--wk-s2);
+    box-shadow: none;
+    color: var(--wk-fg-2);
+}
+
+.wk-btn--quiet:hover:not(:disabled) {
+    background: var(--wk-s1);
+    color: var(--wk-fg);
+}
+
+.wk-btn--danger {
+    border-color: color-mix(in srgb, var(--wk-danger) 45%, transparent);
+    background: var(--wk-s1);
+    box-shadow: var(--wk-btn-shadow);
+    color: var(--wk-danger);
+}
+
+.wk-btn--danger:hover:not(:disabled) {
+    background: color-mix(in srgb, var(--wk-danger) 10%, var(--wk-s1));
+    border-color: var(--wk-danger);
+}
+
+/* ── 表单：与按钮同高 ───────────────────────────────────────────────────── */
+.wk-field { display: grid; gap: 6px; min-width: 0; }
+
+.wk-field > .wk-field-label { font-size: var(--wk-t-meta); color: var(--wk-fg-3); }
+
+.wk-field-hint { font-size: var(--wk-t-meta); color: var(--wk-fg-3); }
+
+.wk-input,
+.wk-textarea,
+.wk-select {
+    width: 100%;
+    min-width: 0;
+    height: var(--wk-h-md);
+    border: 1px solid var(--wk-ctrl-line);
+    border-radius: var(--wk-r-1);
+    background: var(--wk-input);
+    padding: 0 10px;
+    color: var(--wk-fg);
+    font-family: inherit;
+    font-size: var(--wk-t-body);
+    outline: none;
+    /* 编辑框：外边一道硬投影（离开纸面）+ 内边一道内凹（像刻进去） */
+    box-shadow: var(--wk-elev-1), var(--wk-inset-1);
+    transition: border-color 120ms ease-out;
+}
+
+.wk-input::placeholder,
+.wk-textarea::placeholder { color: var(--wk-fg-3); }
+
+.wk-input:focus,
+.wk-textarea:focus,
+.wk-select:focus { border-color: var(--wk-accent); }
+
+.wk-input:disabled,
+.wk-textarea:disabled,
+.wk-select:disabled { opacity: 0.55; }
+
+/* 多行编辑框：高度随内容自动增长（field-sizing），但**不允许用户拽**（resize: none）。
+   同时给上限，避免超长文本把页面撑爆 —— 超出后在框内滚动。 */
+.wk-textarea {
+    height: auto;
+    min-height: 84px;
+    max-height: 40vh;
+    overflow-y: auto;
+    padding: 8px 10px;
+    line-height: 1.65;
+    resize: none;
+    field-sizing: content;
+}
+
+.wk-select { appearance: none; padding-right: 26px;
+    background-image: url("data:image/svg+xml;charset=utf-8,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%238a8175' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 8px center;
+    background-size: 14px;
+}
+
+/* ── 开关 ───────────────────────────────────────────────────────────────── */
+.wk-switch {
+    position: relative;
+    display: inline-flex;
+    width: 36px;
+    height: 20px;
+    flex-shrink: 0;
+    align-items: center;
+    border: 1px solid var(--wk-ctrl-line);
+    border-radius: 999px;
+    background: var(--wk-s2);
+    padding: 0;
+    cursor: pointer;
+    box-shadow: var(--wk-inset-1);
+    transition: background-color 140ms ease-out, border-color 140ms ease-out;
+}
+
+.wk-switch[data-on='true'] { background: var(--wk-accent-solid); border-color: transparent; }
+
+.wk-switch-knob {
+    position: absolute;
+    left: 2px;
+    width: 14px;
+    height: 14px;
+    border-radius: 999px;
+    background: var(--wk-fg-3);
+    box-shadow: var(--wk-btn-shadow);
+    transition: transform 140ms ease-out, background-color 140ms ease-out;
+}
+
+.wk-switch[data-on='true'] .wk-switch-knob { transform: translateX(16px); background: var(--wk-accent-fg); }
+
+/* ── 分段：容器 36 / 内部 28 ───────────────────────────────────────────── */
+.wk-seg {
+    display: inline-flex;
+    height: var(--wk-h-md);
+    flex-shrink: 0;
+    align-items: center;
+    gap: 2px;
+    padding: 2px;
+    border-radius: var(--wk-r-1);
+    background: var(--wk-s2);
+    /* tabs（分段）：容器内凹，选中项再凸起 */
+    box-shadow: var(--wk-inset-1);
+}
+
+.wk-seg-item {
+    height: 28px;
+    border: 0;
+    border-radius: var(--wk-r-1);
+    background: transparent;
+    padding: 0 12px;
+    color: var(--wk-fg-3);
+    font-family: inherit;
+    font-size: var(--wk-t-meta);
+    line-height: 1;
+    white-space: nowrap;
+    cursor: pointer;
+    transition: background-color 120ms ease-out, color 120ms ease-out;
+}
+
+.wk-seg-item:hover { color: var(--wk-fg); }
+
+.wk-seg-item[data-active='true'] {
+    background: var(--wk-s1);
+    color: var(--wk-fg);
+    box-shadow: var(--wk-elev-1), var(--wk-inset-2);
+}
+
+/* ── 徽标：固定 20 高，不参与行高竞争 ───────────────────────────────────── */
+.wk-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    height: 20px;
+    flex-shrink: 0;
+    border: 1px solid var(--wk-ctrl-line);
+    border-radius: var(--wk-r-1);
+    padding: 0 7px;
+    font-size: var(--wk-t-meta);
+    line-height: 1;
+    color: var(--wk-fg-3);
+    white-space: nowrap;
+    box-shadow: var(--wk-inset-2);
+}
+
+.wk-badge--accent { border-color: transparent; background: var(--wk-accent-solid); color: var(--wk-accent-fg); }
+
+.wk-badge--ok { border-color: color-mix(in srgb, var(--wk-ok) 45%, transparent); color: var(--wk-ok); }
+
+.wk-badge--warn { border-color: color-mix(in srgb, var(--wk-warn) 45%, transparent); color: var(--wk-warn); }
+
+.wk-badge--danger { border-color: color-mix(in srgb, var(--wk-danger) 45%, transparent); color: var(--wk-danger); }
+
+/* 标签 chip 上的移除按钮：继承 chip 的字与色，只去掉按钮默认外观 */
+.wk-tag-remove {
+    border: 0;
+    background: transparent;
+    color: inherit;
+    font: inherit;
+    line-height: 1;
+    padding: 0;
+    cursor: pointer;
+}
+
+/* ── 卡片：只保留外轮廓 1 条，禁止卡片套卡片；投影是内外各一层硬阴影 ────── */
+.wk-card {
+    position: relative;
+    overflow: hidden;
+    border: 1px solid var(--wk-line);
+    border-radius: var(--wk-r-2);
+    background: var(--wk-s1);
+    box-shadow: var(--wk-elev-1), var(--wk-inset-2);
+}
+
+.wk-card-pad { padding: var(--wk-pad); }
+
+/* ── 工具栏 / 分区 ──────────────────────────────────────────────────────── */
+.wk-toolbar { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+
+.wk-spacer { flex: 1; min-width: 0; }
+
+.wk-divider { height: 1px; width: 100%; background: var(--wk-line); }
+
+/* 分区标题：一条线 + 字号对比，不再给区块套框 */
+.wk-section-head {
+    display: flex;
+    align-items: baseline;
+    gap: var(--wk-gap);
+    padding-bottom: 10px;
+    margin-bottom: var(--wk-pad);
+    border-bottom: 1px solid var(--wk-line);
+}
+
+/* ── 页面标题区 ─────────────────────────────────────────────────────────── */
+.wk-page-head {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: flex-end;
+    justify-content: space-between;
+    gap: var(--wk-gap);
+    padding: 24px 0 var(--wk-pad);
+    border-bottom: 1px solid var(--wk-line);
+}
+
+.wk-page-title { font-size: var(--wk-t-page); }
+
+.wk-page-sub { margin-top: 6px; font-size: var(--wk-t-body); color: var(--wk-fg-3); }
+
+/* ── 空态 ───────────────────────────────────────────────────────────────── */
+.wk-empty {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    padding: 48px 24px;
+    text-align: center;
+    color: var(--wk-fg-3);
+    font-size: var(--wk-t-body);
+}
+
+/* ── 菜单 / popover ─────────────────────────────────────────────────────── */
+.wk-menu {
+    position: absolute;
+    z-index: 80;
+    /* 行尾 ⋯ 菜单：宽度/高度都按视口封顶，超出时面板内滚动（水平方向的靠右溢出由 WkMenu 用 translateX 夹住） */
+    width: max-content;
+    min-width: min(176px, calc(100vw - 24px));
+    max-width: calc(100vw - 24px);
+    max-height: calc(100dvh - 24px);
+    overflow-y: auto;
+    border: 1px solid var(--wk-line);
+    border-radius: var(--wk-r-2);
+    background: var(--wk-s3);
+    box-shadow: var(--wk-elev-2), var(--wk-inset-2);
+    padding: 4px;
+}
+
+.wk-menu-item {
+    display: flex;
+    width: 100%;
+    align-items: center;
+    gap: 8px;
+    height: var(--wk-h-sm);
+    border: 0;
+    border-radius: var(--wk-r-1);
+    background: transparent;
+    padding: 0 8px;
+    color: var(--wk-fg);
+    font-family: inherit;
+    font-size: var(--wk-t-body);
+    text-align: left;
+    cursor: pointer;
+}
+
+.wk-menu-item:hover { background: var(--wk-s2); }
+
+.wk-menu-item--danger { color: var(--wk-danger); }
+
+/* 实体条目（打开实体弹窗）：比普通菜单项高一点，好放 24px 头像 */
+.wk-entity-item {
+    height: auto;
+    min-height: 40px;
+    padding-top: 4px;
+    padding-bottom: 4px;
+}
+
+.wk-entity-icon {
+    display: inline-flex;
+    width: 24px;
+    height: 24px;
+    flex-shrink: 0;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+    border: 1px solid var(--wk-line);
+    border-radius: 50%;
+    background: var(--wk-s2);
+    color: var(--wk-fg-3);
+}
+
+.wk-entity-icon img { width: 100%; height: 100%; object-fit: cover; }
+
+.wk-entity-icon > svg { width: 14px; height: 14px; }
+
+/* ── toast ──────────────────────────────────────────────────────────────── */
+.wk-toaster {
+    position: fixed;
+    right: 20px;
+    bottom: 20px;
+    z-index: 90;
+    display: flex;
+    width: min(340px, calc(100vw - 40px));
+    flex-direction: column;
+    gap: 8px;
+    pointer-events: none;
+}
+
+.wk-toast {
+    display: flex;
+    align-items: flex-start;
+    gap: 8px;
+    pointer-events: auto;
+    border: 1px solid var(--wk-line);
+    border-radius: var(--wk-r-2);
+    background: var(--wk-s3);
+    box-shadow: var(--wk-elev-2), var(--wk-inset-2);
+    padding: 10px 12px;
+    font-size: var(--wk-t-body);
+    color: var(--wk-fg);
+    animation: wk-toast-in 120ms ease-out;
+}
+
+.wk-toast--ok { border-left: 3px solid var(--wk-ok); }
+
+.wk-toast--error { border-left: 3px solid var(--wk-danger); }
+
+.wk-toast--info { border-left: 3px solid var(--wk-accent); }
+
+@keyframes wk-toast-in {
+    from { opacity: 0; transform: translateY(4px); }
+    to { opacity: 1; transform: none; }
+}
+
+.wk a.wk-nav-item { color: var(--wk-fg-2); text-decoration: none; }
+
+.wk a.wk-nav-item:hover { color: var(--wk-fg); text-decoration: none; }
+
+.wk a.wk-brand { color: var(--wk-fg); text-decoration: none; }
+
+.wk a.wk-btn { color: var(--wk-fg); text-decoration: none; }
+
+.wk a.wk-btn--primary { color: var(--wk-accent-fg); }
+
+.wk a.wk-btn:hover { text-decoration: none; }
+
+.wk a.wk-menu-link { color: var(--wk-fg); text-decoration: none; }
+
+/* ── 顶栏 ──────────────────────────────────────────────────────────────── */
+.wk-topbar {
+    position: sticky;
+    top: 0;
+    z-index: 30;
+    background: var(--wk-bg);
+    border-bottom: 1px solid var(--wk-line);
+}
+
+.wk-topbar-in {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    height: 56px;
+    max-width: var(--wk-max);
+    margin: 0 auto;
+    padding: 0 16px;
+}
+
+.wk-brand {
+    margin-right: 6px;
+    color: var(--wk-fg);
+    font-size: var(--wk-t-lead);
+    font-weight: 600;
+    letter-spacing: 0.02em;
+    white-space: nowrap;
+}
+
+.wk-nav { display: flex; min-width: 0; align-items: center; gap: 2px; }
+
+.wk-nav-item {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    height: var(--wk-h-sm);
+    padding: 0 10px;
+    border-radius: var(--wk-r-1);
+    color: var(--wk-fg-2);
+    font-size: var(--wk-t-body);
+    white-space: nowrap;
+}
+
+.wk-nav-item:hover { background: var(--wk-s2); color: var(--wk-fg); }
+
+/* 宽屏主导航：撑满顶栏高度，选中态是贴底的一道横条 */
+.wk-nav--wide .wk-nav-item {
+    height: 56px;
+    padding: 0 12px;
+    border-radius: 0;
+}
+
+.wk-nav--wide .wk-nav-item:hover { background: transparent; }
+
+.wk-nav--wide .wk-nav-item[data-active='true'] { color: var(--wk-fg); font-weight: 600; }
+
+.wk-nav--wide .wk-nav-item[data-active='true']::after {
+    content: '';
+    position: absolute;
+    right: 12px;
+    bottom: 0;
+    left: 12px;
+    height: 2px;
+    background: var(--wk-accent);
+}
+
+/* 窄屏：三个主导航收进「菜单」下拉；宽屏反过来 */
+.wk-only-narrow { display: inline-flex; }
+
+@media (min-width: 768px) {
+    .wk-only-narrow { display: none; }
+}
+
+@media (max-width: 767px) {
+    .wk-nav--wide { display: none; }
+}
+
+/* 只在宽屏出现的控件（例如「管理」图标：窄屏时它的入口已经收进「菜单」下拉，外面再放一个就是重复） */
+.wk-only-wide { display: inline-flex; }
+
+@media (max-width: 767px) {
+    .wk-only-wide { display: none; }
+}
+
+/* ── popover（编辑锁 / 管理 / 菜单）───────────────────────────────────────
+   不越出屏幕：宽度按视口收窄，高度按视口封顶并内部滚动。
+   窄屏（≤767）直接改成顶栏下方整宽的浮层——按钮贴左或贴右都不会再把面板甩出屏幕。 */
+.wk-pop { position: relative; display: inline-flex; }
+
+.wk-pop-panel {
+    position: absolute;
+    top: calc(100% + 6px);
+    right: 0;
+    z-index: 80;
+    width: min(288px, calc(100vw - 24px));
+    max-width: calc(100vw - 24px);
+    max-height: calc(100dvh - 96px);
+    overflow-y: auto;
+    padding: 12px;
+    border: 1px solid var(--wk-line);
+    border-radius: var(--wk-r-2);
+    background: var(--wk-s3);
+    box-shadow: var(--wk-elev-2), var(--wk-inset-2);
+}
+
+.wk-pop-panel--menu {
+    width: min(180px, calc(100vw - 24px));
+    padding: 4px;
+}
+
+@media (max-width: 767px) {
+    .wk-pop-panel {
+        position: fixed;
+        top: 64px;
+        right: 12px;
+        left: 12px;
+        width: auto;
+        max-width: none;
+        max-height: calc(100dvh - 76px);
+    }
+}
+
+.wk-pop-row {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+    padding: 10px 0;
+    border-bottom: 1px solid var(--wk-line);
+}
+
+.wk-pop-row:last-of-type { border-bottom: 0; }
+
+.wk-lockdot {
+    position: absolute;
+    top: -2px;
+    right: -3px;
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: var(--wk-accent);
+}
+
+/* ── 页脚：只留一行文字，不放任何交互控件 ──────────────────────────────── */
+.wk-footer { border-top: 1px solid var(--wk-line); background: var(--wk-bg); }
+
+.wk-footer-in {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: center;
+    gap: 6px 12px;
+    max-width: var(--wk-max);
+    margin: 0 auto;
+    padding: 20px 16px;
+    font-size: var(--wk-t-meta);
+    color: var(--wk-fg-3);
+}
+
+.wk-skeleton {
+    border-radius: var(--wk-r-1);
+    background: var(--wk-s2);
+    animation: wk-skeleton-pulse 1.4s ease-in-out infinite;
+}
+
+@keyframes wk-skeleton-pulse {
+    0%,
+    100% { opacity: 0.55; }
+    50% { opacity: 1; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .wk-skeleton { animation: none; opacity: 0.7; }
+}
+
+.wk-skeleton-stack { display: grid; gap: 12px; }
+
+.wk-actionbar {
+    position: sticky;
+    bottom: 0;
+    z-index: 20;
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 8px;
+    min-height: 52px;
+    padding: 8px 12px;
+    border-top: 1px solid var(--wk-line);
+    background: var(--wk-bg);
+    box-shadow: var(--wk-elev-up);
+}
+
+.wk-code {
+    border: 1px solid var(--wk-line);
+    border-radius: var(--wk-r-1);
+    background: var(--wk-s2);
+    padding: 1px 5px;
+    font-family: inherit;
+    font-size: var(--wk-t-meta);
+    color: var(--wk-fg-2);
+}
+
+.wk-pre {
+    display: block;
+    min-width: 0;
+    overflow-x: auto;
+    border: 1px solid var(--wk-line);
+    border-radius: var(--wk-r-1);
+    background: var(--wk-s2);
+    padding: 8px 10px;
+    font-family: inherit;
+    font-size: var(--wk-t-meta);
+    line-height: 1.6;
+    color: var(--wk-fg-2);
+    white-space: nowrap;
+}
+
+.wk-btn--ghost {
+    border-color: var(--wk-line);
+    background: var(--wk-s2);
+    box-shadow: var(--wk-btn-shadow);
+    color: var(--wk-fg-2);
+}
+
+.wk-btn--ghost:hover:not(:disabled) {
+    background: var(--wk-s1);
+    color: var(--wk-fg);
+}
+
+/* 多路由共用的原子类（广场 / 我的 / 管理台都会用到，故留在核心层）*/
+
+.wk-pcard-avatar {
+    display: inline-flex;
+    width: 18px;
+    height: 18px;
+    flex-shrink: 0;
+    overflow: hidden;
+    border-radius: 50%;
+    border: 1px solid var(--wk-ctrl-line);
+    background: var(--wk-s2);
+}
+
+.wk-pcard-avatar img { width: 100%; height: 100%; object-fit: cover; }
+
+.wk-clear {
+    font-size: var(--wk-t-meta);
+    color: var(--wk-accent-text);
+    text-decoration: none;
+    white-space: nowrap;
+}
+
+.wk-clear:hover { text-decoration: underline; text-underline-offset: 2px; }
+
+.wk-pager {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    padding-top: 20px;
+}
+
+.wk-pager-num { min-width: var(--wk-h-sm); padding: 0 8px; }
+
+.wk-pager-num[aria-current='page'] {
+    border-color: color-mix(in srgb, var(--wk-accent) 55%, transparent);
+    background: color-mix(in srgb, var(--wk-accent) 14%, var(--wk-s1));
+    color: var(--wk-accent-text);
+    font-weight: 600;
+}
+
+/* ── 顶栏与信息行的小图标：统一尺寸与弱化色 ───────────────────────────── */
+.wk-nav-icon {
+    width: 16px;
+    height: 16px;
+    flex-shrink: 0;
+    opacity: 0.82;
+}
+
+.wk-btn--sm .wk-nav-icon {
+    width: 14px;
+    height: 14px;
+}
+
+/* 实心主按钮上的图标不做降透明（底色已经是重色，再压就糊了） */
+.wk-btn--primary .wk-nav-icon { opacity: 1; }
+
+/* 主题图标：深色（墨夜）时显示太阳，浅色（纸）时显示月亮 */
+.wk-theme-icon-moon {
+    display: none;
+}
+
+html.light .wk-theme-icon-sun {
+    display: none;
+}
+
+html.light .wk-theme-icon-moon {
+    display: inline-block;
+}

@@ -1,0 +1,223 @@
+/* 广场专用：工程卡（含角色头像叠底）、卡片网格、结果行。
+   由 /、/me、/share/[code]、/dev/ui 导入。 */
+
+/* ── 角色头像叠底（恢复旧版的角部叠底观感）──────────────────────────────
+   贴在卡片右下角、略微出血（由 .wk-card 的 overflow:hidden 裁齐），
+   朝「左 + 上」两个方向淡出，标题与简介在左上象限不受干扰。 */
+.wk-card-art {
+    position: absolute;
+    right: -6px;
+    /* 抬高一点：原来贴着卡片下沿，会被元信息行和底衬挡住半张脸 */
+    bottom: 18px;
+    z-index: 0;
+    display: flex;
+    align-items: flex-end;
+    opacity: 0.45;
+    pointer-events: none;
+    /* 容器本身不加蒙版：淡出交给每张图自己的「左上」边缘，
+       这样右下两条边保持实心，贴着卡片右下角不会露出一条浅边 */
+}
+
+.wk-card-art > * {
+    display: block;
+}
+
+.wk-card-art img {
+    position: relative;
+    display: block;
+    /* 不做圆形裁剪；也不给底色——透明头像会透出底色，看着像一块白框 */
+    object-fit: cover;
+    /* 只柔化「左 + 上」两条边：左上羽化融进前一张/卡片，
+       右、下保持实心（右下角是卡片边缘，不需要羽化）
+       两向渐变取交集（intersect）= 只有同时满足"靠右上"的区域才不透明 */
+    -webkit-mask-image: linear-gradient(to left, #000 58%, transparent 100%),
+        linear-gradient(to top, #000 58%, transparent 100%);
+    -webkit-mask-composite: source-in;
+    mask-image: linear-gradient(to left, #000 58%, transparent 100%),
+        linear-gradient(to top, #000 58%, transparent 100%);
+    mask-composite: intersect;
+}
+
+/* 显式保证叠放顺序：右侧（后渲染）永远压在左侧之上，与 DOM 顺序无关时也成立 */
+.wk-card-art img:nth-child(1) {
+    z-index: 1;
+}
+
+.wk-card-art img:nth-child(2) {
+    z-index: 2;
+}
+
+.wk-card-art img:nth-child(3) {
+    z-index: 3;
+}
+
+/* 纸主题：用正片叠底把头像自带的白底吃掉（白 × 纸色 = 纸色）。
+   墨夜不加 blend，否则会把人物一起压黑。 */
+html.light .wk-card-art img {
+    mix-blend-mode: multiply;
+}
+
+.wk-card-inner {
+    position: relative;
+    z-index: 1;
+    display: flex;
+    min-width: 0;
+    flex: 1;
+    flex-direction: column;
+    gap: 10px;
+}
+
+/* 整卡可点：内容层不接管点击（否则 stretched link 收不到事件），
+   卡片内的链接（标签）再单独放行 */
+.wk-pcard .wk-card-inner {
+    pointer-events: none;
+}
+
+.wk-pcard .wk-card-inner a,
+.wk-pcard .wk-card-inner button {
+    pointer-events: auto;
+}
+
+/* 底部衬底：一条从卡片底色渐隐向上的窄遮罩。
+   作用是不让「作者 / 时间 / 浏览 / 克隆」这些浅色小字压在浅色头像上 —
+   既保住叠底的观感，又保证文字始终有底色可依。 */
+.wk-pcard::after {
+    content: '';
+    position: absolute;
+    right: 0;
+    bottom: 0;
+    left: 0;
+    z-index: 0;
+    height: 72px;
+    background: linear-gradient(to top, var(--wk-s1) 30%, transparent 100%);
+    pointer-events: none;
+}
+
+/* 元信息行：贴住卡片底部；文字提到 --wk-fg-2 保证在衬底上的对比度 */
+.wk-card-foot {
+    position: relative;
+    z-index: 1;
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 4px 10px;
+    margin-top: auto;
+    padding-top: 10px;
+    border-top: 1px solid var(--wk-line);
+    font-size: var(--wk-t-meta);
+    color: var(--wk-fg-2);
+}
+
+.wk-grid-cards {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    gap: 12px;
+}
+
+@media (min-width: 768px) {
+    .wk-grid-cards {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+}
+
+@media (min-width: 1200px) {
+    .wk-grid-cards {
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
+}
+
+.wk-pcard {
+    display: flex;
+    min-height: 100%;
+}
+
+.wk-pcard-title {
+    flex: 1;
+    min-width: 0;
+    font-size: var(--wk-t-lead);
+    font-weight: 600;
+    line-height: 1.4;
+    letter-spacing: -0.01em;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+}
+
+.wk-pcard-desc {
+    font-size: var(--wk-t-meta);
+    color: var(--wk-fg-3);
+    line-height: 1.65;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+    /* 卡片上的简介只保留换行：Markdown 标记已在 toCardSegments 里剥掉 */
+    white-space: pre-line;
+}
+
+/* 简介里的链接要能点：整卡是一条 stretched link，链接必须自己抬到它上面 */
+.wk-pcard-desc a {
+    position: relative;
+    z-index: 2;
+    pointer-events: auto;
+    color: var(--wk-accent-text);
+    text-decoration: underline;
+    text-underline-offset: 2px;
+}
+
+.wk-pcard-tag {
+    font-size: var(--wk-t-meta);
+    color: var(--wk-accent-text);
+    text-decoration: none;
+}
+
+.wk-pcard-tag:hover {
+    text-decoration: underline;
+    text-underline-offset: 2px;
+}
+
+/* 右下角的「简表速览」：外链跳转。按用户要求只留一条下划线（不要底色、不要描边），
+   图标与文字用 grid-auto-flow: column 排成一行——任何父级挤压都不会把文字挤到图标下面。
+   选择器写成 `.wk a.wk-pcard-jump`：否则会被 `.wk a { text-decoration: none }` 压掉下划线。 */
+.wk a.wk-pcard-jump {
+    position: relative;
+    z-index: 2;
+    display: inline-grid;
+    grid-auto-flow: column;
+    align-items: center;
+    column-gap: 4px;
+    flex-shrink: 0;
+    padding: 0;
+    border: 0;
+    background: transparent;
+    color: var(--wk-accent-text);
+    font-size: var(--wk-t-meta);
+    white-space: nowrap;
+    text-decoration: underline;
+    text-underline-offset: 2px;
+    pointer-events: auto;
+}
+
+.wk a.wk-pcard-jump:hover {
+    color: var(--wk-accent);
+    text-decoration: underline;
+}
+
+/* 整卡可点：最底层，内容层 z-index 1，标签单独提到 2 */
+.wk-pcard-link {
+    position: absolute;
+    inset: 0;
+    z-index: 0;
+}
+
+.wk-result-row {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    padding: 16px 0 10px;
+    font-size: var(--wk-t-meta);
+    color: var(--wk-fg-3);
+}

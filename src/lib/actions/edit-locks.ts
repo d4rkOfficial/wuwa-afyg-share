@@ -20,8 +20,8 @@ function refreshEditLockPaths() {
     revalidatePath('/')
     revalidatePath('/buff-sets')
     revalidatePath('/substat-sets')
-    revalidatePath('/admin/buff-sets')
-    revalidatePath('/admin/substat-sets')
+    revalidatePath('/edit/buff-sets')
+    revalidatePath('/edit/substat-sets')
 }
 
 async function withAdmin() {

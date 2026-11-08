@@ -1,0 +1,13 @@
+/* 我的工程专用：账号区 + 列表两栏布局。由 /me 导入。 */
+
+.wk-me-layout {
+    display: grid;
+    gap: 24px;
+    grid-template-columns: minmax(0, 1fr);
+    align-items: start;
+}
+@media (min-width: 1024px) {
+    .wk-me-layout {
+        grid-template-columns: 280px minmax(0, 1fr);
+    }
+}

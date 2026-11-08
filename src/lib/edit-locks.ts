@@ -10,32 +10,13 @@
 
 import { cache } from 'react'
 import { createClient, hasEnv } from '@/lib/supabase/server'
-import type { BuffEntityType, EditScope } from '@/lib/types/db'
+import { LOCKED_STATE, buffLockKey } from '@/lib/edit-locks.shared'
+import type { EditLocksSnapshot } from '@/lib/edit-locks.shared'
 
-export interface EditLockState {
-    /** @desc buff 集全局锁（true = 仅管理员可编辑） */
-    buffSetsLocked: boolean
-    /** @desc 标准词条集全局锁（true = 仅管理员可编辑） */
-    substatSetsLocked: boolean
-}
-
-export interface EditLocksSnapshot extends EditLockState {
-    /** @desc 被单独锁定的 buff 实体（key 见 `buffLockKey`） */
-    buffLocks: Record<string, boolean>
-    /** @desc 被单独锁定的标准词条集角色 */
-    substatLocks: Record<string, boolean>
-}
-
-/** @desc buff 实体的锁 key（`类型/名称`，与页面里的实体 key 同形） */
-export const buffLockKey = (entityType: BuffEntityType | string, entityName: string): string =>
-    `${entityType}/${entityName}`
-
-export const LOCKED_STATE: EditLocksSnapshot = {
-    buffSetsLocked: true,
-    substatSetsLocked: true,
-    buffLocks: {},
-    substatLocks: {}
-}
+// 类型与纯判定在 edit-locks.shared.ts（客户端也要用）；这里只放需要读库的部分，
+// 并把纯函数原样导出，保持历史 import 路径可用。
+export type { EditLockState, EditLocksSnapshot } from '@/lib/edit-locks.shared'
+export { LOCKED_STATE, buffLockKey, canNonAdminEditBuff, canNonAdminEditSubstat, isScopeUnlocked } from '@/lib/edit-locks.shared'
 
 type DbClient = Awaited<ReturnType<typeof createClient>>
 
@@ -77,18 +58,6 @@ export async function loadEditLocks(supabase?: DbClient): Promise<EditLocksSnaps
         buffLocks,
         substatLocks
     }
-}
-
-/** @desc 某个 buff 实体当前是否可被「非管理员」编辑 */
-export function canNonAdminEditBuff(locks: EditLocksSnapshot, entityType: string, entityName: string): boolean {
-    if (locks.buffSetsLocked) return false
-    return !locks.buffLocks[buffLockKey(entityType, entityName)]
-}
-
-/** @desc 某个标准词条集角色当前是否可被「非管理员」编辑 */
-export function canNonAdminEditSubstat(locks: EditLocksSnapshot, characterName: string): boolean {
-    if (locks.substatSetsLocked) return false
-    return !locks.substatLocks[characterName]
 }
 
 export async function isAdminUserId(supabase: DbClient, userId: string | undefined | null): Promise<boolean> {
@@ -154,6 +123,3 @@ export async function authorizeSubstatSetEdit(
     return { ok: true }
 }
 
-/** @desc 全局锁是否关闭（供页面文案判断「可编辑」） */
-export const isScopeUnlocked = (locks: EditLocksSnapshot, scope: EditScope): boolean =>
-    scope === 'buff_sets' ? !locks.buffSetsLocked : !locks.substatSetsLocked

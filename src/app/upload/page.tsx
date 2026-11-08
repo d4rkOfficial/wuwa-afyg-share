@@ -1,7 +1,9 @@
 import type { Metadata } from 'next'
 import { redirect } from 'next/navigation'
-import UploadForm from '@/components/upload-form'
+import UploadForm from '@/components/wk/upload-form'
+import { WkContainer, WkPageHead, WkRoot } from '@/design'
 import { createClient, hasEnv } from '@/lib/supabase/server'
+import { CHAR_ELEMENTS } from '@/lib/data/char-elements.generated'
 
 export const metadata: Metadata = {
     title: '上传工程'
@@ -16,23 +18,21 @@ export default async function UploadPage() {
             data: { user }
         } = await supabase.auth.getUser()
         if (!user) redirect('/login?redirect=/upload')
-        const { data: profile } = await supabase
-            .from('profiles')
-            .select('id')
-            .eq('id', user.id)
-            .maybeSingle()
+        const { data: profile } = await supabase.from('profiles').select('id').eq('id', user.id).maybeSingle()
         if (!profile) redirect('/setup-username?redirect=/upload')
     }
 
     return (
-        <div className="mx-auto max-w-5xl space-y-5">
-            <div className="border-b pb-4 mg-hairline">
-                <h1 className="mg-title-xl text-2xl md:text-3xl">上传工程</h1>
-                <p className="mt-1 text-sm leading-relaxed text-(--muted)">
-                    选择工具箱导出的 .json，填写分享信息后发布；标题 / 简介 / 标签 / 有效期都能在发布前改。
-                </p>
-            </div>
-            <UploadForm />
-        </div>
+        <WkRoot>
+            <WkContainer>
+                <WkPageHead
+                    title="上传工程"
+                    sub="选择工具箱导出的 .json，填写分享信息后发布；标题 / 简介 / 标签 / 有效期都能在发布前改。"
+                />
+                <div style={{ marginTop: 16 }}>
+                    <UploadForm elements={CHAR_ELEMENTS as Record<string, string>} />
+                </div>
+            </WkContainer>
+        </WkRoot>
     )
 }

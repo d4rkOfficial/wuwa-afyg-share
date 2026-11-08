@@ -168,6 +168,42 @@ function sanitizeFolders(
         .map(([name], index) => ({ name, sort_order: index }))
 }
 
+
+/**
+ * @desc 清理「幽灵文件夹」：buff_folders 里已经没有成员、只留下空壳的文件夹行。
+ *
+ * 单条 upsert / delete / rename 都只动 buff_sets，不会动 buff_folders，于是改名或删掉
+ * 某文件夹最后一条 buff 后，buff_folders 会残留一个空文件夹（界面上表现为列表里多出一个
+ * 点不开任何东西、也拖不进东西的空组；AI 走工具批量改时尤其明显）。
+ *
+ * 判定口径：以**当前 buff_sets 里实际出现的 folder 前缀**为准，buff_folders 里多出来的全删。
+ * 只在单条写入后调用：整实体写入（upsertBuffEntity）本来就是「先删全部文件夹再重建」。
+ */
+async function pruneEmptyFolders(
+    supabase: Awaited<ReturnType<typeof withBuffSetWrite>>['supabase'],
+    entityType: BuffEntityType,
+    entityName: string
+): Promise<void> {
+    const [{ data: buffRows, error: buffErr }, { data: folderRows, error: folderErr }] = await Promise.all([
+        supabase.from('buff_sets').select('buff_name').eq('entity_type', entityType).eq('entity_name', entityName),
+        supabase.from('buff_folders').select('name').eq('entity_type', entityType).eq('entity_name', entityName)
+    ])
+    if (buffErr || folderErr) return
+    const used = new Set(
+        ((buffRows ?? []) as Array<{ buff_name: string }>)
+            .map((row) => buffFolderName(row.buff_name))
+            .filter(Boolean)
+    )
+    const ghosts = ((folderRows ?? []) as Array<{ name: string }>).map((row) => row.name).filter((name) => !used.has(name))
+    if (ghosts.length === 0) return
+    await supabase
+        .from('buff_folders')
+        .delete()
+        .eq('entity_type', entityType)
+        .eq('entity_name', entityName)
+        .in('name', ghosts)
+}
+
 /** @desc 清洗全名：工坊最多一级文件夹；空名/重复全名直接拒绝 */
 function sanitizeBuffNames(buffs: readonly InputEntityBuff[]): Array<InputEntityBuff & { buffName: string }> {
     const seen = new Set<string>()
@@ -227,8 +263,10 @@ export async function upsertBuffSet(input: InputBuff): Promise<ActionResult> {
         { onConflict: 'entity_type,entity_name,buff_name' }
     )
     if (error) return { error: error.message }
+    // 改名 / 换 folder 后，旧 folder 可能已经空掉 → 顺手清理幽灵文件夹
+    await pruneEmptyFolders(supabase, entityType, entityName)
     revalidatePath('/buff-sets')
-    revalidatePath('/admin/buff-sets')
+    revalidatePath('/edit/buff-sets')
     return {}
 }
 
@@ -248,8 +286,10 @@ export async function deleteBuffPreset(
         .eq('entity_name', entityName)
         .eq('buff_name', buffName)
     if (error) return { error: error.message }
+    // 删掉某 folder 最后一条后，folder 行会变成空壳 → 清掉
+    await pruneEmptyFolders(supabase, entityType, entityName)
     revalidatePath('/buff-sets')
-    revalidatePath('/admin/buff-sets')
+    revalidatePath('/edit/buff-sets')
     return {}
 }
 
@@ -340,7 +380,7 @@ export async function upsertBuffEntity(input: UpsertEntityInput): Promise<Action
     }
 
     revalidatePath('/buff-sets')
-    revalidatePath('/admin/buff-sets')
+    revalidatePath('/edit/buff-sets')
     return { data: { saved: buffs.length } }
 }
 
@@ -365,6 +405,6 @@ export async function deleteBuffEntity(
         .eq('entity_name', entityName)
     if (folderError) return { error: folderError.message }
     revalidatePath('/buff-sets')
-    revalidatePath('/admin/buff-sets')
+    revalidatePath('/edit/buff-sets')
     return {}
 }

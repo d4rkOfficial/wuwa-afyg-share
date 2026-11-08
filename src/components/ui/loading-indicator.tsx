@@ -17,9 +17,9 @@ export default function LoadingIndicator({ label = '加载中…', className = '
         <div
             role="status"
             aria-live="polite"
-            className={`flex w-full flex-col items-center justify-center gap-3 text-(--muted) ${className}`}
+            className={`flex w-full flex-col items-center justify-center gap-3 text-(--wk-fg-3) ${className}`}
         >
-            <Icon icon="mdi:loading" className={`${size} animate-spin text-(--accent-text)`} />
+            <Icon icon="mdi:loading" className={`${size} animate-spin text-(--wk-accent-text)`} />
             {label && <span className="text-xs tracking-[0.18em]">{label}</span>}
         </div>
     )

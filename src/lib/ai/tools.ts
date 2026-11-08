@@ -24,7 +24,7 @@ import { analyzeCharacterTerms } from '@/lib/ai/terms'
 import { sanitizeBuffs } from '@/lib/ai/client'
 import type { GeneratedBuff } from '@/lib/ai/types'
 import type { BuffEntityType, BuffFolderRow, BuffSetRow } from '@/lib/types/db'
-import { buffFolderName, buffLeafName, joinBuffPath, sanitizeLeafName } from '@/lib/buff-names'
+import { buffFolderName, buffLeafName, joinBuffPath, sanitizeFolderName, sanitizeLeafName } from '@/lib/buff-names'
 
 export interface ToolDefinition {
     type: 'function'
@@ -206,7 +206,11 @@ const BASE_TOOLS: ToolDefinition[] = [
                         items: {
                             type: 'object',
                             properties: {
-                                buffName: { type: 'string' },
+                                folder: {
+                                    type: 'string',
+                                    description: '游戏原文案（可选）：全名里的文件夹段，只去掉增益数值、保留限定语'
+                                },
+                                buffName: { type: 'string', description: '效果短名，如 `暴击率15%`、`攻击(2层)`' },
                                 scope: { type: 'string', enum: ['self', 'self_except', 'team', 'effect_only'] },
                                 exclusive: { type: 'boolean' },
                                 condition: {
@@ -438,7 +442,11 @@ const BASE_TOOLS: ToolDefinition[] = [
             parameters: {
                 type: 'object',
                 properties: {
-                    buffName: { type: 'string' },
+                    folder: {
+                        type: 'string',
+                        description: '游戏原文案（可选）：新 Buff 要放进的一级文件夹，只去掉增益数值、保留限定语'
+                    },
+                    buffName: { type: 'string', description: '效果短名，如 `暴击率15%`（不带文件夹前缀与反斜杠）' },
                     scope: { type: 'string', enum: ['self', 'self_except', 'team', 'effect_only'] },
                     exclusive: { type: 'boolean' },
                     condition: { type: 'object', description: '实例级生效条件（可选）', properties: {} },
@@ -892,9 +900,11 @@ export async function executeTool(ctx: ToolContext, name: string, args: Record<s
             if (list.some((b) => b.buffName.trim() === buffName)) {
                 return JSON.stringify({ error: `已存在同名 Buff「${buffName}」，请改用 update_buff` })
             }
+            const folder = args.folder === undefined ? '' : sanitizeFolderName(str(args.folder))
             const clean = sanitizeBuffs([
                 {
                     buffName,
+                    ...(folder ? { folder } : {}),
                     scope: args.scope === undefined ? 'team' : str(args.scope),
                     exclusive: !!args.exclusive,
                     ...(args.condition === undefined ? {} : { condition: args.condition }),

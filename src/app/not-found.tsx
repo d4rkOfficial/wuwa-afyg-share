@@ -1,19 +1,20 @@
 import Link from 'next/link'
-import { Icon } from '@iconify/react'
+import { WkContainer, WkEmpty, WkRoot } from '@/design'
 
 export default function NotFound() {
     return (
-        <div className="flex flex-col items-center justify-center gap-3 py-24 text-center">
-            <Icon icon="mdi:link-off" className="size-12 text-(--muted)" />
-            <h2 className="mg-title text-2xl md:text-3xl">分享已失效或不存在</h2>
-            <p className="text-sm leading-relaxed text-(--muted)">该分享链接可能已过期、被作者删除或从未存在。</p>
-            <Link
-                href="/"
-                className="mt-2 inline-flex items-center gap-1.5 rounded-sm border border-(--card-border) bg-(--btn-bg) px-4 py-2 text-sm font-medium text-(--btn-text) transition-colors hover:bg-(--card) hover:text-(--fg)"
-            >
-                <Icon icon="mdi:arrow-left" className="size-4" />
-                返回广场
-            </Link>
-        </div>
+        <WkRoot>
+            <WkContainer>
+                <WkEmpty
+                    title="分享已失效或不存在"
+                    hint="该分享链接可能已过期、被作者删除或从未存在。"
+                    action={
+                        <Link href="/" className="wk-btn wk-btn--sm">
+                            返回广场
+                        </Link>
+                    }
+                />
+            </WkContainer>
+        </WkRoot>
     )
 }

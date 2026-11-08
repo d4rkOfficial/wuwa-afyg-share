@@ -34,6 +34,19 @@ export const sanitizeLeafName = (name: string): string =>
         .replaceAll(BUFF_PATH_SEP, '/')
         .slice(0, 80)
 
+/**
+ * @desc 文件夹名清洗（AI 生成的「游戏原文案」段）。
+ * 文件夹不能有分隔符，也不能带 `/`（那是短名里的层级写法），一律折叠成空格；
+ * 连续空白压成一个，首尾空白与常见句末标点后的多余空格去掉。
+ */
+export const sanitizeFolderName = (name: string): string =>
+    String(name ?? '')
+        .replaceAll(BUFF_PATH_SEP, ' ')
+        .replaceAll('/', ' ')
+        .replace(/\s+/g, ' ')
+        .trim()
+        .slice(0, 80)
+
 /** @desc 工坊全名：最多一层文件夹；多余层级并入短名（/ 保留信息） */
 export const normalizeShareBuffName = (name: string): string => {
     const parts = String(name ?? '')

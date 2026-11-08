@@ -1,0 +1,624 @@
+<!doctype html>
+<html lang="zh-CN" data-theme="paper">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>椰果工坊 · 方向 C「工坊刊物 2.0」样张</title>
+<style>
+    /* ══════════════════════════════════════════════════════════════
+       方向 C ·「工坊刊物 2.0」
+       全站保留 FangXinShu。用「版面秩序」而不是「装饰边框」建立层次。
+
+       硬规则（本样张即为规范的执行示范）
+       H1 字号只有 6 档：12 / 14 / 16 / 20 / 26 / 34。禁止 10px、11px。
+       H2 控件高度只有 2 档：32 / 36。同一行只能用其中一档，禁止混用。
+       H3 圆角只有 2 档：4 / 8。焦点环 2px outline（不用 border-color 冒充）。
+       H4 列表与表格的表头、行共用同一套列模板 → 列必然对齐。
+       H5 一个视野最多一条分区线；卡片只保留外轮廓 1 条，禁止卡片套卡片。
+       H6 每个屏幕只有一个实心主操作（绛红实心），其余为描边或纯文字。
+       ══════════════════════════════════════════════════════════════ */
+
+    @font-face {
+        font-family: 'FangXinShu';
+        src: url('../public/fonts/fang-xin-shu.ttf') format('truetype');
+        font-display: swap;
+    }
+
+    /* ── 纸（主设计目标） ── */
+    [data-theme='paper'] {
+        --bg: #f4f1ea;
+        --s1: #fdfcf9;          /* 卡片   vs bg 1.10 */
+        --s2: #efeae1;          /* 抬起   vs s1 1.17 */
+        --s3: #fffefb;          /* 浮层 */
+        --input: #fffefb;
+        --line: #e0d9cd;        /* 装饰 1.37（不承担可访问职责） */
+        --ctrl-line: #8a8175;   /* 控件描边 3.74 达标 */
+        --fg: #23201c;          /* 15.8:1 */
+        --fg-2: #4a443c;        /*  9.4:1 */
+        --fg-3: #6f675c;        /*  5.4:1 */
+        --accent: #a8454f;      /* 文字/描边 5.6:1 达标 */
+        --accent-solid: #9c3b45;
+        --accent-fg: #fdfcf9;   /* 6.6:1 达标 */
+        --focus: #2f6fb5;
+        --danger: #a8443f;
+        --ok: #3f7a5c;
+        --scrim: rgba(52, 46, 40, 0.42);
+        --elev-1: 0 1px 2px rgba(35, 33, 30, 0.07);
+        --elev-2: 0 18px 40px -12px rgba(35, 33, 30, 0.28);
+    }
+
+    /* ── 墨夜（深色变体：暖墨，不是纯黑） ── */
+    [data-theme='ink'] {
+        --bg: #14120f;
+        --s1: #1b1815;
+        --s2: #241f1a;
+        --s3: #2c261f;
+        --input: #17140f;
+        --line: #322d26;
+        --ctrl-line: #787064;   /* 3.62 达标 */
+        --fg: #ece7dd;          /* 14.3:1 */
+        --fg-2: #c3bcaf;        /*  9.4:1 */
+        --fg-3: #a09a8e;        /*  6.3:1 */
+        --accent: #c95762;      /* 描边/图标（文字请用下方 accent-text） */
+        --accent-text: #e0a3a8; /*  8.4:1 达标 */
+        --accent-solid: #a84a53;
+        --accent-fg: #fdfcf9;   /* 5.4:1 达标 */
+        --focus: #8fb8ff;
+        --danger: #e08585;
+        --ok: #7fbf9a;
+        --scrim: rgba(6, 5, 4, 0.7);
+        --elev-1: 0 1px 2px rgba(0, 0, 0, 0.4);
+        --elev-2: 0 18px 40px -12px rgba(0, 0, 0, 0.66);
+    }
+
+    /* ── 尺度令牌（两主题共用） ── */
+    :root {
+        --t-meta: 12px;   /* 元信息 / 标签 / 表头 / 徽标 */
+        --t-body: 14px;   /* 正文 / 控件 */
+        --t-lead: 16px;   /* 卡片标题 / 小标题 */
+        --t-sec: 20px;    /* 区块标题 */
+        --t-page: 26px;   /* 页面标题 */
+        --t-display: 34px;/* 刊头（仅首页一处） */
+
+        --h-sm: 32px;
+        --h-md: 36px;
+        --r-1: 4px;
+        --r-2: 8px;
+
+        --row: 44px;      /* 列表行 */
+        --trow: 40px;     /* 表格行 */
+        --gap: 12px;      /* 列间距，全站统一 */
+        --pad: 16px;      /* 卡片内边距，全站统一 */
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+        margin: 0 0 72px;
+        background: var(--bg);
+        color: var(--fg);
+        font-family: 'FangXinShu', 'Songti SC', SimSun, serif;
+        font-size: var(--t-body);
+        line-height: 1.55;
+        letter-spacing: 0.01em;
+        -webkit-font-smoothing: antialiased;
+        transition: background-color 200ms ease, color 200ms ease;
+    }
+
+    .wrap { max-width: 1040px; margin: 0 auto; padding: 0 24px; }
+
+    h1, h2, h3 { margin: 0; font-weight: 600; letter-spacing: -0.01em; line-height: 1.3; }
+    p { margin: 0; }
+    a { color: var(--accent); text-decoration: none; }
+    a:hover { text-decoration: underline; text-underline-offset: 3px; }
+
+    .meta { font-size: var(--t-meta); color: var(--fg-3); }
+    .label { font-size: var(--t-meta); color: var(--fg-3); letter-spacing: 0.06em; }
+    .num { text-align: right; }   /* 仿心书无 tnum，靠定宽列 + 右对齐对齐数字 */
+
+    /* ══ 按钮：两档高度，绝不混用 ══ */
+    .btn {
+        display: inline-flex; align-items: center; justify-content: center; gap: 6px;
+        height: var(--h-md); padding: 0 14px;
+        border: 1px solid var(--ctrl-line); border-radius: var(--r-1);
+        background: transparent; color: var(--fg);
+        font-family: inherit; font-size: var(--t-body); white-space: nowrap; cursor: pointer;
+        transition: background-color 120ms ease-out, border-color 120ms ease-out, color 120ms ease-out;
+    }
+    .btn:hover { background: var(--s2); }
+    .btn-sm { height: var(--h-sm); padding: 0 10px; font-size: var(--t-meta); }
+    .btn-primary { border-color: transparent; background: var(--accent-solid); color: var(--accent-fg); }
+    .btn-primary:hover { background: var(--accent); border-color: transparent; }
+    .btn-quiet { border-color: transparent; color: var(--fg-2); }
+    .btn-quiet:hover { color: var(--fg); background: var(--s2); }
+    .btn-danger { border-color: color-mix(in srgb, var(--danger) 45%, transparent); color: var(--danger); }
+    .btn-danger:hover { background: color-mix(in srgb, var(--danger) 10%, transparent); }
+    .btn-icon { width: var(--h-md); padding: 0; }
+    .btn-icon.btn-sm { width: var(--h-sm); }
+    .btn:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
+
+    /* ══ 输入：与按钮同高 ══ */
+    .input {
+        height: var(--h-md); width: 100%;
+        border: 1px solid var(--ctrl-line); border-radius: var(--r-1);
+        background: var(--input); color: var(--fg);
+        padding: 0 10px; font-family: inherit; font-size: var(--t-body); outline: none;
+    }
+    .input::placeholder { color: var(--fg-3); }
+    .input:focus { border-color: var(--accent); outline: 2px solid var(--focus); outline-offset: 1px; }
+
+    /* ══ 徽标：固定 20 高，不参与行高竞争 ══ */
+    .badge {
+        display: inline-flex; align-items: center; gap: 4px;
+        height: 20px; padding: 0 7px;
+        border: 1px solid var(--ctrl-line); border-radius: var(--r-1);
+        font-size: var(--t-meta); line-height: 1; color: var(--fg-3); white-space: nowrap;
+    }
+    .badge-accent { border-color: transparent; background: var(--accent-solid); color: var(--accent-fg); }
+    .badge-ok { border-color: color-mix(in srgb, var(--ok) 45%, transparent); color: var(--ok); }
+    .badge-warn { border-color: color-mix(in srgb, var(--accent) 45%, transparent); color: var(--accent); }
+    .badge-danger { border-color: color-mix(in srgb, var(--danger) 45%, transparent); color: var(--danger); }
+
+    /* ══ 分段：容器 36，内部 item 28，与外层按钮同档 ══ */
+    .seg { display: inline-flex; align-items: center; gap: 2px; height: var(--h-md); padding: 2px;
+           background: var(--s2); border-radius: var(--r-1); }
+    .seg button {
+        height: 28px; padding: 0 12px; border: 0; border-radius: var(--r-1);
+        background: transparent; color: var(--fg-3); font: inherit; font-size: var(--t-meta); cursor: pointer;
+    }
+    .seg button[aria-pressed='true'] { background: var(--s1); color: var(--fg); box-shadow: var(--elev-1); }
+    .seg button:focus-visible { outline: 2px solid var(--focus); outline-offset: 1px; }
+
+    /* ══ 卡片：只保留外轮廓 1 条 ══ */
+    .card { border: 1px solid var(--line); border-radius: var(--r-2); background: var(--s1); }
+    .card-pad { padding: var(--pad); }
+
+    /* ══ 表格 / 列表：表头与行共用列模板 ══ */
+    .tbl { --cols: minmax(0, 1fr) 72px 88px 96px; border-top: 1px solid var(--line); }
+    .tr {
+        display: grid; grid-template-columns: var(--cols); align-items: center;
+        gap: var(--gap); height: var(--trow); padding: 0 var(--pad);
+        border-bottom: 1px solid var(--line); font-size: var(--t-body);
+    }
+    .tr:last-child { border-bottom: 0; }
+    .tr-head { height: 36px; font-size: var(--t-meta); color: var(--fg-3); }
+    .tr-body:hover { background: var(--s2); }
+    .tr-num { text-align: right; }
+
+    /* ══ 顶栏 ══ */
+    .topbar {
+        position: sticky; top: 0; z-index: 20;
+        background: var(--bg); border-bottom: 1px solid var(--line);
+    }
+    .topbar .in {
+        display: flex; align-items: center; gap: 8px;
+        height: 56px; max-width: 1040px; margin: 0 auto; padding: 0 24px;
+    }
+    .nav-item {
+        display: inline-flex; align-items: center; gap: 6px;
+        height: var(--h-md); padding: 0 10px;
+        border: 1px solid transparent; border-radius: var(--r-1);
+        color: var(--fg-2); font-size: var(--t-body);
+    }
+    .nav-item:hover { background: var(--s2); color: var(--fg); text-decoration: none; }
+    .nav-item[aria-current='page'] { color: var(--fg); border-color: var(--line); background: var(--s1); }
+    .nav-item:focus-visible { outline: 2px solid var(--focus); outline-offset: 1px; }
+    .topbar .spacer { flex: 1; }
+
+    /* ══ 编辑锁：从页脚搬到顶栏 ══ */
+    .lockwrap { position: relative; }
+    .lockdot {
+        position: absolute; top: 6px; right: 6px; width: 6px; height: 6px;
+        border-radius: 50%; background: var(--accent);
+    }
+    .popover {
+        position: absolute; top: calc(100% + 8px); right: 0; width: 300px;
+        border: 1px solid var(--line); border-radius: var(--r-2); background: var(--s3);
+        box-shadow: var(--elev-2); padding: 14px; z-index: 40;
+    }
+    .popover .head { display: flex; align-items: center; gap: 8px; padding-bottom: 10px; border-bottom: 1px solid var(--line); }
+    .poprow { display: flex; align-items: center; gap: 10px; padding: 10px 0; border-bottom: 1px solid var(--line); }
+    .poprow:last-of-type { border-bottom: 0; }
+    .switch { width: 36px; height: 20px; border-radius: 999px; background: var(--s2); border: 1px solid var(--ctrl-line); position: relative; flex-shrink: 0; }
+    .switch i { position: absolute; top: 2px; left: 2px; width: 14px; height: 14px; border-radius: 50%; background: var(--fg-3); }
+    .switch[data-on='true'] { background: var(--accent-solid); border-color: transparent; }
+    .switch[data-on='true'] i { left: 18px; background: var(--accent-fg); }
+
+    /* ══ 刊头 ══ */
+    .masthead { padding: 32px 0 20px; border-bottom: 1px solid var(--line); }
+    .masthead h1 { font-size: var(--t-display); letter-spacing: 0.02em; }
+    .toolbar { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; padding: 16px 0 12px; }
+    .toolbar .spacer { flex: 1; }
+    .search { position: relative; flex: 1; min-width: 240px; max-width: 320px; }
+    .search .input { padding-left: 32px; }
+    .search svg { position: absolute; left: 10px; top: 50%; transform: translateY(-50%); color: var(--fg-3); }
+
+    /* ══ 工程卡 ══ */
+    .grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+    @media (max-width: 760px) { .grid { grid-template-columns: 1fr; } }
+    .pcard { display: flex; flex-direction: column; gap: 10px; padding: var(--pad); transition: background-color 140ms ease-out, border-color 140ms ease-out; }
+    .pcard:hover { border-color: var(--ctrl-line); background: var(--s1); }
+    .pcard .top { display: flex; align-items: flex-start; gap: 12px; }
+    .pcard h3 { font-size: var(--t-lead); line-height: 1.4; }
+    .pcard .desc { font-size: var(--t-meta); color: var(--fg-3); line-height: 1.65;
+                   display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+    .pcard .foot { display: flex; align-items: center; gap: 10px; height: 24px;
+                   padding-top: 10px; border-top: 1px solid var(--line); font-size: var(--t-meta); color: var(--fg-3); }
+    .team { display: flex; flex-shrink: 0; align-items: center; }
+    .team .av {
+        width: 32px; height: 32px; margin-left: -8px; border-radius: 50%;
+        border: 1px solid var(--ctrl-line); background: var(--s2);
+        display: grid; place-items: center; font-size: var(--t-meta); color: var(--fg-2);
+    }
+    .team .av:first-child { margin-left: 0; width: 40px; height: 40px; border-color: var(--accent); color: var(--accent); }
+    .tags { display: flex; flex-wrap: wrap; gap: 8px; }
+    .tags a { font-size: var(--t-meta); }
+
+    /* ══ 卡片头像叠底：保留叠底，但绝不压字 ══
+       ① pointer-events:none  ② z-index 0 / 内容 1  ③ 朝文字方向蒙版淡出 + 元信息行实色底 */
+    .pcard { position: relative; overflow: hidden; }
+    .pcard-inner { position: relative; z-index: 1; display: flex; flex-direction: column; gap: 10px; }
+    .card-art {
+        position: absolute; right: 0; bottom: 0; z-index: 0;
+        display: flex; align-items: flex-end; opacity: .30; pointer-events: none;
+        -webkit-mask-image: linear-gradient(to left, #000 45%, transparent 100%);
+        mask-image: linear-gradient(to left, #000 45%, transparent 100%);
+    }
+    .card-art .av {
+        border-radius: 50%; border: 1px solid var(--ctrl-line); background: var(--s2);
+        display: grid; place-items: center; font-size: var(--t-meta); color: var(--fg-2);
+    }
+    .card-art .av-1 { width: 76px; height: 76px; }
+    .card-art .av-2 { width: 56px; height: 56px; margin-left: -14px; }
+    .card-art .av-3 { width: 44px; height: 44px; margin-left: -12px; }
+    .pcard .foot { background: var(--s1); }
+
+    /* ══ 编辑台：单列、无侧栏 ══ */
+    .editor { display: grid; gap: var(--gap); max-width: 820px; }
+    .editor-head { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+    .editor-card { display: grid; gap: var(--gap); padding: var(--pad); }
+    .editor-savebar {
+        position: sticky; bottom: 0; display: flex; align-items: center; gap: 8px;
+        height: 52px; padding: 0 var(--pad);
+        border-top: 1px solid var(--line); background: var(--bg);
+    }
+    .field { display: grid; gap: 6px; }
+    .field > span { font-size: var(--t-meta); color: var(--fg-3); }
+    .two { display: grid; grid-template-columns: 1fr 1fr; gap: var(--gap); }
+
+    /* ══ 弹层 ══ */
+    .demo-scrim { position: relative; height: 260px; border: 1px solid var(--line); border-radius: var(--r-2); overflow: hidden; background: var(--s1); }
+    .demo-scrim .veil { position: absolute; inset: 0; background: var(--scrim); display: grid; place-items: center; padding: 16px; }
+    .dialog { width: min(420px, 100%); background: var(--s3); border: 1px solid var(--line); border-radius: var(--r-2); box-shadow: var(--elev-2); }
+    .dialog .dhead { display: flex; align-items: center; gap: 8px; padding: 14px 16px; border-bottom: 1px solid var(--line); }
+    .dialog .dbody { padding: 16px; display: grid; gap: 12px; }
+    .dialog .dfoot { display: flex; justify-content: flex-end; gap: 8px; padding: 12px 16px; border-top: 1px solid var(--line); }
+
+    /* ══ 对照区：现状 vs 规范 ══ */
+    .cmp { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+    @media (max-width: 760px) { .cmp { grid-template-columns: 1fr; } }
+    .cmp .box { border: 1px solid var(--line); border-radius: var(--r-2); padding: 14px; background: var(--s1); }
+    .cmp .bad { border-color: color-mix(in srgb, var(--danger) 35%, var(--line)); }
+    .cmp .good { border-color: color-mix(in srgb, var(--ok) 35%, var(--line)); }
+    .cmp .tag { display: inline-flex; align-items: center; gap: 4px; font-size: var(--t-meta); margin-bottom: 10px; }
+    .cmp .bad .tag { color: var(--danger); }
+    .cmp .good .tag { color: var(--ok); }
+    .sizedemo { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+    .fake-lg { height: 36px; padding: 0 14px; display: inline-flex; align-items: center; border: 1px solid var(--ctrl-line); border-radius: var(--r-1); font-size: var(--t-body); }
+    .fake-sm { height: 22px; padding: 0 8px; display: inline-flex; align-items: center; border: 1px solid var(--ctrl-line); border-radius: var(--r-1); font-size: 11px; }
+    .tinydemo span { display: block; }
+    .cols-demo { display: grid; grid-template-columns: minmax(0,1fr) 72px 88px; gap: var(--gap); align-items: center; font-size: var(--t-meta); color: var(--fg-3); }
+    .cols-demo .mis { display: flex; justify-content: space-between; }
+
+    .sec { margin-top: 40px; }
+    .sec > .head { display: flex; align-items: baseline; gap: 12px; padding-bottom: 10px; margin-bottom: 16px; border-bottom: 1px solid var(--line); }
+    .swatches { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 8px; }
+    .sw { padding: 10px 12px; border: 1px solid var(--line); border-radius: var(--r-1); background: var(--s1); }
+    .sw .n { font-size: var(--t-meta); margin-bottom: 2px; }
+    .sw .v { font-size: var(--t-meta); color: var(--fg-2); }
+    .sw .c { font-size: var(--t-meta); color: var(--fg-3); }
+    .theme-btn { position: fixed; right: 20px; bottom: 20px; z-index: 60; box-shadow: var(--elev-2); }
+</style>
+</head>
+<body>
+
+<!-- ══ 顶栏：含编辑锁新位置（从页脚搬上来） ══ -->
+<div class="topbar">
+    <div class="in">
+        <span style="font-size:var(--t-lead); font-weight:600; letter-spacing:0.02em; margin-right:8px;">椰果工坊</span>
+        <a class="nav-item" href="#" aria-current="page">广场</a>
+        <a class="nav-item" href="#">数据</a>
+        <a class="nav-item" href="#">我的</a>
+        <span class="spacer"></span>
+
+        <div class="lockwrap">
+            <button class="btn btn-icon btn-quiet" title="编辑锁" aria-haspopup="dialog">
+                锁<span class="lockdot"></span>
+            </button>
+            <div class="popover">
+                <div class="head"><span class="label">编辑锁 · 管理员</span></div>
+                <div class="poprow"><div class="switch" data-on="false"><i></i></div><div><div style="font-size:var(--t-body);">Buff 集锁定</div><div class="meta">开启后仅管理员可编辑</div></div></div>
+                <div class="poprow"><div class="switch" data-on="true"><i></i></div><div><div style="font-size:var(--t-body);">标准词条集锁定</div><div class="meta">当前：已锁定</div></div></div>
+                <div class="meta" style="padding-top:10px; border-top:1px solid var(--line);">锁状态对所有访客生效。页脚不再放置该开关。</div>
+            </div>
+        </div>
+
+        <button class="btn btn-primary btn-sm">上传</button>
+    </div>
+</div>
+
+<div class="wrap">
+
+    <header style="padding: 32px 0 0;">
+        <div class="label">方向 C · 样张</div>
+        <h1 style="font-size:var(--t-page); margin-top:8px;">工坊刊物 2.0</h1>
+        <p class="meta" style="margin-top:8px; max-width: 760px; font-size: var(--t-body); line-height:1.75;">
+            全站保留 FangXinShu。层次靠<strong>版面秩序</strong>——字号对比、留白、一条分区线，而不是满屏 1px 方框。<br>
+            下面每一块都是规范的执行示范：字号 6 档、控件 2 档、圆角 2 档、列模板共用。
+        </p>
+    </header>
+
+    <!-- ══ 令牌 ══ -->
+    <section class="sec">
+        <div class="head"><h2 style="font-size:var(--t-sec);">令牌 · 纸</h2><span class="meta">括号内为实测对比度</span></div>
+        <div class="swatches">
+            <div class="sw"><div class="n">页面底</div><div class="v">#f4f1ea</div></div>
+            <div class="sw"><div class="n">卡片</div><div class="v">#fdfcf9</div><div class="c">vs 底 1.10</div></div>
+            <div class="sw"><div class="n">抬起 / hover</div><div class="v">#efeae1</div><div class="c">vs 卡 1.17</div></div>
+            <div class="sw"><div class="n">墨色正文</div><div class="v">#23201c</div><div class="c">15.8:1</div></div>
+            <div class="sw"><div class="n">次级</div><div class="v">#4a443c</div><div class="c">9.4:1</div></div>
+            <div class="sw"><div class="n">元信息</div><div class="v">#6f675c</div><div class="c">5.4:1</div></div>
+            <div class="sw"><div class="n">控件描边</div><div class="v">#8a8175</div><div class="c">3.74:1 达标</div></div>
+            <div class="sw"><div class="n">装饰线</div><div class="v">#e0d9cd</div><div class="c">1.37（不担责）</div></div>
+            <div class="sw"><div class="n">绛红 · 文字</div><div class="v">#a8454f</div><div class="c">5.6:1 达标</div></div>
+            <div class="sw"><div class="n">绛红 · 填充</div><div class="v">#9c3b45</div><div class="c">配纸白 6.6:1 达标</div></div>
+            <div class="sw"><div class="n">焦点环</div><div class="v">#2f6fb5</div><div class="c">5.0:1</div></div>
+        </div>
+        <p class="meta" style="margin-top:12px;">
+            字号 6 档 <span style="color:var(--fg-2)">12 / 14 / 16 / 20 / 26 / 34</span>　·　控件 2 档 <span style="color:var(--fg-2)">32 / 36</span>　·　圆角 2 档 <span style="color:var(--fg-2)">4 / 8</span>　·　列间距 <span style="color:var(--fg-2)">12</span>　·　卡内距 <span style="color:var(--fg-2)">16</span>
+        </p>
+    </section>
+
+    <!-- ══ 三个病灶：现状 vs 规范 ══ -->
+    <section class="sec">
+        <div class="head"><h2 style="font-size:var(--t-sec);">三个病灶的治法</h2><span class="meta">你点名的三件事</span></div>
+        <div class="cmp">
+
+            <div class="box bad">
+                <div class="tag">问题 · 现状：一行里按钮 36 与 22 混排，字号 14 / 11 / 10 混排</div>
+                <div class="sizedemo">
+                    <span class="fake-lg">上传工程</span>
+                    <span class="fake-sm">简表速览</span>
+                    <span class="fake-sm">移除</span>
+                    <span style="font-size:10px; color:var(--fg-3);">剩余 12 天</span>
+                </div>
+                <div class="meta" style="margin-top:10px;">视觉重量随机，眼睛无法归组；这也是"一看就乱"的主因。</div>
+            </div>
+
+            <div class="box good">
+                <div class="tag">通过 · 规范：同一行只用一档高度，字号只用 2 档</div>
+                <div class="sizedemo">
+                    <button class="btn btn-sm">上传工程</button>
+                    <button class="btn btn-sm btn-quiet">简表速览</button>
+                    <button class="btn btn-sm btn-quiet">移除</button>
+                    <span class="badge">剩余 12 天</span>
+                </div>
+                <div class="meta" style="margin-top:10px;">徽标固定 20 高、12px，用容器表达小，而不是缩小按钮。</div>
+            </div>
+
+            <div class="box bad">
+                <div class="tag">问题 · 现状：行内用 justify-between + 随机 gap 拼，列不对齐</div>
+                <div class="cols-demo">
+                    <div class="mis"><span>布兰特</span><span>15</span><span>已保存</span></div>
+                    <div class="mis"><span>散华</span><span>6</span><span>未保存</span></div>
+                    <div class="mis"><span>釉瑚（长名字）</span><span>32</span><span>锁定</span></div>
+                </div>
+                <div class="meta" style="margin-top:10px;">数字列跟着文字长度漂移，行与行之间错位。</div>
+            </div>
+
+            <div class="box good">
+                <div class="tag">通过 · 规范：表头与行共用同一套列模板</div>
+                <div class="cols-demo">
+                    <div style="color:var(--fg-3);">实体</div><div class="tr-num" style="text-align:right; color:var(--fg-3);">条数</div><div style="color:var(--fg-3);">状态</div>
+                    <div style="color:var(--fg);">布兰特</div><div class="tr-num" style="text-align:right; color:var(--fg);">15</div><div><span class="badge badge-ok">已保存</span></div>
+                    <div style="color:var(--fg);">散华</div><div class="tr-num" style="text-align:right; color:var(--fg);">6</div><div><span class="badge badge-warn">未保存</span></div>
+                    <div style="color:var(--fg);">釉瑚（长名字）</div><div class="tr-num" style="text-align:right; color:var(--fg);">32</div><div><span class="badge">锁定</span></div>
+                </div>
+                <div class="meta" style="margin-top:10px;">仿心书没有等宽数字，所以对齐必须来自<strong>布局</strong>：定宽列 + 右对齐。</div>
+            </div>
+
+        </div>
+    </section>
+
+    <!-- ══ 组件 ══ -->
+    <section class="sec">
+        <div class="head"><h2 style="font-size:var(--t-sec);">组件</h2></div>
+        <div class="card card-pad" style="display:grid; gap:20px;">
+
+            <div>
+                <div class="label" style="margin-bottom:10px;">按钮 · 每屏一个实心主操作</div>
+                <div class="sizedemo">
+                    <button class="btn btn-primary">在工具箱中打开</button>
+                    <button class="btn">下载工程</button>
+                    <button class="btn btn-quiet">复制链接</button>
+                    <span class="badge badge-accent">v2.4</span>
+                </div>
+                <div class="sizedemo" style="margin-top:10px;">
+                    <button class="btn btn-sm btn-primary">小号主操作</button>
+                    <button class="btn btn-sm">小号次操作</button>
+                    <button class="btn btn-sm btn-danger">删除</button>
+                    <button class="btn btn-icon">⋯</button>
+                    <button class="btn btn-icon btn-sm">⋯</button>
+                </div>
+            </div>
+
+            <div class="two">
+                <div class="field">
+                    <span>单行输入（与按钮同高 36）</span>
+                    <input class="input" placeholder="搜索工程、作者或角色…">
+                </div>
+                <div class="field">
+                    <span>下拉</span>
+                    <select class="input"><option>全部角色</option></select>
+                </div>
+                <div class="field">
+                    <span>多行（最小 3 行，自动增高）</span>
+                    <textarea class="input" style="height:auto; min-height:84px; padding:8px 10px; resize:vertical;">共鸣回路在第一次变奏后再开……</textarea>
+                </div>
+                <div class="field">
+                    <span>分段（容器 36 / 内部 28）</span>
+                    <div class="seg">
+                        <button aria-pressed="true">最新</button>
+                        <button aria-pressed="false">最热</button>
+                    </div>
+                    <span class="meta" style="margin-top:4px;">徽标固定 20 高，不与按钮抢高度</span>
+                    <div class="sizedemo">
+                        <span class="badge badge-ok">有效</span>
+                        <span class="badge badge-warn">宽限中</span>
+                        <span class="badge badge-danger">已过期</span>
+                        <span class="badge">锁定</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- ══ 广场 ══ -->
+    <section class="sec">
+        <div class="head"><h2 style="font-size:var(--t-sec);">广场页</h2><span class="meta">刊头用字号对比与留白，不套卡片</span></div>
+
+        <div class="masthead">
+            <h1>椰果工坊</h1>
+            <div class="meta" style="margin-top:6px; font-size:var(--t-body);">
+                分享、浏览和克隆《鸣潮》拉表排轴工程 · <span style="color:var(--fg-2)">128</span> 个工程
+            </div>
+        </div>
+
+        <div class="toolbar">
+            <div class="search">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
+                <input class="input" placeholder="搜索工程、作者或角色…">
+            </div>
+            <select class="input" style="width:132px"><option>全部角色</option></select>
+            <div class="seg"><button aria-pressed="true">最新</button><button aria-pressed="false">最热</button></div>
+            <span class="spacer"></span>
+            <button class="btn btn-primary">上传工程</button>
+        </div>
+
+        <div style="display:flex; justify-content:space-between; align-items:center; padding-bottom:12px;" class="meta">
+            <span>共 <span style="color:var(--fg-2)">128</span> 个结果 · 含角色「散华」</span>
+            <a href="#">清除筛选</a>
+        </div>
+
+        <div class="grid">
+            <div class="card pcard">
+                <div class="card-art" aria-hidden="true">
+                    <span class="av av-3">守</span><span class="av av-2">散</span><span class="av av-1">汐</span>
+                </div>
+                <div class="pcard-inner">
+                    <h3>今汐 · 衍射队 23 秒循环（含共鸣回路对齐）</h3>
+                    <div class="desc">默认轴，共鸣回路在第一次变奏后再开，参考视频见简介。</div>
+                    <div class="tags"><a href="#">#衍射</a><a href="#">#23秒</a><a href="#">#循环</a></div>
+                    <div class="foot">
+                        <span>阿散</span><span>·</span><span>5 个月前</span>
+                        <span style="flex:1;"></span>
+                        <span>浏览 1,284</span><span>克隆 342</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card pcard">
+                <div class="card-art" aria-hidden="true">
+                    <span class="av av-3">忌</span><span class="av av-2">吟</span><span class="av av-1">珂</span>
+                </div>
+                <div class="pcard-inner">
+                    <h3>珂莱塔 · 速切队（无守岸人替代方案）</h3>
+                    <div class="desc">给没有守岸人的玩家：用吟霖顶替，代价是少了 8% 增伤，轴不变。</div>
+                    <div class="tags"><a href="#">#速切</a><a href="#">#珂莱塔</a></div>
+                    <div class="foot">
+                        <span>Kail</span><span>·</span><span>2 周前</span>
+                        <span style="flex:1;"></span>
+                        <span>浏览 903</span><span>克隆 156</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- ══ 编辑台（单列）══ -->
+    <section class="sec">
+        <div class="head"><h2 style="font-size:var(--t-sec);">管理 / 编辑台（全部重做成这一套）</h2><span class="meta">单列，没有侧栏；编辑区限宽 820</span></div>
+
+        <div class="editor">
+            <div class="editor-head">
+                <select class="input" style="max-width:320px;" aria-label="选择实体">
+                    <option>布兰特 · 角色 · 15 条</option>
+                    <option>散华 · 角色 · 6 条</option>
+                    <option>釉瑚 · 角色 · 32 条</option>
+                </select>
+                <button class="btn btn-sm">新建实体</button>
+                <span class="badge badge-warn">未保存</span>
+                <span style="flex:1;"></span>
+                <button class="btn btn-sm btn-quiet">更多</button>
+            </div>
+
+            <div class="card editor-card">
+                <div class="field"><span>实体名称</span><input class="input" value="布兰特"></div>
+                <div class="field"><span>说明</span>
+                    <textarea class="input" rows="2" style="height:auto; min-height:84px; padding:8px 10px; resize:none; line-height:1.65;">仅计算本体，不含守岸人协奏。</textarea>
+                </div>
+                <div style="height:1px; background:var(--line);"></div>
+                <div class="field"><span>乘区</span>
+                    <div class="tbl">
+                        <div class="tr tr-head"><span>名称</span><span class="num tr-num">覆盖方式</span><span>条件</span><span>操作</span></div>
+                        <div class="tr tr-body"><span>基础攻击</span><span class="num tr-num">覆盖</span><span><span class="badge">始终</span></span><span style="text-align:right;"><button class="btn btn-sm btn-quiet">编辑</button></span></div>
+                        <div class="tr tr-body"><span>攻击力加成</span><span class="num tr-num">追加</span><span><span class="badge badge-warn">共鸣效率 250 以上</span></span><span style="text-align:right;"><button class="btn btn-sm btn-quiet">编辑</button></span></div>
+                        <div class="tr tr-body"><span>共鸣回路倍率</span><span class="num tr-num">覆盖</span><span><span class="badge">始终</span></span><span style="text-align:right;"><button class="btn btn-sm btn-quiet">编辑</button></span></div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="editor-savebar">
+                <span class="meta">有未保存改动</span>
+                <button class="btn btn-sm btn-quiet">丢弃</button>
+                <span style="flex:1;"></span>
+                <button class="btn btn-sm btn-primary">保存</button>
+            </div>
+        </div>
+
+        <p class="meta" style="margin-top:10px;">
+            三条铁律：① <strong>不做常驻左侧对象列表</strong>，对象用顶部下拉切换；
+            ② <strong>编辑页只放与「编辑当前对象」有关的东西</strong> —— 快照 / 批量重生成 / AI / 导入导出 一律进右上「更多」或独立页面；
+            ③ 编辑区单列限宽 820，字段竖排，保存条粘在底部。
+        </p>
+    </section>
+
+    <!-- ══ 弹层 ══ -->
+    <section class="sec">
+        <div class="head"><h2 style="font-size:var(--t-sec);">弹层</h2><span class="meta">全站只有一种：细边 + 投影 + 头/体/脚</span></div>
+        <div class="demo-scrim">
+            <div class="veil">
+                <div class="dialog">
+                    <div class="dhead"><span style="color:var(--accent);"></span><h3 style="font-size:var(--t-lead);">删除这个工程？</h3></div>
+                    <div class="dbody">
+                        <p style="color:var(--fg-2);">分享链接会立刻失效，克隆过的人不受影响。此操作不可撤销。</p>
+                        <div class="sizedemo"><span class="badge">/share/a7f3k2</span><span class="badge badge-danger">不可恢复</span></div>
+                    </div>
+                    <div class="dfoot">
+                        <button class="btn btn-quiet">取消</button>
+                        <button class="btn btn-danger">永久删除</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <p class="meta" style="margin-top:36px; padding-top:16px; border-top:1px solid var(--line);">
+        静态样张，不接应用、不参与构建。右下角可切换纸 / 墨夜两套主题。
+    </p>
+</div>
+
+<button class="btn btn-sm theme-btn" onclick="(function(){var h=document.documentElement;h.dataset.theme=h.dataset.theme==='paper'?'ink':'paper';this.textContent=h.dataset.theme==='paper'?'切到墨夜':'切到纸';}).call(this)">切到墨夜</button>
+
+</body>
+</html>

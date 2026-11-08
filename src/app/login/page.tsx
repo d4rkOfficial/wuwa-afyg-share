@@ -1,4 +1,5 @@
-import LoginForm from '@/components/login-form'
+import LoginForm from '@/components/wk/login-form'
+import { WkContainer, WkRoot } from '@/design'
 
 export default async function LoginPage({
     searchParams
@@ -10,14 +11,20 @@ export default async function LoginPage({
     const redirect = typeof sp.redirect === 'string' ? sp.redirect : '/'
 
     return (
-        <div className="mx-auto max-w-md space-y-8 py-12">
-            <div className="border-b pb-5 text-center mg-hairline">
-                <h1 className="mg-title-xl text-3xl md:text-4xl">登录</h1>
-                <p className="mt-1 text-sm leading-relaxed text-(--muted)">登录后即可上传和分享你的拉表排轴工程</p>
-            </div>
-            <div className="mg-card p-5 sm:p-6">
-                <LoginForm redirect={redirect} error={error} />
-            </div>
-        </div>
+        <WkRoot>
+            <WkContainer>
+                <div style={{ maxWidth: 420, margin: '0 auto', paddingTop: 24, display: 'grid', gap: 24 }}>
+                    <header style={{ textAlign: 'center' }}>
+                        <h1 style={{ fontSize: 'var(--wk-t-page)' }}>登录</h1>
+                        <p className="wk-meta" style={{ marginTop: 6 }}>
+                            登录后即可上传和分享你的拉表排轴工程
+                        </p>
+                    </header>
+                    <div className="wk-card wk-card-pad">
+                        <LoginForm redirect={redirect} error={error} />
+                    </div>
+                </div>
+            </WkContainer>
+        </WkRoot>
     )
 }

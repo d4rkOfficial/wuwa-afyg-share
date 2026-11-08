@@ -69,7 +69,7 @@ export async function upsertSubstatSet(input: UpsertSubstatSetInput): Promise<Ac
     )
     if (error) return { error: error.message }
 
-    revalidatePath('/admin/substat-sets')
+    revalidatePath('/edit/substat-sets')
     revalidatePath('/substat-sets')
     return {}
 }
@@ -86,7 +86,7 @@ export async function deleteSubstatSet(characterName: string): Promise<ActionRes
     const { error } = await supabase.from('standard_substat_sets').delete().eq('character_name', name)
     if (error) return { error: error.message }
 
-    revalidatePath('/admin/substat-sets')
+    revalidatePath('/edit/substat-sets')
     revalidatePath('/substat-sets')
     return {}
 }

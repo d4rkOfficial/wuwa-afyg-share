@@ -124,7 +124,7 @@ export async function saveBuffSnapshot(noteRaw: string): Promise<ActionResult<{ 
             p_note: note
         })
         if (error) return { error: error.message }
-        revalidatePath('/admin/buff-sets')
+        revalidatePath('/edit/buff-sets')
         return { data: { rows: state.buffs.length + state.folders.length, mode: 'root' } }
     }
 
@@ -147,7 +147,7 @@ export async function saveBuffSnapshot(noteRaw: string): Promise<ActionResult<{ 
         p_note: note
     })
     if (error) return { error: error.message }
-    revalidatePath('/admin/buff-sets')
+    revalidatePath('/edit/buff-sets')
     return { data: { rows: diffCount, mode: 'version' } }
 }
 
@@ -194,7 +194,7 @@ export async function restoreBuffSnapshot(targetId: string): Promise<ActionResul
     const restored = ((data as [{ restored?: number }] | null)?.[0]?.restored) ?? 0
 
     revalidatePath('/buff-sets')
-    revalidatePath('/admin/buff-sets')
+    revalidatePath('/edit/buff-sets')
     return { data: { restored } }
 }
 
@@ -205,7 +205,7 @@ export async function deleteBuffSnapshot(id: string): Promise<ActionResult<{ mes
 
     const { data, error } = await auth.supabase.rpc('delete_buff_set_snapshot', { p_id: id })
     if (error) return { error: error.message }
-    revalidatePath('/admin/buff-sets')
+    revalidatePath('/edit/buff-sets')
     return { data: { message: String(data ?? '') } }
 }
 
@@ -231,6 +231,6 @@ export async function squashBuffSnapshot(noteRaw: string): Promise<ActionResult<
         p_note: note || null
     })
     if (error) return { error: error.message }
-    revalidatePath('/admin/buff-sets')
+    revalidatePath('/edit/buff-sets')
     return { data: { message: String(data ?? '') } }
 }

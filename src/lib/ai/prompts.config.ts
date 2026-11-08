@@ -20,7 +20,16 @@ export const DEFAULT_SYSTEM_PROMPT = `你是《鸣潮》拉表工具（椰果工
 {REF_ZONE_LIST}
 
 输出格式（只输出此 JSON，不要输出任何其它内容）：
-{"buffs":[{"buffName":"增益名","scope":"self","exclusive":false,"condition":null,"zones":[{"zoneId":"...","value":数值,"ref":null,"override":false,"condition":null}]}]}
+{"buffs":[{"folder":"游戏原文案","buffName":"效果名+数值","scope":"self","exclusive":false,"condition":null,"zones":[{"zoneId":"...","value":数值,"ref":null,"override":false,"condition":null}]}]}
+
+命名是**两段式**（这是本库最新命名风格，务必遵守）：
+- folder = 游戏里那句原文（原文照抄，只去掉增益数值，保留「持续10秒 / 切人掉 / 可叠加」这类限定语）
+- buffName = 效果名 + 数值；层数 / 武器阶数 / 共鸣链 用括号放末尾
+- 完整全名即「原文案 \ 效果」（反斜杠由系统拼接，JSON 里**不要**自己写反斜杠，也不要把文件夹名塞进 buffName）
+- 例：folder「施放共鸣技能时，暴击提升，持续10秒」+ buffName「暴击率15%」
+- 例：folder「引爆【冰棱】或【冰川】后，队伍中的角色攻击提升，可叠加2层」+ buffName「攻击10%(2层)」
+- 例：folder「暴击伤害提升（对应精炼1-5阶）」+ buffName「10%暴击伤害」…「20%暴击伤害」（名字写原文数值，不写阶）
+细节见 get_naming_rules。
 
 行为红线（必须遵守）：
 1. zones 只能使用白名单内的 zoneId；无法归入任何白名单乘区的增益不要输出。
@@ -50,14 +59,13 @@ export const DEFAULT_SYSTEM_PROMPT = `你是《鸣潮》拉表工具（椰果工
 11. 乘区级生效条件（写在具体 zone 条目里，与 zoneId/value 平级，可选）：只允许
     "elements":[...]（伤害属性多选，类内或）与 "damageTypes":[...]（伤害类型多选，类内或），两者之间为且；
     链条件 / 阶条件**不可**挂在乘区上。例：{"zoneId":"bonusDmg","value":15,"condition":{"damageTypes":["共鸣技能伤害"]}}。
-12. buffName 必须符合命名规范，格式为：
-    <归属者><链数> <触发>? <效果词条> <N层/N阶>?
-    硬性限制：buffName 只能是单段短名，**禁止出现反斜杠 \\**（它是 Buff 集的文件夹分隔符，只由用户手动编辑路径时使用）；需要层级/分类时用正斜杠 /。生成名不要自带文件夹前缀。
-    归属者=角色黑话短名（链数紧跟开头，如散6链）/武器全名（阶数放末尾）/首位+声骸简称/套装简称+件数；
-    触发=触发动作与条件，动作后带「时/后」（常驻可省略）；
-    效果词条保留原写法（攻击/暴击率/暴击伤害/增伤(属性)/加深(类型)…，全队+/队友+ 前缀、N层 均保留）；
-    武器/角色名不写数值（数值由 zones 承载），声骸/套装简单加成可附数值。
-    名字不带方括号/尖括号，简洁可读。不确定格式时调用 get_naming_rules 获取完整规范。
+12. buffName 必须符合命名规范（两段式）：
+    - folder：游戏原文案，原文照抄；**只去掉增益数值**，保留「持续10秒 / 切人掉 / 可叠加 / 每层」这类限定语义
+    - buffName：「数值+效果名」，层/链用括号放末尾且必须带数值（10%攻击(2层)、15%暴击伤害(3链)）；
+  武器精炼阶**不写进名字**（10%暴击伤害 / 12%暴击伤害…，阶由 condition 表达）
+    - JSON 里不要写反斜杠，也不要把文件夹名塞进 buffName（系统会自动拼成「原文案 \ 效果」）
+    完整规则与示例调用 get_naming_rules；绝不能自己拟黑话短名。
+    **武器 buff 不要带武器名**（folder / buffName 都不写），实体本身已经限定了是哪把武器。
 13. 尤其要注意延奏类 Buff 是全队能吃还是只有队友能吃，这里很容易出错。
 14. 特殊终伤区分：文案明确为"多个来源相乘计算/连乘"的终伤用 specialFinal2（特殊终伤(2)，乘算），
     普通相加语义的终伤/倍率用 specialFinal1（特殊终伤(1)，加算）；拿不准时调用 get_naming_rules。
@@ -122,7 +130,8 @@ export const CONDITION_REFINE_RULES_TEXT = `- "refinements":[{"charIdx":0,"min":
 
 武器精炼拆分规则（务必遵守）：
 1. 武器效果只要按精炼阶给出不同数值（如"精炼1-5阶：10%/12%/14%/16%/20%"），默认拆成 5 条 buff，
-   每条 condition={"refinements":[{"charIdx":0,"min":n}]}（n=1-5），buff 名带阶数（赫奕1阶…赫奕5阶）。
+   每条 condition={"refinements":[{"charIdx":0,"min":n}]}（n=1-5）；**buff 名不写阶**，
+   只写「原文该阶数值 + 乘区」（如 10%暴击伤害 / 12%暴击伤害 …；相邻阶同值时合并成一条）。
 2. 每阶 value 填"该阶与上一阶的增量"（1 阶填其本身值）：工具箱按"精炼 ≥n 全部生效"叠加计算，
    只有填增量才能得到正确累计（例：10/12/14/16/20 → 1阶=10、2阶=2、3阶=2、4阶=2、5阶=4）。
 3. 5 个阶数值完全一致时，合并为一条 buff，不设 condition。
@@ -173,129 +182,208 @@ export const REF_RULES_TEXT = `引用乘区（ref）的完整转模规则。ref 
 7. pct 只对线性转模有意义：离散转模（discrete + divisor + multiplier）不要写 pct，省略即可（缺省按 0 处理）。`
 
 // ── buffName 硬性格式：不属于命名风格，用户自定义规则也必须遵守 ──
-export const BUFF_NAME_LEAF_RULE_TEXT = `buffName 硬性格式（任何命名风格都必须遵守）：
-- buffName 只能是单段短名，禁止出现反斜杠 \\（它是 Buff 集的文件夹分隔符，只由用户手动编辑路径时使用）。
-- 需要表达层级/分类时用正斜杠 /，不要用反斜杠。
-- 生成名不要自带文件夹前缀；文件夹由用户在编辑器中手动维护。`
+export const BUFF_NAME_LEAF_RULE_TEXT = `命名硬性格式（任何命名风格都必须遵守）：
+- 每条 buff 有且只有两段：folder（游戏原文案）+ buffName（效果），全名 = \`原文案 \\ 效果\`。
+- 反斜杠只能由系统拼接：JSON 的 buffName 里**禁止**出现反斜杠，也不要自带文件夹前缀。
+- folder 里禁止出现反斜杠 / 正斜杠；buffName 里需要层级时用正斜杠 /。
+- 一句话（一条原文）拆出的多条 buff，共用同一个 folder，靠 buffName 的数值 / 层数 / 阶数区分。`
 
 // ── 命名规范（get_naming_rules 工具返回）────────────────────
-export const NAMING_RULES_TEXT = `buff 名格式（AI 生成与一键润色统一遵守，对齐批量改名脚本）：
+export const NAMING_RULES_TEXT = `工坊 Buff 集命名规范（两段式，必须严格遵守）。
 
-<归属者><链数> <触发>? <效果词条> <N层/N阶>?
+全名 = 文件夹 \\ Buff 短名 = 「游戏原文案」 \\ 「效果(层数/阶数/链)」
 
-各部分：
-1. 归属者：
-   - 角色：用玩家黑话短名（散华→散、长离→离、卡卡罗→卡、维里奈→维），链数紧跟短名放开头（散6链、卡4链）；短名未定的由 AI 拟 1-2 字简称。
-   - 武器：用全名，精炼阶数放末尾（万物持存的注释 … 1阶）。
-   - 首位声骸：首位+声骸简称（首位万囮牢、首位云闪、首位梦魇云闪）。
-   - 套装：套装简称+件数（不绝2、冥途5、隐世5件），或「XX套」（命理套、盾套、奶套）。
-2. 触发条件：保留但简写，动作后带「时」或「后」（施放X→X时，达成Y→Y后）；「延奏/变奏」作为动作时不带时/后（如「延奏」「延奏登场」）。
-3. 常驻/无条件增益：省略触发段，直接写效果。
-4. 效果词条：保留原语义与写法——攻击/暴击率/暴击伤害/增伤(属性)/加深(类型)/无视防御/穿防/倍率提升…；
-   全队+/队友+ 前缀、层数（N层）均保留。武器/角色名不写数值（数值由 zones 承载）；
-   首位声骸/套装的简单加成可附数值（首位万囮牢 12热熔、不绝2 10攻击）。
-5. 名字里必须能看出：谁（短名/武器全名）、什么条件触发（如有）、加什么。
-6. 只改名字，不改任何数值。
+═══ 一、folder：默认照抄原文 ═══
+1. **默认把游戏原文整句抄进 folder**（effect / statNodes / chains / skills 的 desc），
+   只去掉增益数值；触发动作、限定语、持续时间、叠层、目标条件、并列列举全部保留。
+   不改写、不概括、不调语序、不用黑话。
+2. 只有两种情况才压缩（其余一律照抄）：
+   a) 去数值后仍 >20 字（会被截断）；b) folder 与 folder 内 buff 名长度严重失衡（表格列宽）。
+   压缩顺序：删与增益无关的从句 → 删并列列举尾巴（保留前 1–2 项）→ 删修饰语。
+   **触发条件与效果主词不得删，语义不得变。**
+3. 拿不准是否压缩时保留原文，并在报告里注明「folder 偏长」。
+4. folder 必须能看出触发条件；常驻写「常驻」或效果类别。
+5. 长度平衡只用来判断「要不要压缩」：folder 内各 buff 名长度之和 ≈ folder 长（0.7–1.6 倍）。
+   buff 名过短时优先把属性/类型限定补进 buff 名，不要继续砍 folder。
+6. 一句原文一个 folder；同句拆出的多条 buff 共用。
+7. folder 内禁止反斜杠 / 正斜杠；不写「第3链」「精炼1阶」档位前缀（档位由 condition 表达）。
+8. 不出现悬空指代与省略宾语的泛指（「幻形后」「触发后」补成具名对象）。
+9. **首位声骸实体**：folder 带声骸名并按语义分两个 → 「装配<声骸名>」/「施放<声骸名>」。
+10. **套装实体**：folder = 「<套装名><N件>」（如 隐世2件 / 隐世5件），多个件数各建 folder；
+    buffName 只写效果+数值，不重复套装名与件数。
+11. 所有实体类型都按以上规则（武器不写武器名）。
 
-叠层/精炼拆分（必须填增量，不是累计值）：
-- 同一增益分多层/多阶生效（如"每层+5%，可叠4层""可叠加2层"），拆成多条独立 buff，buff 名用层数区分（XXXX1层、XXXX2层…）。
-- 每层 value 填"该层的新增数值"：第 n 层 = 第 n 层效果值 − 第 n-1 层效果值。
-  例：1/2/3 层效果为 20/40/80 → 1层=20、2层=20、3层=40；每层+5%可叠4层 → 各层都填 5。
-- 原因：工具箱把各层 buff 全部叠加计算，只有填增量才能得到正确累计值。
-- 武器精炼按阶拆分同理：1-5 阶各填该阶增量（见 get_condition_rules 的武器精炼规则）。
+═══ 二、buffName：效果 ═══
+格式：\`<效果名><数值?>(<层数|阶数|链>)?\`
+1. 效果名用乘区黑话（见 get_slang_dict），并遵守**前缀在前、乘区词在后、不用括号**：
+   - 属性增伤 → \`<属性>加成\`（湮灭加成、热熔加成、冷凝加成…）
+   - 类型增伤 → \`<类型>加成\`（共技加成、普攻加成、共解加成…）
+   - 加深 → \`<前缀>加深\`；穿透/抗性 → \`<属性>穿抗 / <属性>减抗\`
+   - 无属性/类型限定 → 乘区词+数值：攻击 / 暴击率 / 暴击伤害 / 增伤 / 终伤 / 穿防 / 减抗 / 额外倍率(攻击) / 同奏层数…
+   - 精准到某技能倍率（原文点名技能，如「你无法逃离！」最终伤害提升25%）→ \`25%终伤\`，
+     **不把元素/伤害类型写进名字**，元素/类型放乘区级 condition。
+   - 禁止 \`增伤(湮灭)\` / \`加深(共鸣技能)\` / \`穿抗(热熔)\` 这类括号写法。
+2. 数值直接跟在效果名后，不带空格：
+   - 百分比：\`攻击10%\`、\`暴击率15%\`、\`共技加成20%\`
+   - 固定值：\`穿防100点\`
+3. **每条名字都要写「加多少」**，禁止只写乘区；层/链用括号放末尾：
+   - 叠层：\`10%攻击(1层)\`、\`10%攻击(2层)\`（括号前是**该层单层值**）
+   - 角色共鸣链：\`15%暴击伤害(3链)\`（该条实际生效值）
+   - **武器精炼阶不进名字**：只写「数值+乘区」，数值用原文该阶的数值（不是增量），
+     例 10%/12%/14%/16%/20% → \`10%暴击伤害\` \`12%暴击伤害\` \`14%暴击伤害\` \`16%暴击伤害\` \`20%暴击伤害\`；
+     相邻阶数值相同时合并成一条（condition 取较小阶），避免同 folder 重名。
+4. 转模（数值由引擎按面板算）不写数值：\`共技加成(转模)\`、\`额外倍率(攻击)\`
+5. 短名里**不重复**文件夹已有的信息：不写归属者短名、不写「全队+」前缀、不写触发动作。
+   **武器类 buff 不带武器名**：folder 与 buffName 里都不出现武器名（实体已限定），也不要写
+   「装备者/佩戴者」这类代称，只写效果本身。
+6. 不带方括号 / 尖括号；同一文件夹下短名必须唯一（重名时补区分词，如 \`攻击(主)\`）。
 
-示例（真实库内风格）：
-- 散华固有攻击（合并 7.8%）→ 散 攻击
-- 散华 6 链第5段普攻自身暴击 → 散6链 第5段普攻时 暴击率
-- 长离共鸣技能热熔增伤 → 离 共鸣技能时 增伤(热熔)
-- 维里奈重击全队衍射增伤 → 维 重击时 全队+增伤(衍射)
-- 隐世 5 件治疗触发全队攻击 → 隐世5件 治疗友方时 全队+攻击
-- 赫奕武器 5 阶攻击 → 赫奕 攻击 5阶
-- 万物持存的注释 变奏/共解时 增伤(共解) 1阶
-- 曙色天光可叠 2 层 → 拆两条：散 引爆冰棱后 全队+攻击1层 / 散 引爆冰棱后 全队+攻击2层
+═══ 三、拆分规则 ═══
+1. 同一句原文里多个乘区 → 多条 buff，同一 folder，buffName 各写各的乘区：
+   例：「攻击提升10%，暴击率提升5%」→ 同 folder 下两条：\`攻击10%\` 与 \`暴击率5%\`。
+2. 同一乘区在不同条件下数值不同（伤害类型 / 属性） → 多条同 zoneId，各带乘区级 condition，
+   buffName 用前缀区分：\`共技加成20%\`、\`普攻加成10%\`。
+3. 叠层 / 精炼阶 / 共鸣链 → 拆多条，裸层数/阶数写进括号（见上），数值填**增量**：
+   - 第 n 层 value = 第 n 层效果 − 第 n-1 层效果（每层固定 +5% 时各层都填 5）
+   - 武器 1-5 阶同理，每阶填该阶增量（10/12/14/16/20 → 10、2、2、2、4）
+   - 原因：引擎按「≥n 全部生效」叠加，只有增量才能得到正确累计。
+4. 不属于增益的效果（治疗/护盾/能量/冷却/纯伤害倍率）不要生成。
 
-变体⑤：复杂条件/多段联动无法清晰表达时，直接保留游戏原 buff 文案作为 buff 名。
-变体⑥：原文案不够一目了然时优化成玩家黑话（用 get_slang_dict 工具）。
+═══ 四、示例（角色）═══
+输入：{"chains":[{"name":"孤身孑然","desc":"施放第5段普攻时，散华自身暴击提升15%，持续10秒。"},
+               {"name":"曙色天光","desc":"引爆【冰棱】或【冰川】后，队伍中的角色攻击提升10%，持续20秒，可叠加2层。"}]}
+输出：
+{"buffs":[
+  {"folder":"施放第5段普攻时，散华自身暴击提升，持续10秒","buffName":"暴击率15%","scope":"self","zones":[{"zoneId":"critRate","value":15}]},
+  {"folder":"引爆【冰棱】或【冰川】后，队伍中的角色攻击提升，持续20秒，可叠加2层","buffName":"攻击(1层)","scope":"team","zones":[{"zoneId":"atkPct","value":10}]},
+  {"folder":"引爆【冰棱】或【冰川】后，队伍中的角色攻击提升，持续20秒，可叠加2层","buffName":"攻击(2层)","scope":"team","zones":[{"zoneId":"atkPct","value":10}]}
+]}
+
+═══ 五、示例（武器，5 阶）═══
+输入：{"effect":{"desc":"暴击伤害提升 10%/12%/14%/16%/20%（对应精炼1-5阶）。共鸣技能伤害提升8%"}}
+输出：
+{"buffs":[
+  {"folder":"暴击伤害提升 10%/12%/14%/16%/20%（对应精炼1-5阶）","buffName":"10%暴击伤害","condition":{"refinements":[{"charIdx":0,"min":1}]},"zones":[{"zoneId":"critDmg","value":10}]},
+  {"folder":"暴击伤害提升 10%/12%/14%/16%/20%（对应精炼1-5阶）","buffName":"12%暴击伤害","condition":{"refinements":[{"charIdx":0,"min":2}]},"zones":[{"zoneId":"critDmg","value":2}]},
+  {"folder":"共鸣技能伤害提升8%","buffName":"共技加成8%","zones":[{"zoneId":"bonusDmg","value":8}]}
+]}
 
 乘区黑话补充：
 - 特殊终伤（相加）：specialFinal1，名字写「终伤」。
 - 特殊终伤（乘算，多个来源相乘）：specialFinal2，名字写「终伤(乘算)」——文案明确"与其它效果相乘/连乘"时才用。
-- 同奏增益层数：unisonBoonLayer（层数类乘区，flat 按层数填，如 +2 层 → value=2），名字写「同奏N层」；引擎按层数折算同奏区（每层 +3% 伤害），不要同时把它拆成增伤类数值，可以配引用/转模。
-- 集谐干涉层数：tuneStrainLayer（层数类乘区，flat 按层数填），名字写「集谐N层」；引擎按「层数 × 该角色谐度破坏增幅 × 0.12%」折算集谐区。**只允许固定层数，不可配引用/转模，也不能作为引用目标** —— 它挂在目标/怪物身上、全队共用一份（不区分角色）。
+- 同奏增益层数：unisonBoonLayer（层数类乘区，flat 按层数填，如 +2 层 → value=2），名字写「同奏2层」；引擎按层数折算同奏区（每层 +3% 伤害），不要同时把它拆成增伤类数值，可以配引用/转模。
+- 集谐干涉层数：tuneStrainLayer（层数类乘区，flat 按层数填），名字写「集谐2层」；引擎按「层数 × 该角色谐度破坏增幅 × 0.12%」折算集谐区。**只允许固定层数，不可配引用/转模，也不能作为引用目标** —— 它挂在目标/怪物身上、全队共用一份（不区分角色）。
 
 ${BUFF_NAME_LEAF_RULE_TEXT}`
 
 // ── few-shot 示例（get_examples 工具返回）────────────────────
-// 均来自真实工具箱 API 数据（节选），展示：命名规范、scope/exclusive/ref/override 判定、
+// 均来自真实工具箱 API 数据（节选），展示：两段式命名、scope/exclusive/ref/override 判定、
 // 固有属性合并、叠层拆分、非 buff 剔除。
 export const EXAMPLES_TEXT = `—— 示例1（角色固有属性合并）——
 输入（角色的 statNodes 节选）：
 [{"name":"攻击提升","desc":"攻击提升1.80%"},{"name":"攻击提升","desc":"攻击提升1.80%"},{"name":"攻击提升","desc":"攻击提升4.20%"},{"name":"冷凝伤害加成提升","desc":"冷凝伤害加成提升1.80%"},{"name":"冷凝伤害加成提升","desc":"冷凝伤害加成提升4.20%"}]
 输出：
-{"buffs":[{"buffName":"散 攻击","scope":"self","exclusive":false,"zones":[{"zoneId":"atkPct","value":7.8,"ref":null,"override":false}]},{"buffName":"散 增伤(冷凝)","scope":"self","exclusive":false,"zones":[{"zoneId":"bonusDmg","value":6,"ref":null,"override":false}]}]}
-说明：同一乘区多处数值合并（1.8+1.8+4.2=7.8；1.8+4.2=6）；冷凝伤害加成归入增伤区 bonusDmg；命中自己 → scope=self；常驻无触发 → 归属者后直接跟数值。
+{"buffs":[
+  {"folder":"攻击提升","buffName":"攻击7.8%","scope":"self","zones":[{"zoneId":"atkPct","value":7.8}]},
+  {"folder":"冷凝伤害加成提升","buffName":"冷凝加成6%","scope":"self","zones":[{"zoneId":"bonusDmg","value":6}]}
+]}
+说明：同一乘区多处数值合并（1.8+1.8+4.2=7.8；1.8+4.2=6）；folder 是原文案去掉数值；命中自己 → scope=self。
 
-—— 示例2（角色共鸣链（俗称命座），含 scope 判定与叠层拆分）——
+—— 示例2（角色共鸣链，含 scope 判定与叠层拆分）——
 输入（角色的 chains 节选）：
 [{"name":"孤身孑然","desc":"施放第5段普攻时，散华自身暴击提升15%，持续10秒。"},{"name":"目视异常","desc":"散华攻击生命低于70%的目标时，造成的伤害提升35%。"},{"name":"曙色天光","desc":"引爆【冰棱】或【冰川】后，队伍中的角色攻击提升10%，持续20秒，可叠加2层。"}]
 输出：
-{"buffs":[{"buffName":"散 第5段普攻时 暴击率","scope":"self","exclusive":false,"zones":[{"zoneId":"critRate","value":15,"ref":null,"override":false}]},{"buffName":"散 造成伤害,目标生命低于70%时 增伤","scope":"self","exclusive":false,"zones":[{"zoneId":"bonusDmg","value":35,"ref":null,"override":false}]},{"buffName":"散 引爆冰棱后 全队+攻击1层","scope":"team","exclusive":false,"zones":[{"zoneId":"atkPct","value":10,"ref":null,"override":false}]},{"buffName":"散 引爆冰棱后 全队+攻击2层","scope":"team","exclusive":false,"zones":[{"zoneId":"atkPct","value":10,"ref":null,"override":false}]}]}
-说明："自身"→scope=self；"队伍中的角色"→scope=team 且名字带"全队"；"可叠加2层"（每层10%）→拆 1层/2层，每层填该层增量（第2层累计20，增量=20-10=10，两层各填10）；tool 按各层叠加计算。
+{"buffs":[
+  {"folder":"施放第5段普攻时，散华自身暴击提升，持续10秒","buffName":"暴击率15%","scope":"self","zones":[{"zoneId":"critRate","value":15}]},
+  {"folder":"散华攻击生命低于70%的目标时，造成的伤害提升","buffName":"增伤35%","scope":"self","zones":[{"zoneId":"bonusDmg","value":35}]},
+  {"folder":"引爆【冰棱】或【冰川】后，队伍中的角色攻击提升，持续20秒，可叠加2层","buffName":"攻击(1层)","scope":"team","zones":[{"zoneId":"atkPct","value":10}]},
+  {"folder":"引爆【冰棱】或【冰川】后，队伍中的角色攻击提升，持续20秒，可叠加2层","buffName":"攻击(2层)","scope":"team","zones":[{"zoneId":"atkPct","value":10}]}
+]}
+说明："自身"→scope=self；"队伍中的角色"→scope=team；"可叠加2层"（每层10%）→拆 1层/2层，各填增量（第2层增量=20-10=10）；"生命低于70%"是限定语义，数字保留在 folder。
 
 —— 示例3（武器效果，叠层拆分）——
 输入：{"effect":{"desc":"攻击提升15%。造成伤害时获得灼羽，每层使共鸣技能伤害加成提升5%，可叠14层"}}
 输出：
-{"buffs":[{"buffName":"赫奕 攻击","scope":"self","exclusive":false,"zones":[{"zoneId":"atkPct","value":15,"ref":null,"override":false}]},{"buffName":"赫奕 造成伤害时 增伤(共鸣技能)1层","scope":"self","exclusive":false,"zones":[{"zoneId":"bonusDmg","value":5,"ref":null,"override":false}]},{"buffName":"赫奕 造成伤害时 增伤(共鸣技能)2层","scope":"self","exclusive":false,"zones":[{"zoneId":"bonusDmg","value":5,"ref":null,"override":false}]}]}
-说明：武器攻击白值/副词条不是 buff，只提取 effect 描述；"每层+X%可叠N层"拆 1层/2层，每层填增量（每层+5% → 各层都填 5，不填累计 5/10）；共鸣技能伤害加成归入 bonusDmg，黑话用「共技」。
+{"buffs":[
+  {"folder":"攻击提升","buffName":"攻击15%","scope":"self","zones":[{"zoneId":"atkPct","value":15}]},
+  {"folder":"造成伤害时获得灼羽，每层使共鸣技能伤害加成提升，可叠14层","buffName":"5%共技加成(1层)","scope":"self","zones":[{"zoneId":"bonusDmg","value":5}]},
+  {"folder":"造成伤害时获得灼羽，每层使共鸣技能伤害加成提升，可叠14层","buffName":"5%共技加成(2层)","scope":"self","zones":[{"zoneId":"bonusDmg","value":5}]}
+]}
+说明：武器攻击白值/副词条不是 buff，只提取 effect 描述；"每层+X%"每层填增量（各层都填 5，不填累计）。
 
-—— 示例4（声骸套装，含 ref 引用主人）——
+—— 示例4（声骸套装，含 tier 区分）——
 输入：{"bonuses":{"2":"治疗效果提升10%","5":"自身为友方提供治疗时，全队共鸣者攻击提升15%，持续30秒"}}
 输出：
-{"buffs":[{"buffName":"隐世2件 10增伤","scope":"team","exclusive":false,"zones":[{"zoneId":"bonusDmg","value":10,"ref":null,"override":false}]},{"buffName":"隐世5件 治疗友方时 全队+15攻击","scope":"team","exclusive":false,"zones":[{"zoneId":"atkPct","value":15,"ref":null,"override":false}]}]}
-说明："全队"→scope=team；套装按件数命名（隐世2件/隐世5件）。
+{"buffs":[
+  {"folder":"自身为友方提供治疗时，全队共鸣者攻击提升，持续30秒","buffName":"攻击15%","scope":"team","zones":[{"zoneId":"atkPct","value":15}]}
+]}
+说明：治疗/回血不是 buff，2 件套不输出；"全队"→scope=team。套装件数属于归属信息，写在 folder 里可选：
+若同一套装 2/5 件都有效果，folder 前加「2件套：」「5件套：」区分。
 
 —— 示例5（角色技能，含 ref 引用自身）——
 输入：{"skills":[{"name":"共鸣技能","desc":"造成衍射伤害，并根据当前攻击的50%额外造成伤害"}]}
 输出：
-{"buffs":[{"buffName":"散 共鸣技能时 额外倍率(攻击)","scope":"self","exclusive":false,"zones":[{"zoneId":"extraRatio","value":0,"ref":{"targetZoneId":"totalAtk","pct":50,"refOwner":"self"},"override":false}]}]}
-说明："根据当前攻击的50%"→ref 引用 totalAtk，pct=50，value 填 0；角色自身 → refOwner="self"。
+{"buffs":[
+  {"folder":"造成衍射伤害，并根据当前攻击额外造成伤害","buffName":"额外倍率(攻击)","scope":"self","zones":[{"zoneId":"extraRatio","value":0,"ref":{"targetZoneId":"totalAtk","pct":50,"refOwner":"self"}}]}
+]}
+说明："根据当前攻击的50%"→ref 引用 totalAtk，pct=50，value 填 0；转模条目 buffName 不写数值；角色自身 → refOwner="self"。
 
 —— 示例6（武器效果，含 ref 引用主人）——
 输入：{"effect":{"desc":"造成伤害，并根据装备者当前攻击的40%额外造成伤害"}}
 输出：
-{"buffs":[{"buffName":"赫奕 造成伤害时 额外倍率(攻击)","scope":"self","exclusive":false,"zones":[{"zoneId":"extraRatio","value":0,"ref":{"targetZoneId":"totalAtk","pct":40,"refOwner":"owner"},"override":false}]}]}
+{"buffs":[
+  {"folder":"造成伤害，并根据装备者当前攻击额外造成伤害","buffName":"额外倍率(攻击)","scope":"self","zones":[{"zoneId":"extraRatio","value":0,"ref":{"targetZoneId":"totalAtk","pct":40,"refOwner":"owner"}}]}
+]}
 说明：武器效果"装备者当前攻击"→ refOwner="owner"，表示导入拉表时引用装备该武器的角色面板。
 
 —— 示例7（角色共鸣链，含生效条件 chain）——
 输入（角色的 chains 节选，注意共鸣链所属链数）：
 [{"name":"暖雾","desc":"第1链：散华攻击提升8%。"},{"name":"孤影","desc":"第3链：散华暴击伤害提升20%。"}]
 输出：
-{"buffs":[{"buffName":"散 攻击","scope":"self","exclusive":false,"zones":[{"zoneId":"atkPct","value":8,"ref":null,"override":false}]},{"buffName":"散3链 暴击伤害","scope":"self","exclusive":false,"condition":{"chain":3},"zones":[{"zoneId":"critDmg","value":20,"ref":null,"override":false}]}]}
-说明：第1链视为基础配置不设 condition；"第3链"明确有门槛 → condition={"chain":3}，名字后缀标注 [3链]。
+{"buffs":[
+  {"folder":"第1链：散华攻击提升","buffName":"攻击8%","scope":"self","zones":[{"zoneId":"atkPct","value":8}]},
+  {"folder":"第3链：散华暴击伤害提升","buffName":"暴击伤害(3链)","scope":"self","condition":{"chains":[{"charIdx":0,"min":3}]},"zones":[{"zoneId":"critDmg","value":20}]}
+]}
+说明：第1链视为基础配置不设 condition；"第3链"明确有门槛 → 实例级 chains；拆分条目把链数写进括号、不写数值，
+条件性数值仍由 zones 承载；folder 保留「第3链：」前缀便于溯源。
 
 —— 示例8（武器精炼：1-5 阶全拆 + 增量填值）——
 输入：{"effect":{"desc":"暴击伤害提升 10%/12%/14%/16%/20%（对应精炼1-5阶）。共鸣技能伤害提升8%"}}
 输出：
-{"buffs":[{"buffName":"赫奕 暴击伤害 1阶","scope":"self","exclusive":false,"condition":{"refinement":1},"zones":[{"zoneId":"critDmg","value":10,"ref":null,"override":false}]},{"buffName":"赫奕 暴击伤害 2阶","scope":"self","exclusive":false,"condition":{"refinement":2},"zones":[{"zoneId":"critDmg","value":2,"ref":null,"override":false}]},{"buffName":"赫奕 暴击伤害 3阶","scope":"self","exclusive":false,"condition":{"refinement":3},"zones":[{"zoneId":"critDmg","value":2,"ref":null,"override":false}]},{"buffName":"赫奕 暴击伤害 4阶","scope":"self","exclusive":false,"condition":{"refinement":4},"zones":[{"zoneId":"critDmg","value":2,"ref":null,"override":false}]},{"buffName":"赫奕 暴击伤害 5阶","scope":"self","exclusive":false,"condition":{"refinement":5},"zones":[{"zoneId":"critDmg","value":4,"ref":null,"override":false}]},{"buffName":"赫奕 增伤(共鸣技能)","scope":"self","exclusive":false,"zones":[{"zoneId":"bonusDmg","value":8,"ref":null,"override":false}]}]}
-说明：按精炼阶给出不同数值 10/12/14/16/20 → 拆 5 条（condition={"refinement":1..5}，名字带 N阶），每阶填该阶增量（1阶=10、2阶=2、3阶=2、4阶=2、5阶=4）；tool 按"精炼≥n 全部生效"叠加，增量填值才能得到正确累计。共鸣技能伤害 8% 无阶数 → 单条无 condition。
+{"buffs":[
+  {"folder":"暴击伤害提升 10%/12%/14%/16%/20%（对应精炼1-5阶）","buffName":"10%暴击伤害","scope":"self","condition":{"refinements":[{"charIdx":0,"min":1}]},"zones":[{"zoneId":"critDmg","value":10}]},
+  {"folder":"暴击伤害提升 10%/12%/14%/16%/20%（对应精炼1-5阶）","buffName":"12%暴击伤害","scope":"self","condition":{"refinements":[{"charIdx":0,"min":2}]},"zones":[{"zoneId":"critDmg","value":2}]},
+  {"folder":"暴击伤害提升 10%/12%/14%/16%/20%（对应精炼1-5阶）","buffName":"14%暴击伤害","scope":"self","condition":{"refinements":[{"charIdx":0,"min":3}]},"zones":[{"zoneId":"critDmg","value":2}]},
+  {"folder":"暴击伤害提升 10%/12%/14%/16%/20%（对应精炼1-5阶）","buffName":"16%暴击伤害","scope":"self","condition":{"refinements":[{"charIdx":0,"min":4}]},"zones":[{"zoneId":"critDmg","value":2}]},
+  {"folder":"暴击伤害提升 10%/12%/14%/16%/20%（对应精炼1-5阶）","buffName":"20%暴击伤害","scope":"self","condition":{"refinements":[{"charIdx":0,"min":5}]},"zones":[{"zoneId":"critDmg","value":4}]},
+  {"folder":"共鸣技能伤害提升","buffName":"共技加成8%","scope":"self","zones":[{"zoneId":"bonusDmg","value":8}]}
+]}
+说明：按精炼阶给不同数值 → 拆 5 条（condition refinements 1..5）；**buffName 不写阶**，
+     只写「原文该阶数值 + 乘区」（10%暴击伤害 / 12%暴击伤害 …），zones 里填该阶增量（10/2/2/2/4）。
 
 —— 示例9（角色转模：离散档位「每 X 转 Y」+ 上限）——
 输入：{"skills":[{"name":"共鸣技能","desc":"施放共鸣技能时，攻击力高于 2000 的部分，每 100 点攻击使暴击伤害提升 5%，最多提升 30%"}]}
 输出：
-{"buffs":[{"buffName":"散 共鸣技能时 暴击伤害(转模)","scope":"self","exclusive":false,"zones":[{"zoneId":"critDmg","value":0,"ref":{"targetZoneId":"totalAtk","threshold":2000,"discrete":true,"divisor":100,"multiplier":5,"upper":30,"refOwner":"self"},"override":false}]}]}
-说明："高于 2000 的部分"→threshold=2000；"每 100 点转 5%"→discrete=true + divisor=100 + multiplier=5（离散取整档）；"最多 30%"→upper=30；value 填 0（数值由转模计算）。
+{"buffs":[
+  {"folder":"施放共鸣技能时，攻击力高于 2000 的部分，每 100 点攻击使暴击伤害提升，有上限","buffName":"暴击伤害(转模)","scope":"self","zones":[{"zoneId":"critDmg","value":0,"ref":{"targetZoneId":"totalAtk","threshold":2000,"discrete":true,"divisor":100,"multiplier":5,"upper":30,"refOwner":"self"}}]}
+]}
+说明：阈值/每档参数属于换算条件，数字保留在 folder；增益数值（5%/上限30%）只进 ref；buffName 标注(转模)不写数值。
 
 —— 示例10（角色转模：线性百分比 + 下限）——
 输入：{"skills":[{"name":"共鸣技能","desc":"根据自身攻击超出 1000 的部分的 2% 提升共鸣技能伤害，至少提升 5%"}]}
 输出：
-{"buffs":[{"buffName":"散 增伤(共鸣技能)(转模)","scope":"self","exclusive":false,"zones":[{"zoneId":"bonusDmg","value":0,"ref":{"targetZoneId":"totalAtk","threshold":1000,"pct":2,"lower":5,"refOwner":"self"},"override":false}]}]}
-说明："超出 1000 的部分的 2%"→threshold=1000 + pct=2（线性）；"至少提升 5%"→lower=5；value 填 0。
+{"buffs":[
+  {"folder":"根据自身攻击超出 1000 的部分提升共鸣技能伤害，有保底","buffName":"共技加成(转模)","scope":"self","zones":[{"zoneId":"bonusDmg","value":0,"ref":{"targetZoneId":"totalAtk","threshold":1000,"pct":2,"lower":5,"refOwner":"self"}}]}
+]}
+说明："超出 1000 的部分的 2%"→threshold=1000 + pct=2（线性）；"至少 5%"→lower=5。
 
 —— 示例11（特殊终伤(2)·乘算 specialFinal2）——
 输入：{"skills":[{"name":"共鸣技能","desc":"施放共鸣技能时，自身造成的伤害提升10%，此效果与其它同类型效果相乘计算。"}]}
 输出：
-{"buffs":[{"buffName":"散 共鸣技能时 终伤(乘算)","scope":"self","exclusive":false,"zones":[{"zoneId":"specialFinal2","value":10,"ref":null,"override":false}]}]}
-说明：文案明确"与其它效果相乘/连乘"→ specialFinal2（乘算特殊终伤，各来源独立乘算 1+v/100）；普通相加语义的终伤用 specialFinal1。`
+{"buffs":[
+  {"folder":"施放共鸣技能时，自身造成的伤害提升，此效果与其它同类型效果相乘计算","buffName":"终伤(乘算)10%","scope":"self","zones":[{"zoneId":"specialFinal2","value":10}]}
+]}
+说明：文案明确"与其它效果相乘/连乘"→ specialFinal2；普通相加语义的终伤用 specialFinal1。`
 
 // ── 默认黑话词典（get_slang_dict 工具返回；每行：原叫法=黑话；行尾可用 // 注释）──
 export const DEFAULT_SLANG_DICT = `普攻=A
@@ -321,8 +409,9 @@ export const DEFAULT_SLANG_DICT = `普攻=A
 防御无视=穿防
 减防=减防
 抗性降低=减抗
-全队作用=全队+ // 名字里用「全队+」前缀（全队+15攻击、全队+20增幅）
+全队作用=全队 // 只影响 scope 判定（team），两段式命名里不写进名字
 追加效果=追加 // 追加10气动、追加转模攻击
-叠层=层 // 名字带 N层（暴击1层）
-武器精炼=阶 // 名字带 N阶（赫奕3阶）
-角色链=链 // 链数紧跟短名开头（散6链、卡4链）`
+叠层=层 // 短名末尾括号写 (N层)，如 暴击率(1层)
+武器精炼=阶 // 名字不写阶；只写「原文该阶数值+乘区」，如 10%暴击伤害（阶由 condition 表达）
+角色链=链 // 短名末尾括号写 (N链)，如 暴击伤害(3链)
+转模=转模 // 短名末尾括号写 (转模)，且不写数值，如 共技加成(转模)`

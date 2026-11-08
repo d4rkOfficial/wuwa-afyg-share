@@ -1,8 +1,10 @@
+import '@/design/wk-rows.css'
+import '@/design/wk-data.css'
 import type { Metadata } from 'next'
 import Link from 'next/link'
-import { Icon } from '@iconify/react'
 import SetupNotice from '@/components/setup-notice'
-import SubstatSetsBrowser from '@/components/substat-sets-browser'
+import SubstatSetsBrowser from '@/components/wk/substat-sets-browser'
+import { WkContainer, WkPageHead, WkRoot } from '@/design'
 import { createClient, hasEnv } from '@/lib/supabase/server'
 import { getViewerLocks } from '@/lib/edit-locks'
 import { getEntityIcons } from '@/lib/data/avatar-icons'
@@ -14,10 +16,6 @@ export const metadata: Metadata = {
 
 export const dynamic = 'force-dynamic'
 
-/**
- * @desc 标准词条集浏览页（任何访客都可查看，无需登录）。
- * 编辑锁关闭时，登录用户也可以从这里进编辑页；被管理员单独锁定的角色仍只读。
- */
 export default async function SubstatSetsPage() {
     if (!hasEnv()) return <SetupNotice />
 
@@ -32,56 +30,45 @@ export default async function SubstatSetsPage() {
         data: { user }
     } = await supabase.auth.getUser()
     const viewer = await getViewerLocks()
-    const isAdmin = viewer.isAdmin
     const editable = !viewer.locks.substatSetsLocked
+    const canEdit = editable || viewer.isAdmin
     const icons = (await getEntityIcons()).character
 
     return (
-        <div className="space-y-5">
-            <div className="flex flex-wrap items-end justify-between gap-3 border-b pb-4 mg-hairline">
-                <div className="min-w-0">
-                    <h1 className="mg-title-xl text-2xl md:text-3xl">
-                        标准 14 词条
-                        {editable && (
-                            <span className="ml-2 align-middle text-xs font-normal text-(--accent-text)">（可编辑）</span>
-                        )}
-                    </h1>
-                </div>
-                <div className="flex flex-wrap items-center gap-2">
-                    {(editable || isAdmin) && (
-                        <Link
-                            href={user ? '/admin/substat-sets' : '/login?redirect=/admin/substat-sets'}
-                            className={`inline-flex items-center gap-1.5 rounded-sm border px-3 py-1.5 text-xs font-medium transition-colors ${
-                                editable
-                                    ? 'border-(--accent) bg-(--accent) text-(--accent-fg) hover:brightness-110'
-                                    : 'border-(--card-border) bg-(--btn-bg) text-(--btn-text) hover:bg-(--card) hover:text-(--fg)'
-                            }`}
-                            title={
-                                editable
-                                    ? '编辑锁已关闭：登录后即可编辑（被单独锁定的角色仍仅管理员可改）'
-                                    : '标准词条集编辑锁开启中：仅管理员可编辑'
-                            }
-                        >
-                            <Icon
-                                icon={editable ? 'mdi:pencil-outline' : 'mdi:shield-edit-outline'}
-                                className="size-4"
-                            />
-                            {editable ? (user ? '编辑标准词条集' : '登录后编辑') : '标准词条集管理'}
-                        </Link>
+        <WkRoot>
+            <WkContainer>
+                <WkPageHead
+                    title="标准 14 词条"
+                    sub={`特殊角色的整份声骸词条方案（主词条 + 副主词条 + 副词条），供工具箱一键同步 · 共 ${rows.length} 个角色`}
+                    actions={
+                        canEdit ? (
+                            <Link
+                                href={user ? '/edit/substat-sets' : '/login?redirect=/edit/substat-sets'}
+                                className={editable ? 'wk-btn wk-btn--primary' : 'wk-btn'}
+                                title={
+                                    editable
+                                        ? '编辑锁已关闭：登录后即可编辑（被单独锁定的角色仍仅管理员可改）'
+                                        : '标准词条集编辑锁开启中：仅管理员可编辑'
+                                }
+                            >
+                                {editable ? (user ? '编辑标准词条集' : '登录后编辑') : '标准词条集管理'}
+                            </Link>
+                        ) : null
+                    }
+                />
+
+                <div style={{ marginTop: 16 }}>
+                    {error ? (
+                        <p className="wk-meta">加载失败：{error.message}</p>
+                    ) : rows.length === 0 ? (
+                        <p className="wk-meta" style={{ padding: '24px 0' }}>
+                            暂时还没有收录任何特殊角色的标准词条集
+                        </p>
+                    ) : (
+                        <SubstatSetsBrowser rows={rows} icons={icons} />
                     )}
                 </div>
-            </div>
-
-            {error ? (
-                <div className="mg-card p-8 text-center text-(--muted)">加载失败：{error.message}</div>
-            ) : rows.length === 0 ? (
-                <div className="mg-card p-12 text-center">
-                    <Icon icon="mdi:clipboard-text-outline" className="mx-auto mb-3 size-10 text-(--muted)" />
-                    <p className="text-(--muted)">暂时还没有收录任何特殊角色的标准词条集</p>
-                </div>
-            ) : (
-                <SubstatSetsBrowser rows={rows} icons={icons} />
-            )}
-        </div>
+            </WkContainer>
+        </WkRoot>
     )
 }

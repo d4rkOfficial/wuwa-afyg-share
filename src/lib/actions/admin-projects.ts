@@ -15,10 +15,14 @@ async function withAdmin() {
     return { supabase: r.supabase, error: null as string | null }
 }
 
+export type AdminProjectFilter = 'all' | 'expired' | 'permanent' | 'protected' | 'unpublished'
+
 export interface AdminProjectQuery {
     q?: string
     page?: number
     pageSize?: number
+    /** @desc 状态过滤：已过期 / 永久 / 已保护 / 未发布 */
+    filter?: AdminProjectFilter
 }
 
 export async function adminListProjects(query: AdminProjectQuery): Promise<ActionResult<{ items: ProjectListItem[]; total: number }>> {
@@ -36,8 +40,17 @@ export async function adminListProjects(query: AdminProjectQuery): Promise<Actio
         .from('projects')
         .select('id, code, author_id, author_name, title, description, tags, game_version, team_preview, published, expires_at, view_count, clone_count, created_at, updated_at, protected', { count: 'exact' })
     if (q) {
-        listQuery = listQuery.or(`title.ilike.%${q.replace(/[%_\\]/g, '\\$&')}%,code.ilike.%${q.replace(/[%_\\]/g, '\\$&')}%,author_name.ilike.%${q.replace(/[%_\\]/g, '\\$&')}%`)
+        const escaped = q.replace(/[%_\\]/g, '\\$&')
+        listQuery = listQuery.or(
+            `title.ilike.%${escaped}%,code.ilike.%${escaped}%,author_name.ilike.%${escaped}%`
+        )
     }
+    // 状态过滤（SQL 层做，保证 total 与翻页一致）
+    const filter = query.filter ?? 'all'
+    if (filter === 'protected') listQuery = listQuery.eq('protected', true)
+    if (filter === 'unpublished') listQuery = listQuery.eq('published', false)
+    if (filter === 'permanent') listQuery = listQuery.is('expires_at', null)
+    if (filter === 'expired') listQuery = listQuery.not('expires_at', 'is', null).lte('expires_at', new Date().toISOString())
     const { data, count, error } = await listQuery
         .order('created_at', { ascending: false })
         .range(from, to)

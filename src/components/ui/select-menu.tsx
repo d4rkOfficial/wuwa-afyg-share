@@ -104,7 +104,7 @@ export default function SelectMenu({
         <div
             ref={panelRef}
             role="listbox"
-            className="overflow-y-auto rounded-sm border p-1"
+            className="wk overflow-y-auto rounded-sm border p-1"
             style={{
                 position: 'fixed',
                 left: pos?.left ?? 0,
@@ -113,7 +113,7 @@ export default function SelectMenu({
                 maxHeight: PANEL_MAX_HEIGHT,
                 zIndex: 60,
                 background: 'var(--bg)',
-                borderColor: 'var(--card-border)'
+                borderColor: 'var(--wk-line)'
             }}
         >
             {allOption && (
@@ -149,15 +149,15 @@ export default function SelectMenu({
                 aria-haspopup="listbox"
                 aria-expanded={open}
                 aria-label={ariaLabel}
-                className="flex h-full w-full min-w-0 items-center gap-1.5 rounded-sm border border-(--card-border) bg-(--input-bg) px-2.5 text-sm font-medium text-(--fg) outline-none transition-[border-color,box-shadow] duration-200 focus:border-(--accent) "
+                className="flex h-full w-full min-w-0 items-center gap-1.5 rounded-sm border border-(--wk-line) bg-(--wk-input) px-2.5 text-sm font-medium text-(--wk-fg) outline-none transition-[border-color,box-shadow] duration-200 focus:border-(--wk-accent) "
             >
-                {icon && <Icon icon={icon} className="size-4 shrink-0 text-(--muted)" />}
-                <span className={`min-w-0 flex-1 truncate text-left ${current ? '' : 'text-(--muted)'}`}>
+                {icon && <Icon icon={icon} className="size-4 shrink-0 text-(--wk-fg-3)" />}
+                <span className={`min-w-0 flex-1 truncate text-left ${current ? '' : 'text-(--wk-fg-3)'}`}>
                     {current?.label ?? placeholder}
                 </span>
                 <Icon
                     icon="mdi:chevron-down"
-                    className={`size-4 shrink-0 text-(--muted) transition-transform duration-200 ${open ? 'rotate-180' : ''}`}
+                    className={`size-4 shrink-0 text-(--wk-fg-3) transition-transform duration-200 ${open ? 'rotate-180' : ''}`}
                 />
             </button>
 
@@ -182,7 +182,7 @@ function SelectItem({
             aria-selected={selected}
             onClick={() => onSelect(opt.value)}
             className={`flex w-full items-center gap-2 rounded-sm px-2.5 py-1.5 text-left text-xs transition-colors ${
-                selected ? 'bg-(--accent) font-medium text-(--accent-fg)' : 'text-(--fg) hover:bg-(--card-hover)'
+                selected ? 'bg-(--wk-accent) font-medium text-(--wk-accent-fg)' : 'text-(--wk-fg) hover:bg-(--wk-s2)'
             }`}
         >
             <span className="min-w-0 flex-1 truncate">{opt.label}</span>

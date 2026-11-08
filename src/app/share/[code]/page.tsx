@@ -1,14 +1,18 @@
+import '@/design/wk-overlay.css'
+import '@/design/wk-plaza.css'
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
 import type { Metadata } from 'next'
-import { Icon } from '@iconify/react'
-import TeamBanner from '@/components/team-banner'
-import TeamPreview from '@/components/team-preview'
-import ShareLinkPicker from '@/components/share-link-picker'
-import ExpiryCountdown from '@/components/expiry-countdown'
+import TeamPreview from '@/components/wk/team-preview'
+import ShareLinkDialog from '@/components/wk/share-link-dialog'
+import WkCopyButton from '@/components/wk/copy-button'
+import WkMarkdown from '@/components/wk/markdown'
 import SetupNotice from '@/components/setup-notice'
+import { WkBadge, WkContainer, WkEmpty, WkRoot, WkSpacer } from '@/design'
+import { markdownToPlainText } from '@/lib/markdown'
 import { createClient, hasEnv } from '@/lib/supabase/server'
 import { getAvatarIcons } from '@/lib/data/avatar-icons'
+import { CHAR_ELEMENTS } from '@/lib/data/char-elements.generated'
 import { DETAIL_COLUMNS } from '@/lib/project/query'
 import { teamDisplayNames } from '@/lib/project/extract'
 import { formatDate, formatCount } from '@/lib/utils/format'
@@ -26,15 +30,18 @@ export async function generateMetadata({
 }): Promise<Metadata> {
     const { code } = await params
     const supabase = await createClient()
-    const { data } = await supabase
-        .from('projects')
-        .select('title, description')
-        .eq('code', code)
-        .maybeSingle()
+    const { data } = await supabase.from('projects').select('title, description').eq('code', code).maybeSingle()
     return {
         title: data?.title ?? '工程不存在',
-        description: data?.description ?? undefined
+        description: data?.description ? markdownToPlainText(data.description) : undefined
     }
+}
+
+/** @desc 剩余天数（向上取整）；无过期时间返回 null */
+function daysLeft(expiresAt: string | null): number | null {
+    if (!expiresAt) return null
+    const diff = new Date(expiresAt).getTime() - Date.now()
+    return Math.ceil(diff / 86_400_000)
 }
 
 export default async function SharePage({ params }: { params: Promise<{ code: string }> }) {
@@ -47,11 +54,7 @@ export default async function SharePage({ params }: { params: Promise<{ code: st
         data: { user }
     } = await supabase.auth.getUser()
 
-    const { data } = await supabase
-        .from('projects')
-        .select(DETAIL_COLUMNS)
-        .eq('code', code)
-        .maybeSingle()
+    const { data } = await supabase.from('projects').select(DETAIL_COLUMNS).eq('code', code).maybeSingle()
 
     if (!data) notFound()
 
@@ -62,130 +65,148 @@ export default async function SharePage({ params }: { params: Promise<{ code: st
     const expired = isExpiredProject(project.expires_at, project.author_name)
     const grace = isGracePeriod(project.expires_at, project.author_name)
     const isOwner = user && user.id === project.author_id
-
-    // 角色头像（与首页 ProjectCard 同源）：配队大卡片的头像叠底 + 作者头像
     const charIcons = await getAvatarIcons()
+    // 属性色只是装饰：用静态生成表，不为它多打两次第三方 CDN
+    const elements = CHAR_ELEMENTS as Record<string, string>
 
     if (expired) {
         return (
-            <div className="mx-auto max-w-4xl space-y-8 md:space-y-12">
-                <div className="mg-card p-12 text-center">
-                    <Icon icon="mdi:clock-alert-outline" className="mx-auto mb-3 size-10 text-(--muted)" />
-                    <p className="mg-title text-base">该工程分享已过期</p>
-                    <p className="mt-1 text-sm leading-relaxed text-(--muted)">链接已失效，可联系作者重新分享。</p>
-                </div>
-            </div>
+            <WkRoot>
+                <WkContainer>
+                    <WkEmpty
+                        title="该工程分享已过期"
+                        hint="链接已失效，可联系作者重新分享。"
+                        action={
+                            <Link href="/" className="wk-btn wk-btn--sm">
+                                返回广场
+                            </Link>
+                        }
+                    />
+                </WkContainer>
+            </WkRoot>
         )
     }
 
+    const authorAvatar = pickCharacterAvatar(project.author_name, charIcons)
+    const remaining = daysLeft(project.expires_at)
+
     return (
-        <div className="mx-auto max-w-4xl space-y-6">
-            <div className="mg-card space-y-4 p-6">
-                <div className="flex flex-wrap items-start justify-between gap-3">
-                    <div className="min-w-0">
-                        <h1 className="mg-title-xl text-3xl md:text-4xl">{project.title}</h1>
-                        <div className="mt-1.5 flex flex-wrap items-center gap-x-3 gap-y-1 text-sm text-(--muted)">
-                            <span className="flex items-center gap-1.5">
-                                {(() => {
-                                    const avatar = pickCharacterAvatar(project.author_name, charIcons)
-                                    return avatar ? (
+        <WkRoot>
+            <WkContainer>
+                <article style={{ display: 'grid', gap: 20, maxWidth: 720 }}>
+                    {/* 标题区：标题 + 一行元信息 */}
+                    <header style={{ display: 'grid', gap: 8, paddingBottom: 16, borderBottom: '1px solid var(--wk-line)' }}>
+                        <h1 style={{ fontSize: 'var(--wk-t-page)' }}>{project.title}</h1>
+                        <div
+                            style={{
+                                display: 'flex',
+                                flexWrap: 'wrap',
+                                alignItems: 'center',
+                                gap: 8,
+                                fontSize: 'var(--wk-t-meta)',
+                                color: 'var(--wk-fg-3)'
+                            }}
+                        >
+                            <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+                                <span className="wk-pcard-avatar">
+                                    {authorAvatar ? (
                                         // eslint-disable-next-line @next/next/no-img-element
-                                        <img
-                                            src={avatar.url}
-                                            alt={avatar.name}
-                                            className="size-5 shrink-0 rounded-sm border border-(--card-border) object-cover"
-                                        />
-                                    ) : (
-                                        <Icon icon="mdi:account-outline" className="size-4" />
-                                    )
-                                })()}
+                                        <img src={authorAvatar.url} alt="" loading="lazy" />
+                                    ) : null}
+                                </span>
                                 {project.author_name}
                             </span>
-                            <span className="mg-num">{formatDate(project.created_at)}</span>
-                            {project.game_version && <span className="mg-num">v{project.game_version}</span>}
+                            <span aria-hidden="true">·</span>
+                            <span>{formatDate(project.created_at)}</span>
+                            {project.game_version && (
+                                <>
+                                    <span aria-hidden="true">·</span>
+                                    <WkBadge>{project.game_version}</WkBadge>
+                                </>
+                            )}
                             {grace ? (
-                                <span className="inline-flex items-center gap-1 rounded-sm border border-(--warning) px-2 py-0.5 text-xs text-(--warning)">
-                                    <Icon icon="mdi:clock-alert-outline" className="size-3.5" />
-                                    宽限期中
-                                </span>
+                                <WkBadge tone="warn">宽限中</WkBadge>
+                            ) : remaining !== null ? (
+                                <WkBadge tone={remaining <= 3 ? 'warn' : 'default'}>
+                                    {remaining <= 0 ? '今天到期' : `剩余 ${remaining} 天`}
+                                </WkBadge>
                             ) : (
-                                project.expires_at && !expired && <ExpiryCountdown expiresAt={project.expires_at} />
+                                <WkBadge>永久有效</WkBadge>
                             )}
                         </div>
-                    </div>
-                </div>
+                    </header>
 
-                {/* 分区：配队（角色名徽标 + 下细线；不再用 mdi 图标前缀） */}
-                <div className="mg-section">
-                    <TeamBanner names={names} size="lg" />
-                </div>
-
-                {project.description && (
-                    <p className="text-sm leading-relaxed whitespace-pre-wrap text-(--muted)">{project.description}</p>
-                )}
-
-                {project.tags.length > 0 && (
-                    <div className="flex flex-wrap gap-1.5">
-                        {project.tags.map((tag) => (
-                            <span
-                                key={tag}
-                                className="rounded-sm border border-(--card-border) bg-(--card-hover) px-2 py-0.5 text-xs text-(--muted)"
-                            >
-                                #{tag}
-                            </span>
-                        ))}
-                    </div>
-                )}
-
-                <div className="flex flex-wrap items-center gap-2 border-t pt-4 mg-hairline">
-                    {/* 简表速览：实心黄色主按钮，放在下载左侧 */}
-                    <a
-                        href={fastCalcUrl(project.code)}
-                        target="_blank"
-                        rel="noreferrer"
-                        title="在工具箱中打开该工程的简表速览"
-                        className="inline-flex items-center gap-1.5 rounded-sm border border-(--warning) bg-(--warning) px-4 py-2 text-sm font-medium text-(--warning-fg) transition-opacity hover:opacity-90"
-                    >
-                        <Icon icon="mdi:table-eye" className="size-4" />
-                        简表速览
-                    </a>
-                    {/* 下载工程 JSON：空心绿色按钮 */}
-                    <a
-                        href={`/share/${project.code}/download`}
-                        className="inline-flex items-center gap-1.5 rounded-sm border border-(--success) bg-transparent px-4 py-2 text-sm font-medium text-(--success) transition-colors hover:bg-(--card-hover)"
-                    >
-                        <Icon icon="mdi:download" className="size-4" />
-                        下载工程 JSON
-                    </a>
-                    <ShareLinkPicker code={project.code} />
-                    {isOwner && (
-                        <Link
-                            href="/me"
-                            className="inline-flex items-center gap-1.5 rounded-sm border border-(--card-border) bg-(--card) px-3 py-1.5 text-sm text-(--muted) transition-colors hover:border-(--accent) hover:text-(--fg)"
-                        >
-                            <Icon icon="mdi:account-cog-outline" className="size-4" />
-                            管理
-                        </Link>
+                    {/* 配队徽标 */}
+                    {names.length > 0 && (
+                        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+                            {names.map((name, slot) => {
+                                const element = elements[name]
+                                return (
+                                    <span
+                                        key={`${name}-${slot}`}
+                                        className="wk-badge"
+                                        style={{
+                                            height: 24,
+                                            fontSize: 'var(--wk-t-body)',
+                                            padding: '0 10px',
+                                            color: element ? `var(--element-${element})` : 'var(--wk-fg)',
+                                            borderColor: element
+                                                ? `color-mix(in srgb, var(--element-${element}) 55%, transparent)`
+                                                : undefined
+                                        }}
+                                    >
+                                        {name}
+                                    </span>
+                                )
+                            })}
+                        </div>
                     )}
-                    <div className="flex-1" />
-                    <div className="flex items-center gap-3 text-sm text-(--muted)">
-                        <span className="mg-num flex items-center gap-1">
-                            <Icon icon="mdi:eye-outline" className="size-4" />
-                            {formatCount(project.view_count)}
-                        </span>
-                        <span className="mg-num flex items-center gap-1">
-                            <Icon icon="mdi:content-copy" className="size-4" />
-                            {formatCount(project.clone_count)}
-                        </span>
-                    </div>
-                </div>
-            </div>
 
-            <TeamPreview
-                slots={project.team_preview?.slots ?? []}
-                locked={project.team_preview?.locked ?? { team: false, timeline: false, calculation: false, config: false }}
-                icons={charIcons}
-            />
-        </div>
+                    {project.description && <WkMarkdown source={project.description} />}
+
+                    {project.tags.length > 0 && (
+                        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+                            {project.tags.map((tag) => (
+                                <Link key={tag} href={`/?q=${encodeURIComponent(tag)}`} className="wk-pcard-tag">
+                                    #{tag}
+                                </Link>
+                            ))}
+                        </div>
+                    )}
+
+                    {/* 操作行：一个实心主操作（在工具箱中打开），其余次级 */}
+                    <div className="wk-toolbar" style={{ paddingTop: 16, borderTop: '1px solid var(--wk-line)' }}>
+                        <ShareLinkDialog code={project.code} />
+                        <Link href={`/share/${project.code}/download`} className="wk-btn">
+                            下载工程 JSON
+                        </Link>
+                        <WkCopyButton path={`/share/${project.code}`} label="复制页面链接" variant="quiet" />
+                        <Link
+                            href={fastCalcUrl(project.code)}
+                            target="_blank"
+                            rel="noreferrer"
+                            className="wk-btn wk-btn--quiet"
+                        >
+                            简表速览
+                        </Link>
+                        {isOwner && (
+                            <Link href="/me" className="wk-btn wk-btn--quiet">
+                                管理
+                            </Link>
+                        )}
+                        <WkSpacer />
+                        <span className="wk-meta">浏览 {formatCount(project.view_count)}</span>
+                        <span className="wk-meta">克隆 {formatCount(project.clone_count)}</span>
+                    </div>
+
+                    <TeamPreview
+                        slots={project.team_preview?.slots ?? []}
+                        locked={project.team_preview?.locked ?? { team: false, timeline: false, calculation: false, config: false }}
+                        icons={charIcons}
+                        elements={elements}
+                    />
+                </article>
+            </WkContainer>
+        </WkRoot>
     )
 }

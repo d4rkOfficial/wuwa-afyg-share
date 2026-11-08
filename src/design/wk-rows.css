@@ -1,0 +1,97 @@
+/* 行网格（表头与行共用列模板）：/admin/projects、/buff-sets、/substat-sets、/dev/ui 导入 */
+
+/* ── 行网格：表头与每一行共用同一套 --wk-cols（H4）─────────────────────── */
+.wk-rows { --wk-cols: minmax(0, 1fr) 72px 88px 96px; }
+
+.wk-tr {
+    display: grid;
+    grid-template-columns: var(--wk-cols);
+    align-items: center;
+    gap: var(--wk-gap);
+    height: var(--wk-trow);
+    min-width: 0;
+    padding: 0 var(--wk-pad);
+    border-bottom: 1px solid var(--wk-line);
+    font-size: var(--wk-t-body);
+}
+
+/* 单元格允许收缩到 0：一行里只要有会省略的文本，它的 flex/grid 子项就必须能缩，
+   否则该行会按 max-content 撑出去，把卡片右半截顶到可视区之外。 */
+.wk-tr > * {
+    min-width: 0;
+}
+
+.wk-tr:last-child { border-bottom: 0; }
+
+.wk-tr--head { height: var(--wk-thead); font-size: var(--wk-t-meta); color: var(--wk-fg-3); }
+
+.wk-tr--body:hover { background: var(--wk-s2); }
+
+/* ── 两行式数据行（Buff 集浏览）──────────────────────────────────────────────
+   第一行「Buff 名 + 分组名」，第二行是属性徽标（覆盖对象 / 数值 / 条件 / 乘区）。
+   不再按「名称 | 覆盖对象 | 乘区」三列铺满——分组名是几十字的游戏原文案，
+   铺成列以后每行都要横向扫 900px 才读得完，还容易互相压字。 */
+.wk-tr--two {
+    display: block;
+    height: auto;
+    min-height: var(--wk-trow);
+    padding: 10px var(--wk-pad);
+}
+
+.wk-tr--two:hover { background: transparent; }
+
+/* 第一行是两列「Buff 名 | 分组名」，列宽固定：
+   分组名一律右对齐到同一列的右边缘——不管这行有没有分组名，列的起点都不会乱跳；
+   两列各自单行省略，所以再长的游戏原文案也只会缩略，不会把整行撑成一段大白话。 */
+.wk-line {
+    display: grid;
+    min-width: 0;
+    grid-template-columns: minmax(0, 1fr);
+    align-items: baseline;
+    gap: 12px;
+}
+
+/* 有分组名时切成两列：名称拿剩下的宽度，分组名固定占右侧 42% 并右对齐 */
+.wk-line[data-has-folder='true'] {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 42%);
+}
+
+.wk-line-name {
+    min-width: 0;
+    overflow: hidden;
+    font-weight: 600;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+/* 没有分组名时，名称也只占 58%：脏数据（整条原文案被写进名称）不至于在行首铺成一段大白话 */
+.wk-line:not([data-has-folder='true']) .wk-line-name {
+    max-width: 58%;
+}
+
+/* 分组名缩略：只占右侧 42%，超出省略；完整值放 title */
+.wk-line-folder {
+    min-width: 0;
+    overflow: hidden;
+    color: var(--wk-fg-3);
+    font-size: var(--wk-t-meta);
+    text-align: right;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.wk-facts {
+    display: flex;
+    min-width: 0;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 6px;
+    margin-top: 6px;
+    color: var(--wk-fg-3);
+    font-size: var(--wk-t-meta);
+}
+
+.wk-fact-value {
+    color: var(--wk-fg-2);
+    font-weight: 600;
+}

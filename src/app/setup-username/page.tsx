@@ -1,6 +1,7 @@
 import { redirect } from 'next/navigation'
 import type { Metadata } from 'next'
-import SetupUsernameForm from '@/components/setup-username-form'
+import SetupUsernameForm from '@/components/wk/setup-username-form'
+import { WkContainer, WkRoot } from '@/design'
 import { createClient, hasEnv } from '@/lib/supabase/server'
 
 export const metadata: Metadata = {
@@ -12,12 +13,19 @@ export default async function SetupUsernamePage({
 }: {
     searchParams: Promise<Record<string, string | string[] | undefined>>
 }) {
-    if (!hasEnv()) return <p className="text-(--muted)">服务未配置</p>
+    if (!hasEnv()) {
+        return (
+            <WkRoot>
+                <WkContainer>
+                    <p className="wk-meta">服务未配置</p>
+                </WkContainer>
+            </WkRoot>
+        )
+    }
 
     const sp = await searchParams
-    const redirectTo = typeof sp.redirect === 'string' && sp.redirect.startsWith('/') && !sp.redirect.startsWith('//')
-        ? sp.redirect
-        : '/'
+    const redirectTo =
+        typeof sp.redirect === 'string' && sp.redirect.startsWith('/') && !sp.redirect.startsWith('//') ? sp.redirect : '/'
 
     const supabase = await createClient()
     const {
@@ -25,21 +33,24 @@ export default async function SetupUsernamePage({
     } = await supabase.auth.getUser()
     if (!user) redirect('/login')
 
-    const { data: profile } = await supabase
-        .from('profiles')
-        .select('username')
-        .eq('id', user.id)
-        .maybeSingle()
-
+    const { data: profile } = await supabase.from('profiles').select('username').eq('id', user.id).maybeSingle()
     if (profile?.username) redirect(redirectTo)
 
     return (
-        <div className="mx-auto max-w-md space-y-8 py-12">
-            <div className="text-center">
-                <h1 className="text-3xl md:text-4xl font-black tracking-tight">设置用户名</h1>
-                <p className="mt-1 text-sm text-(--muted)">这是你在广场上展示的名字，设置后即可开始分享</p>
-            </div>
-            <SetupUsernameForm redirectTo={redirectTo} />
-        </div>
+        <WkRoot>
+            <WkContainer>
+                <div style={{ maxWidth: 420, margin: '0 auto', paddingTop: 24, display: 'grid', gap: 24 }}>
+                    <header style={{ textAlign: 'center' }}>
+                        <h1 style={{ fontSize: 'var(--wk-t-page)' }}>设置用户名</h1>
+                        <p className="wk-meta" style={{ marginTop: 6 }}>
+                            这是你在广场上展示的名字，设置后即可开始分享
+                        </p>
+                    </header>
+                    <div className="wk-card wk-card-pad">
+                        <SetupUsernameForm redirectTo={redirectTo} />
+                    </div>
+                </div>
+            </WkContainer>
+        </WkRoot>
     )
 }

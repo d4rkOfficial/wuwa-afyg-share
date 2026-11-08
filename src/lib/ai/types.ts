@@ -23,7 +23,16 @@ export interface GeneratedZone {
 }
 
 export interface GeneratedBuff {
+    /**
+     * @desc Buff 短名（全名的最后一段）：`效果名+数值(+层数/阶数)`，如 `暴击率15%` / `攻击10%(2层)`。
+     *  不带文件夹前缀、不带反斜杠。
+     */
     buffName: string
+    /**
+     * @desc 一级文件夹 = 游戏原文案（去掉增益数值，保留「持续10秒 / 切人掉」这类限定语）。
+     *  与 buffName 一起拼成全名 `原文案 \ 效果`；留空表示放在根目录。
+     */
+    folder?: string
     scope?: BuffScope
     exclusive?: boolean
     /** @desc 实例级生效条件（链/阶硬门槛，链阶互斥） */

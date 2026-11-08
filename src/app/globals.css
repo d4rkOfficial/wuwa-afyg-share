@@ -1,158 +1,107 @@
 @import 'tailwindcss';
+/* 设计系统本体：以前由 layout.tsx 用 JS import 引入，Turbopack dev 会把它当成
+   「共享的合并 CSS chunk」，热更新后偶发把整块（含顶栏/按钮/表单）从产物里丢掉，
+   改由这里用 CSS @import 内联进 global 层——和 tailwind 同一条产物，不再单独成块。 */
+@import '../design/wk.css';
+
+/* ── 全站字体：仿心书（与工具箱同源，文件见 public/fonts）── */
+@font-face {
+    font-family: 'FangXinShu';
+    src: url('/fonts/fang-xin-shu.ttf') format('truetype');
+    font-display: swap;
+}
+
+/* Tailwind 主题层：只保留字族（颜色/尺度一律走 --wk-*，见 src/design/wk.css） */
+@theme {
+    --font-sans: 'FangXinShu', 'Songti SC', SimSun, system-ui, sans-serif;
+    --font-serif: 'FangXinShu', 'Songti SC', SimSun, system-ui, sans-serif;
+    --font-mono: 'FangXinShu', ui-monospace, monospace;
+}
 
 /* ──────────────────────────────────────────────────────────────
-   杂志衬线设计系统 · Token 层
-   柔和配色（非纯黑纯白）/ 衬线重音标题 / 单一强调色 / 零阴影零渐变 / 克制的圆角
-   圆角统一为一档小圆角（rounded-sm = 6px）；阴影全局置零；层次靠细边框与弱化文字
+   文档底：与 .wk 页面壳同源（都取 --wk-bg），
+   否则会出现「顶栏是纸色、页面外围是另一层浅灰」的割裂。
    ────────────────────────────────────────────────────────────── */
-
-@theme {
-    /* 小圆角：容器与按钮共用一档 6px，保持全站节奏一致 */
-    --radius-xs: 4px;
-    --radius-sm: 6px;
-    --radius: 6px;
-    --radius-md: 8px;
-    --radius-lg: 10px;
-    --radius-xl: 12px;
-    --radius-2xl: 14px;
-    --radius-3xl: 16px;
-
-    /* 杂志衬线：中文优先宋/仿宋体系，西文回落到 Georgia/Times */
-    --font-sans:
-        'Songti SC', 'Noto Serif SC', 'Source Han Serif SC', SimSun, Georgia, 'Times New Roman', serif;
-    --font-serif:
-        'Songti SC', 'Noto Serif SC', 'Source Han Serif SC', SimSun, Georgia, 'Times New Roman', serif;
-}
-
-/* 默认深色：柔和墨底 / 米白文字（不再纯黑纯白，降低对比） */
-:root {
-    color-scheme: dark;
-    --bg: #0f0f12;
-    --fg: #e6e3de;
-    --muted: #9a958c; /* 刻意弱化的次要文字，柔和不刺眼 */
-    --card: #16161a;
-    --card-hover: #1d1d22; /* 实色表面，不使用低透明度 */
-    --card-border: #2c2c32; /* 细边框：低对比，仅作层次提示 */
-    --btn-bg: #e6e3de;
-    --btn-text: #16161a;
-    --accent: #d9646f; /* 柔和绛红，替代高饱和霓虹粉 */
-    --accent-fg: #fdfcfb;
-    --accent-text: #e08b93;
-    --input-bg: #131317;
-    --danger: #e08585;
-    --danger-text: #e08585;
-    --success: #7fbf9a;
-    --success-text: #7fbf9a;
-    --warning: #d9b26a;
-    --warning-text: #d9b26a;
-    /* 实心警告色按钮的前景色（深色主题下用深墨，保证对比度） */
-    --warning-fg: #2a2214;
-    --info: #86b5cf;
-    --info-text: #86b5cf;
-    --code-bg: #1a1a1f;
-    --code-bg-strong: #24242a;
-    /* 弹层遮罩与危险色前景：柔和化后不再直接用 black/60 与 white */
-    --overlay: rgba(6, 6, 8, 0.62);
-    /* 深色主题的 --danger 偏浅，前景用深墨色（近白在浅红上仅约 1.9:1） */
-    --danger-fg: #2b1416;
-    --element-冷凝: #86b5cf;
-    --element-热熔: #d9a07a;
-    --element-导电: #ab8fc4;
-    --element-气动: #86c0a4;
-    --element-衍射: #d6c07a;
-    --element-湮灭: #cf8fa6;
-}
-
-/* 浅色：暖白纸底 / 墨色文字（同样降低对比） */
-html.light {
-    color-scheme: light;
-    --bg: #f7f5f1;
-    --fg: #23211e;
-    --muted: #6d675f;
-    --card: #fdfcfa;
-    --card-hover: #f1ede7;
-    --card-border: #ddd7cd;
-    --btn-bg: #2a2724;
-    --btn-text: #faf8f5;
-    --accent: #b8505c;
-    --accent-fg: #fdfcfb;
-    --accent-text: #9d4450;
-    --input-bg: #fdfcfa;
-    --danger: #a8443f;
-    --danger-text: #a8443f;
-    --success: #3f7a5c;
-    --success-text: #3f7a5c;
-    --warning: #8a6a2f;
-    --warning-text: #8a6a2f;
-    /* 浅色主题的警告色偏深，前景用近白 */
-    --warning-fg: #fdfcfb;
-    --info: #3c6a86;
-    --info-text: #3c6a86;
-    --code-bg: #f1ede7;
-    --code-bg-strong: #e6e0d7;
-    /* 浅色遮罩更柔（暖灰而非纯黑），危险色前景用纸币白 */
-    --overlay: rgba(52, 46, 40, 0.38);
-    --danger-fg: #fdfcfb;
+html,
+body {
+    background: var(--wk-bg);
 }
 
 body {
+    color: var(--wk-fg);
     font-family: var(--font-sans);
-    /* 杂志感：正文略收字距、行高放松 */
     letter-spacing: 0.01em;
     line-height: 1.7;
+    -webkit-font-smoothing: antialiased;
 }
 
 @layer base {
-    /* 零阴影：硬性要求，任何 box-shadow 均被收敛 */
-    *,
-    *::before,
-    *::after {
-        box-shadow: none !important;
-    }
-
-    /* 键盘聚焦：以 2px 强调色边框建立层次，替代阴影/光晕 */
-    :focus-visible {
-        outline: none;
-        border-color: var(--accent) !important;
-    }
-
-    /* 漏写圆角工具类的原生控件兜底：全站按钮/输入一律小圆角 */
+    /* 原生控件圆角兜底（遗留在编辑器内部的少量原生控件） */
     button,
     input,
-    select,
-    optgroup,
     textarea,
     [role='button'] {
-        border-radius: var(--radius-sm);
+        border-radius: var(--wk-r-1);
+    }
+
+    /* 键盘焦点：2px 焦点环，全站统一（不再用 border-color 冒充） */
+    :focus-visible {
+        outline: 2px solid var(--wk-focus);
+        outline-offset: 2px;
     }
 }
 
 ::selection {
-    background: var(--accent);
-    color: var(--accent-fg);
+    background: var(--wk-accent-solid);
+    color: var(--wk-accent-fg);
 }
 
-/* 细滚动条：实色滑块，不依赖透明度 */
+/* ──────────────────────────────────────────────────────────────
+   自定义滚动条：不用系统原生外观。
+   Chromium 走 ::-webkit-scrollbar；Firefox 用 scrollbar-width/color 兜底。
+   ────────────────────────────────────────────────────────────── */
+:root {
+    --sb-thumb: #333740;
+    --sb-thumb-hover: #4d525c;
+    --sb-size: 10px;
+}
+
+html.light {
+    --sb-thumb: #d6cec0;
+    --sb-thumb-hover: #b6ab98;
+}
+
 * {
     scrollbar-width: thin;
-    scrollbar-color: var(--card-hover) transparent;
+    scrollbar-color: var(--sb-thumb) transparent;
 }
+
 *::-webkit-scrollbar {
-    width: 6px;
-    height: 6px;
+    width: var(--sb-size);
+    height: var(--sb-size);
 }
-*::-webkit-scrollbar-thumb {
-    background: var(--card-hover);
-    border-radius: 999px;
-}
-*::-webkit-scrollbar-thumb:hover {
-    background: var(--muted);
-}
+
 *::-webkit-scrollbar-track {
     background: transparent;
 }
 
-/* 统一样式化下拉（隐藏原生箭头，右侧留出图标位） */
+*::-webkit-scrollbar-thumb {
+    border: 2px solid transparent;
+    border-radius: 999px;
+    background: var(--sb-thumb);
+    background-clip: content-box;
+}
+
+*::-webkit-scrollbar-thumb:hover {
+    background: var(--sb-thumb-hover);
+    background-clip: content-box;
+}
+
+*::-webkit-scrollbar-corner {
+    background: transparent;
+}
+
+/* 原生下拉的箭头只在「还没换成自定义下拉」的控件上出现，保留统一外观 */
 select {
     appearance: none;
     -webkit-appearance: none;
@@ -161,460 +110,6 @@ select {
     background-position: right 6px center;
     background-size: 14px;
     padding-right: 24px;
-}
-
-/* 管理员 Buff 集管理页：黑体加粗，便于阅读 */
-.buff-admin-shell,
-.buff-admin-shell * {
-    font-family:
-        'PingFang SC',
-        'Microsoft YaHei',
-        'Hiragino Sans GB',
-        'Source Han Sans CN',
-        'Noto Sans CJK SC',
-        sans-serif;
-}
-.buff-admin-shell {
-    font-weight: 600;
-}
-.buff-admin-shell input,
-.buff-admin-shell textarea,
-.buff-admin-shell select {
-    font-weight: 600;
-}
-
-/* 管理页编辑框：不内部滚动，高度随内容自动扩展 */
-.buff-admin-shell textarea {
-    resize: none;
-    overflow: hidden;
-    field-sizing: content;
-    min-height: 5rem;
-}
-
-/* 统一工具栏按钮：扁平、2px 边框、颜色反转反馈 */
-.toolbar-btn {
-    display: inline-flex;
-    align-items: center;
-    gap: 0.375rem;
-    border-radius: var(--radius-sm);
-    padding: 0.375rem 0.75rem;
-    font-size: 0.75rem;
-    line-height: 1.25rem;
-    border: 2px solid var(--card-border);
-    background: transparent;
-    color: var(--muted);
-    transition:
-        background-color 0.15s ease-out,
-        color 0.15s ease-out,
-        border-color 0.15s ease-out;
-    cursor: pointer;
-}
-.toolbar-btn:hover {
-    color: var(--fg);
-    background: var(--card-hover);
-}
-.toolbar-btn:disabled {
-    opacity: 0.5;
-    cursor: not-allowed;
-}
-.toolbar-btn-primary {
-    background: var(--btn-bg);
-    color: var(--btn-text);
-    border-color: var(--btn-bg);
-    font-weight: 600;
-}
-.toolbar-btn-primary:hover {
-    background: var(--card);
-    color: var(--fg);
-    border-color: var(--card-border);
-}
-.toolbar-btn-ghost {
-    color: var(--muted);
-    border: 2px solid var(--card-border);
-    background: transparent;
-}
-.toolbar-btn-ghost:hover {
-    color: var(--fg);
-    background: var(--card-hover);
-}
-
-html,
-body {
-    background: var(--bg);
-}
-
-/* 顶栏：实色背景，无模糊 */
-.site-header {
-    background: var(--bg);
-}
-
-.theme-icon-light {
-    display: none;
-}
-html.light .theme-icon-dark {
-    display: none;
-}
-html.light .theme-icon-light {
-    display: block;
-}
-
-/* 链接慢导航提示：底部 2px 实色细线，不做 Z 轴反馈 */
-.app-link {
-    position: relative;
-}
-.app-link-hint {
-    position: absolute;
-    right: 25%;
-    bottom: 1px;
-    left: 25%;
-    height: 2px;
-    border-radius: 999px;
-    background: currentColor;
-    opacity: 0;
-    visibility: hidden;
-    transform: scaleX(0.45);
-    transform-origin: center;
-    transition:
-        opacity 100ms cubic-bezier(0.23, 1, 0.32, 1),
-        transform 100ms cubic-bezier(0.23, 1, 0.32, 1),
-        visibility 0s linear 100ms;
-    pointer-events: none;
-}
-.app-link-hint.is-pending {
-    opacity: 0.6;
-    visibility: visible;
-    transform: scaleX(1);
-    transition-delay: 100ms;
-}
-
-/* 首页筛选：导航期间保留结果，只在筛选条内给出轻量反馈 */
-.project-filter-shell {
-    position: relative;
-    display: grid;
-    grid-template-areas: 'search sort character';
-    grid-template-columns: minmax(16rem, 1fr) max-content max-content;
-    align-items: center;
-    gap: 0.5rem;
-    isolation: isolate;
-    overflow: hidden;
-    transition:
-        border-color 180ms ease-out,
-        background-color 180ms ease-out;
-}
-.project-filter-search {
-    grid-area: search;
-    display: grid;
-    grid-template-columns: auto minmax(0, 1fr) auto;
-    align-items: stretch;
-    gap: 0.5rem;
-    min-width: 0;
-}
-.project-filter-sort {
-    grid-area: sort;
-    justify-self: start;
-}
-.project-filter-character {
-    grid-area: character;
-    justify-self: stretch;
-}
-.project-filter-shell[data-pending='true'] {
-    border-color: var(--accent);
-}
-.project-filter-progress {
-    position: absolute;
-    right: auto;
-    bottom: 0;
-    left: 0;
-    width: 32%;
-    height: 2px;
-    border-radius: 999px;
-    background: var(--accent);
-    opacity: 0;
-    transform: translateX(-115%);
-    pointer-events: none;
-}
-.project-filter-shell[data-pending='true'] .project-filter-progress {
-    opacity: 0.8;
-    animation: project-filter-progress 900ms cubic-bezier(0.22, 1, 0.36, 1) infinite;
-}
-@keyframes project-filter-progress {
-    to {
-        transform: translateX(415%);
-    }
-}
-
-@media (max-width: 860px) {
-    .project-filter-shell {
-        grid-template-areas:
-            'search search'
-            'sort character';
-        grid-template-columns: max-content minmax(10rem, 1fr);
-    }
-}
-
-@media (max-width: 360px) {
-    .project-filter-shell {
-        grid-template-areas:
-            'search'
-            'sort'
-            'character';
-        grid-template-columns: minmax(0, 1fr);
-    }
-    .project-filter-character {
-        width: 100%;
-    }
-}
-
-/* ──────────────────────────────────────────────────────────────
-   Buff 编辑器：宽屏 =「左侧 Buff 列表常驻 + 右侧（手工编辑 或 AI 工作区）」。
-   窄屏（≤ 900px 或竖屏）：左侧列表**收起为顶部的 Buff 下拉**，右侧仍是一次显示
-   「手工编辑 / AI 工作区」之一（用编辑器头部的切换按钮）。
-   为什么不继续用「页签 + 多栏」：手机上多栏各剩几十像素，输入框和长 Buff 名都不可用；
-   而列表本身必须能随时切条目，所以收成下拉而不是藏进页签。
-   ────────────────────────────────────────────────────────────── */
-@media (max-width: 900px), (orientation: portrait) {
-    .buff-editor-layout {
-        display: flex;
-        flex-direction: column;
-        overflow: hidden;
-    }
-    /* 右侧区占满：宽度由 flex 决定，去掉固定宽度 */
-    .buff-editor-layout > * {
-        width: auto !important;
-        height: auto !important;
-        min-width: 0 !important;
-        flex: 1 1 auto;
-        min-height: 0;
-        border-left: 0;
-        border-right: 0;
-    }
-    /* 左侧列表在窄屏隐藏（改用顶部下拉），保证右侧编辑区有足够宽度 */
-    .buff-editor-buff-list {
-        display: none;
-    }
-    /* 触屏点按目标放大一档（原 11px 文字在手机上太小） */
-    .buff-editor-layout button,
-    .buff-editor-layout input,
-    .buff-editor-layout select {
-        min-height: 2rem;
-    }
-    .buff-editor-layout .toolbar-btn {
-        padding: 0.375rem 0.625rem;
-        font-size: 0.75rem;
-    }
-}
-
-/* Buff 下拉选择：只在窄屏出现（宽屏靠左侧常驻列表） */
-.buff-editor-mobile-picker {
-    display: none;
-}
-
-@media (max-width: 900px), (orientation: portrait) {
-    .buff-editor-mobile-picker {
-        display: flex;
-    }
-}
-
-/* 极窄竖屏：再收紧一点边距，保证输入行和底部操作条放得下 */
-@media (max-width: 480px) {
-    .buff-editor-modal-shell {
-        padding: 0.25rem;
-    }
-    .buff-editor-modal {
-        width: calc(100vw - 0.5rem);
-        height: calc(100dvh - 0.5rem);
-    }
-    .buff-editor-modal .mg-title {
-        font-size: 1rem;
-    }
-}
-
-/* 后台外壳（.buff-admin-shell）用未分层规则强制了「苹方/雅黑」字族，级联优先于 @layer components，
-   会把 .mg-title 的衬线字族吃掉（只剩重字重与收紧字距）。这里把标题字族拉回衬线；
-   表单控件仍保留外壳的无衬线字族（密集表单用衬线可读性差）。 */
-.buff-admin-shell .mg-title,
-.buff-admin-shell .mg-title-xl {
-    font-family: var(--font-serif);
-    font-weight: 900;
-}
-
-/* ──────────────────────────────────────────────────────────────
-   词条部位卡片（标准词条集编辑）：用比 --card-border 更明显的边框 + 头部色带，
-   让「一个部位 = 一张卡片」在深色/浅色主题下都能一眼看清。
-   ────────────────────────────────────────────────────────────── */
-@layer components {
-    .slot-card {
-        display: flex;
-        flex-direction: column;
-        gap: 0.75rem;
-        overflow: hidden;
-        border: 1px solid color-mix(in srgb, var(--fg) 16%, transparent);
-        border-radius: var(--radius-sm);
-        background: var(--card);
-        box-shadow: 0 1px 2px color-mix(in srgb, var(--fg) 6%, transparent);
-    }
-
-    .slot-card-head {
-        display: flex;
-        align-items: center;
-        justify-content: space-between;
-        gap: 0.5rem;
-        padding: 0.5rem 0.75rem;
-        border-bottom: 1px solid color-mix(in srgb, var(--fg) 12%, transparent);
-        background: var(--card-hover);
-    }
-
-    .slot-card-body {
-        display: flex;
-        flex-direction: column;
-        gap: 0.75rem;
-        padding: 0 0.75rem 0.75rem;
-    }
-}
-/* ──────────────────────────────────────────────────────────────
-   双栏工作台：左侧「sidebar 列表」+ 右侧主内容区。
-   浏览页（Buff 集 / 标准词条集）与管理页共用同一套骨架：
-   - 宽屏：sidebar 固定宽度、随页面滚动吸附（sticky），自身可滚动；
-   - 窄屏（≤ 900px）：上下堆叠，sidebar 变成一条限高的可滚动列表，
-     主内容跟在后面，避免手机上两栏各剩几十像素。
-   ────────────────────────────────────────────────────────────── */
-@layer components {
-    .workbench {
-        display: grid;
-        grid-template-columns: minmax(0, 16rem) minmax(0, 1fr);
-        gap: 0.875rem;
-        align-items: start;
-    }
-
-    .workbench-sidebar {
-        position: sticky;
-        top: 4.5rem;
-        display: flex;
-        flex-direction: column;
-        gap: 0.5rem;
-        min-height: 0;
-        max-height: calc(100dvh - 5.5rem);
-        padding: 0.5rem;
-        border: 1px solid var(--card-border);
-        border-radius: var(--radius-sm);
-        background: var(--card);
-    }
-
-    /* 列表本体：唯一可滚动区（sidebar 本身不滚，避免搜索框跟着滚走） */
-    .workbench-list {
-        flex: 1 1 auto;
-        min-height: 0;
-        overflow-y: auto;
-        overscroll-behavior: contain;
-    }
-
-    .workbench-main {
-        min-width: 0;
-    }
-
-    /* sidebar 里的分组标题 */
-    .workbench-group {
-        display: flex;
-        align-items: center;
-        gap: 0.375rem;
-        padding: 0.5rem 0.375rem 0.25rem;
-        font-size: 0.6875rem;
-        letter-spacing: 0.16em;
-        color: var(--muted);
-    }
-
-    .workbench-item {
-        display: flex;
-        width: 100%;
-        min-width: 0;
-        align-items: center;
-        gap: 0.5rem;
-        border-radius: var(--radius-sm);
-        padding: 0.375rem 0.5rem;
-        text-align: left;
-        font-size: 0.8125rem;
-        color: var(--fg);
-        transition:
-            background-color 140ms ease-out,
-            color 140ms ease-out;
-    }
-
-    .workbench-item:hover {
-        background: var(--card-hover);
-    }
-
-    .workbench-item[data-active='true'] {
-        background: var(--accent);
-        color: var(--accent-fg);
-    }
-
-    .workbench-item[data-active='true'] .workbench-item-meta {
-        color: color-mix(in srgb, var(--accent-fg) 72%, transparent);
-    }
-
-    .workbench-item-meta {
-        flex-shrink: 0;
-        font-size: 0.625rem;
-        font-variant-numeric: tabular-nums;
-        color: var(--muted);
-    }
-
-    @media (max-width: 900px) {
-        .workbench {
-            grid-template-columns: minmax(0, 1fr);
-        }
-
-        .workbench-sidebar {
-            position: static;
-            max-height: 36dvh;
-        }
-    }
-
-    /* ──────────────────────────────────────────────────────────
-       编辑工作台（管理页）：左右两栏**严格等高**，且同为一整张卡片。
-       高度取「视口下方可用高度」，两栏共用同一个 --workbench-h，
-       页面本身基本不滚动（编辑器内部各自滚动），这样右侧编辑区与左侧
-       sidebar 的卡片轮廓上下沿始终对齐。
-       ────────────────────────────────────────────────────────── */
-    .workbench-editor {
-        --workbench-h: max(32rem, calc(100dvh - 13rem));
-        align-items: stretch;
-    }
-
-    /* 编辑时收起实体侧栏：不要让 main 继续落在原来的 16rem 第一列 */
-    .workbench-editor.workbench-single {
-        grid-template-columns: minmax(0, 1fr);
-    }
-
-    .workbench-editor .workbench-sidebar,
-    .workbench-editor .workbench-main {
-        height: var(--workbench-h);
-        min-height: 0;
-    }
-
-    .workbench-editor .workbench-sidebar {
-        /* 两栏等高且同滚：不再 sticky，避免滚动时 sidebar 上浮、与右侧卡片错位 */
-        position: static;
-        max-height: var(--workbench-h);
-    }
-
-    /* 窄屏：上下堆叠，取消锁高（否则 sidebar 会占满整屏） */
-    @media (max-width: 900px) {
-        .workbench-editor {
-            align-items: start;
-        }
-
-        .workbench-editor .workbench-sidebar {
-            position: static;
-            height: auto;
-            max-height: 36dvh;
-        }
-
-        .workbench-editor .workbench-main {
-            height: auto;
-            min-height: 32rem;
-        }
-    }
 }
 
 /* 动效备选：尊重 prefers-reduced-motion */
@@ -626,70 +121,5 @@ html.light .theme-icon-light {
         animation-iteration-count: 1 !important;
         transition-duration: 0.01ms !important;
         scroll-behavior: auto !important;
-    }
-    .app-link-hint {
-        transition: opacity 100ms ease;
-        transform: none;
-    }
-    .project-filter-shell[data-pending='true'] .project-filter-progress {
-        width: 100%;
-        opacity: 0.55;
-        transform: none;
-    }
-}
-
-/* ──────────────────────────────────────────────────────────────
-   杂志衬线风格助手（全站统一）：
-   标题=衬线重音（字重+收紧字距）；分区=细分割线；卡片=小圆角+细边框；无英文小标（一律用图标）
-   注意：这一层曾被误删过一次，导致 mg-card / mg-title / mg-note 全部失效（卡片没有轮廓），
-   改这里时请整块保留。
-   ────────────────────────────────────────────────────────────── */
-@layer components {
-    /* 衬线重音标题：不要在标题上再用 font-semibold，统一用 font-black + 收紧字距 */
-    .mg-title {
-        font-family: var(--font-serif);
-        font-weight: 900;
-        letter-spacing: -0.01em;
-        line-height: 1.2;
-        color: var(--fg);
-    }
-    .mg-title-xl {
-        font-family: var(--font-serif);
-        font-weight: 900;
-        letter-spacing: -0.015em;
-        line-height: 1.05;
-    }
-    /* 分区标题：图标 + 衬线粗标题 + 下细线 */
-    .mg-section {
-        display: flex;
-        align-items: center;
-        gap: 0.5rem;
-        border-bottom: 1px solid var(--card-border);
-        padding-bottom: 0.625rem;
-        margin-bottom: 0.875rem;
-    }
-    /* 细分割线（杂志感层次，替代阴影） */
-    .mg-hairline {
-        border-color: var(--card-border);
-    }
-    /* 小圆角卡片：细边框 + 实色底，不使用阴影 */
-    .mg-card {
-        background: var(--card);
-        border: 1px solid var(--card-border);
-        border-radius: var(--radius-sm);
-        transition:
-            border-color 160ms ease-out,
-            background-color 160ms ease-out;
-    }
-    /* 关键数字：等宽数字 + 衬线重音 */
-    .mg-num {
-        font-variant-numeric: tabular-nums;
-        font-weight: 900;
-    }
-    /* 弱化说明文字 */
-    .mg-note {
-        font-size: 0.6875rem;
-        line-height: 1.6;
-        color: var(--muted);
     }
 }

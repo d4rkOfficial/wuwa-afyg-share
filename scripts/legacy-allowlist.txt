@@ -1,0 +1,9 @@
+# 已知旧组件（豁免 check:ui 与 acceptance 的"迁移代码"判定）
+# 这些文件尚未改写：仍是密集旧表单，只把类名折算到了 wk-*。
+# 它们只在 /edit/buff-sets、/edit/substat-sets 路由出现，CSS 已按路由加载。
+# 改写后从这里删除，并删除第 4 项对应的责任项。
+src/components/admin/buff-entity-editor.tsx
+src/components/admin/buff-snapshot-panel.tsx
+src/components/admin/buff-ref-modal.tsx
+src/components/admin/substat-slot-editor.tsx
+src/components/agent/agent-console.tsx

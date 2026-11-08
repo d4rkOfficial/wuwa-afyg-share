@@ -1,0 +1,105 @@
+/* 从属树（管理员授权树）：由 /admin/users 导入。
+   为什么用竖树而不是列表 / 横向组织图：
+   - 列表看不出「谁授给谁」的层级，只能靠一句「由 X 授权」脑补；
+   - 横向组织图在「一对多」时宽度立刻就爆（一屏放不下 4 个以上兄弟节点）。
+   竖树用缩进 + 一条竖直导线表达层级，兄弟节点永远往下排，宽度只取决于单行内容。 */
+
+.wk-tree {
+    display: grid;
+    gap: 2px;
+}
+
+.wk-tree-node > .wk-tree-row,
+.wk-tree-node > summary > .wk-tree-row {
+    display: flex;
+    min-width: 0;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 6px 8px;
+    min-height: 34px;
+    padding: 4px 6px 4px 4px;
+    border-radius: var(--wk-r-1);
+}
+
+.wk-tree-node > summary {
+    display: flex;
+    min-width: 0;
+    align-items: center;
+    gap: 2px;
+    list-style: none;
+    cursor: pointer;
+    border-radius: var(--wk-r-1);
+}
+
+.wk-tree-node > summary::-webkit-details-marker {
+    display: none;
+}
+
+.wk-tree-node > summary:hover > .wk-tree-row {
+    background: var(--wk-s2);
+}
+
+.wk-tree-chevron {
+    flex-shrink: 0;
+    color: var(--wk-fg-3);
+    transition: transform 120ms ease-out;
+}
+
+.wk-tree-branch[open] > summary .wk-tree-chevron {
+    transform: rotate(90deg);
+}
+
+/* 子层：缩进 + 竖直导线；宽度不随子节点数量变化 */
+.wk-tree-children {
+    display: grid;
+    margin-left: 12px;
+    padding-left: 16px;
+    border-left: 1px solid var(--wk-line);
+}
+
+/* 用户名过长时省略而不是把整行顶宽 */
+.wk-tree-name {
+    min-width: 0;
+    max-width: 260px;
+    overflow: hidden;
+    font-weight: 600;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.wk-tree-count,
+.wk-tree-note {
+    color: var(--wk-fg-3);
+    font-size: var(--wk-t-meta);
+}
+
+.wk-tree-count {
+    font-variant-numeric: tabular-nums;
+}
+
+/* 撤销按钮永远靠右；宽度不够时整行换行，按钮自然落到下一行 */
+.wk-tree-action {
+    display: inline-flex;
+    margin-left: auto;
+}
+
+/* 一个节点下级过多时的折叠条 */
+.wk-tree-more > summary {
+    padding: 6px 0;
+    color: var(--wk-fg-3);
+    font-size: var(--wk-t-meta);
+    list-style: none;
+    cursor: pointer;
+}
+
+.wk-tree-more > summary::-webkit-details-marker {
+    display: none;
+}
+
+.wk-tree-more > summary:hover {
+    color: var(--wk-fg);
+}
+
+.wk-tree-more > * {
+    min-width: 0;
+}

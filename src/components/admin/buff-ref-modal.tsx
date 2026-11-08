@@ -101,23 +101,31 @@ export default function BuffRefModal({ open, entityType, zoneId, initialRef, onS
     }
 
     return (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-            <div className="absolute inset-0 bg-(--overlay) " onClick={onClose} />
-            <div className="relative flex max-h-[88vh] w-full max-w-md flex-col overflow-hidden mg-card p-4 ">
-                <div className="mb-3 flex items-center justify-between">
-                    <span className="flex items-center gap-2 mg-title text-sm">
-                        <Icon icon="mdi:link-variant" className="size-4 shrink-0 text-(--accent-text)" />
+        /* 与「打开实体」同一套遮罩（--wk-scrim）：原来写的 bg-(--overlay) 是个不存在的令牌，
+           等于没有遮罩，底下编辑区会透上来。 */
+        <div className="wk wk-mask" onClick={onClose}>
+            <div
+                className="wk-dialog"
+                style={{ width: 'min(448px, 100%)' }}
+                role="dialog"
+                aria-modal="true"
+                aria-label="引用配置"
+                onClick={(event) => event.stopPropagation()}
+            >
+                <div className="flex items-center justify-between border-b border-(--wk-line) px-4 py-3">
+                    <span className="flex items-center gap-2 wk-title text-sm">
+                        <Icon icon="mdi:link-variant" className="size-4 shrink-0 text-(--wk-accent-text)" />
                         引用配置
                     </span>
-                    <button onClick={onClose} className="rounded-sm p-1 text-(--muted) hover:text-(--fg)">
+                    <button onClick={onClose} className="rounded-sm p-1 text-(--wk-fg-3) hover:text-(--wk-fg)">
                         <Icon icon="mdi:close" className="size-5" />
                     </button>
                 </div>
 
-                <div className="min-h-0 flex-1 space-y-4 overflow-y-auto">
+                <div className="min-h-0 flex-1 space-y-4 overflow-y-auto px-4 py-3">
                     {/* refOwner 说明（由实体类型决定） */}
-                    <div className="rounded-sm border border-(--card-border) bg-(--input-bg) px-3 py-2 mg-note">
-                        <Icon icon="mdi:information-outline" className="mr-1 inline size-3.5 text-(--muted)" />
+                    <div className="rounded-sm border border-(--wk-line) bg-(--wk-input) px-3 py-2 wk-note">
+                        <Icon icon="mdi:information-outline" className="mr-1 inline size-3.5 text-(--wk-fg-3)" />
                         {entityType === 'character'
                             ? '角色只能引用自身面板属性'
                             : '武器 / 声骸 / 套装引用其装备者（主人）面板属性'}
@@ -125,7 +133,7 @@ export default function BuffRefModal({ open, entityType, zoneId, initialRef, onS
 
                     {/* 引用属性 */}
                     <div>
-                        <div className="mb-1 text-[10px] text-(--muted)">引用属性</div>
+                        <div className="mb-1 text-[10px] text-(--wk-fg-3)">引用属性</div>
                         <SelectMenu
                             value={draft.targetZoneId}
                             onChange={(v) => set({ targetZoneId: v })}
@@ -138,14 +146,14 @@ export default function BuffRefModal({ open, entityType, zoneId, initialRef, onS
                     </div>
 
                     {/* 转换规则卡 */}
-                    <div className="space-y-2.5 rounded-sm border border-(--card-border) bg-(--input-bg) px-3 py-2.5">
-                        <div className="text-xs text-(--fg)/80">{targetDef?.label ?? draft.targetZoneId}</div>
+                    <div className="space-y-2.5 rounded-sm border border-(--wk-line) bg-(--wk-input) px-3 py-2.5">
+                        <div className="text-xs text-(--wk-fg)/80">{targetDef?.label ?? draft.targetZoneId}</div>
                         {/* 超过阈值部分 */}
-                        <div className="flex items-center rounded-sm border border-(--card-border) overflow-hidden">
+                        <div className="flex items-center rounded-sm border border-(--wk-line) overflow-hidden">
                             <button
                                 onClick={() => setHasThreshold((v) => !v)}
                                 className={`px-2.5 py-1.5 text-[11px] font-medium transition-colors ${
-                                    hasThreshold ? 'bg-(--accent)/12 text-(--accent-text)' : 'text-(--muted)'
+                                    hasThreshold ? 'bg-(--wk-accent)/12 text-(--wk-accent-text)' : 'text-(--wk-fg-3)'
                                 }`}
                             >
                                 超过
@@ -156,65 +164,65 @@ export default function BuffRefModal({ open, entityType, zoneId, initialRef, onS
                                 onChange={(e) => set({ threshold: e.target.value })}
                                 disabled={!hasThreshold}
                                 placeholder="0"
-                                className="min-w-0 flex-1 border-x border-(--card-border) bg-(--input-bg) px-2 py-1.5 text-center text-xs outline-none disabled:text-(--muted) mg-num"
+                                className="min-w-0 flex-1 border-x border-(--wk-line) bg-(--wk-input) px-2 py-1.5 text-center text-xs outline-none disabled:text-(--wk-fg-3) wk-numeral"
                             />
-                            <span className="px-2.5 text-[11px] text-(--muted)">
+                            <span className="px-2.5 text-[11px] text-(--wk-fg-3)">
                                 {targetDef?.unit === '%' ? '%' : '点'}
                             </span>
                         </div>
                         {/* 线性/离散 */}
-                        <div className="flex rounded-sm border border-(--card-border) overflow-hidden">
+                        <div className="flex rounded-sm border border-(--wk-line) overflow-hidden">
                             <button
                                 onClick={() => set({ discrete: false })}
                                 className={`flex-1 px-2 py-1.5 text-[11px] font-medium transition-colors ${
-                                    !draft.discrete ? 'bg-(--accent)/12 text-(--accent-text)' : 'text-(--muted)'
+                                    !draft.discrete ? 'bg-(--wk-accent)/12 text-(--wk-accent-text)' : 'text-(--wk-fg-3)'
                                 }`}
                             >
                                 线性地
                             </button>
-                            <div className="w-px bg-(--card-border)" />
+                            <div className="w-px bg-(--wk-line)" />
                             <button
                                 onClick={() => set({ discrete: true })}
                                 className={`flex-1 px-2 py-1.5 text-[11px] font-medium transition-colors ${
-                                    draft.discrete ? 'bg-(--accent)/12 text-(--accent-text)' : 'text-(--muted)'
+                                    draft.discrete ? 'bg-(--wk-accent)/12 text-(--wk-accent-text)' : 'text-(--wk-fg-3)'
                                 }`}
                             >
                                 离散地
                             </button>
                         </div>
                         {/* 每 X 转 Y */}
-                        <div className="flex items-center rounded-sm border border-(--card-border) overflow-hidden">
-                            <span className="px-2.5 py-1.5 text-[11px] text-(--muted)">每</span>
+                        <div className="flex items-center rounded-sm border border-(--wk-line) overflow-hidden">
+                            <span className="px-2.5 py-1.5 text-[11px] text-(--wk-fg-3)">每</span>
                             <input
                                 type="number"
                                 value={divisor}
                                 onChange={(e) => set({ divisor: e.target.value })}
-                                className="min-w-0 flex-1 border-x border-(--card-border) bg-(--input-bg) px-2 py-1.5 text-center text-xs outline-none mg-num"
+                                className="min-w-0 flex-1 border-x border-(--wk-line) bg-(--wk-input) px-2 py-1.5 text-center text-xs outline-none wk-numeral"
                             />
-                            <span className="px-2.5 py-1.5 text-[11px] text-(--muted)">
+                            <span className="px-2.5 py-1.5 text-[11px] text-(--wk-fg-3)">
                                 {targetDef?.unit === '%' ? '%' : '点'}
                             </span>
-                            <span className="px-2.5 py-1.5 text-[11px] text-(--muted)">转换为</span>
+                            <span className="px-2.5 py-1.5 text-[11px] text-(--wk-fg-3)">转换为</span>
                             <input
                                 type="number"
                                 value={multiplier}
                                 onChange={(e) => set({ multiplier: e.target.value })}
-                                className="min-w-0 flex-1 bg-(--input-bg) px-2 py-1.5 text-center text-xs outline-none mg-num"
+                                className="min-w-0 flex-1 bg-(--wk-input) px-2 py-1.5 text-center text-xs outline-none wk-numeral"
                             />
-                            <span className="px-2.5 py-1.5 text-[11px] text-(--muted)">{zoneUnit}</span>
+                            <span className="px-2.5 py-1.5 text-[11px] text-(--wk-fg-3)">{zoneUnit}</span>
                         </div>
-                        <div className="flex justify-end text-xs text-(--muted)">
-                            的<span className="ml-1 font-medium text-(--accent-text)">本乘区</span>
+                        <div className="flex justify-end text-xs text-(--wk-fg-3)">
+                            的<span className="ml-1 font-medium text-(--wk-accent-text)">本乘区</span>
                         </div>
                     </div>
 
                     {/* 上下限 */}
                     <div className="flex gap-2">
-                        <div className="flex flex-1 items-center rounded-sm border border-(--card-border) overflow-hidden">
+                        <div className="flex flex-1 items-center rounded-sm border border-(--wk-line) overflow-hidden">
                             <button
                                 onClick={() => setHasLower((v) => !v)}
                                 className={`px-2.5 py-1.5 text-[11px] font-medium transition-colors ${
-                                    hasLower ? 'bg-(--accent)/12 text-(--accent-text)' : 'text-(--muted)'
+                                    hasLower ? 'bg-(--wk-accent)/12 text-(--wk-accent-text)' : 'text-(--wk-fg-3)'
                                 }`}
                             >
                                 下限
@@ -224,15 +232,15 @@ export default function BuffRefModal({ open, entityType, zoneId, initialRef, onS
                                 value={draft.lower ?? ''}
                                 onChange={(e) => set({ lower: e.target.value })}
                                 disabled={!hasLower}
-                                className="min-w-0 flex-1 border-x border-(--card-border) bg-(--input-bg) px-2 py-1.5 text-center text-xs outline-none disabled:text-(--muted) mg-num"
+                                className="min-w-0 flex-1 border-x border-(--wk-line) bg-(--wk-input) px-2 py-1.5 text-center text-xs outline-none disabled:text-(--wk-fg-3) wk-numeral"
                             />
-                            <span className="px-2.5 py-1.5 text-[11px] text-(--muted)">{zoneUnit}</span>
+                            <span className="px-2.5 py-1.5 text-[11px] text-(--wk-fg-3)">{zoneUnit}</span>
                         </div>
-                        <div className="flex flex-1 items-center rounded-sm border border-(--card-border) overflow-hidden">
+                        <div className="flex flex-1 items-center rounded-sm border border-(--wk-line) overflow-hidden">
                             <button
                                 onClick={() => setHasUpper((v) => !v)}
                                 className={`px-2.5 py-1.5 text-[11px] font-medium transition-colors ${
-                                    hasUpper ? 'bg-(--accent)/12 text-(--accent-text)' : 'text-(--muted)'
+                                    hasUpper ? 'bg-(--wk-accent)/12 text-(--wk-accent-text)' : 'text-(--wk-fg-3)'
                                 }`}
                             >
                                 上限
@@ -242,27 +250,27 @@ export default function BuffRefModal({ open, entityType, zoneId, initialRef, onS
                                 value={draft.upper ?? ''}
                                 onChange={(e) => set({ upper: e.target.value })}
                                 disabled={!hasUpper}
-                                className="min-w-0 flex-1 border-x border-(--card-border) bg-(--input-bg) px-2 py-1.5 text-center text-xs outline-none disabled:text-(--muted) mg-num"
+                                className="min-w-0 flex-1 border-x border-(--wk-line) bg-(--wk-input) px-2 py-1.5 text-center text-xs outline-none disabled:text-(--wk-fg-3) wk-numeral"
                             />
-                            <span className="px-2.5 text-[11px] text-(--muted)">{zoneUnit}</span>
+                            <span className="px-2.5 text-[11px] text-(--wk-fg-3)">{zoneUnit}</span>
                         </div>
                     </div>
                 </div>
 
-                <div className="mt-3 flex items-center justify-between border-t border-(--card-border) pt-3">
+                <div className="flex items-center justify-between gap-2 border-t border-(--wk-line) px-4 py-3">
                     <button
                         onClick={() => onSave(null)}
-                        className="rounded-sm px-3 py-1.5 text-xs text-(--danger) transition-colors hover:bg-(--card-hover)"
+                        className="rounded-sm px-3 py-1.5 text-xs text-(--wk-danger) transition-colors hover:bg-(--wk-s2)"
                     >
                         清除引用
                     </button>
                     <div className="flex items-center gap-2">
-                        <button onClick={onClose} className="rounded-sm px-3 py-1.5 text-xs text-(--muted) hover:bg-(--card-hover)">
+                        <button onClick={onClose} className="rounded-sm px-3 py-1.5 text-xs text-(--wk-fg-3) hover:bg-(--wk-s2)">
                             取消
                         </button>
                         <button
                             onClick={confirm}
-                            className="toolbar-btn toolbar-btn-primary rounded-sm px-4 py-1.5 text-xs"
+                            className="wk-btn wk-btn--primary rounded-sm px-4 py-1.5 text-xs"
                         >
                             确认
                         </button>

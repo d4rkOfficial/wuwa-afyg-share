@@ -1,0 +1,56 @@
+/* 数据浏览专用：可展开条目。由 /buff-sets、/substat-sets 导入。 */
+
+.wk-acc {
+    border: 1px solid var(--wk-line);
+    border-radius: var(--wk-r-2);
+    background: var(--wk-s1);
+    box-shadow: var(--wk-elev-1), var(--wk-inset-2);
+    overflow: hidden;
+    /* 条目永远不许撑破容器：宽了就在条目内部省略，不要推着整页横向滚 */
+    min-width: 0;
+    max-width: 100%;
+}
+
+.wk-acc + .wk-acc {
+    margin-top: 8px;
+}
+
+.wk-acc > summary {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    min-height: 52px;
+    min-width: 0;
+    padding: 8px 16px;
+    cursor: pointer;
+    list-style: none;
+}
+
+/* 摘要行里的每一项都允许被压缩，超长就省略——否则现在这一行会撑宽整张卡片 */
+.wk-acc > summary > * {
+    min-width: 0;
+}
+
+.wk-acc > summary::-webkit-details-marker {
+    display: none;
+}
+
+.wk-acc > summary::after {
+    content: '展开';
+    margin-left: auto;
+    flex-shrink: 0;
+    font-size: var(--wk-t-meta);
+    color: var(--wk-fg-3);
+}
+
+.wk-acc[open] > summary::after {
+    content: '收起';
+}
+
+.wk-acc[open] > summary {
+    border-bottom: 1px solid var(--wk-line);
+}
+
+.wk-acc-body {
+    padding-bottom: 4px;
+}

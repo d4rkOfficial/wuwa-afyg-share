@@ -174,7 +174,7 @@ export async function generateBuffSet(options: GenerateBuffSetOptions): Promise<
     const namingRule = (options.namingRule ?? '').trim()
     const namingSection = namingRule ? `\n\n【命名规则（当前生效，必须遵守）】\n${namingRule}` : ''
     const targetSection =
-        '\n\n【生成目标】工坊 Buff 集（云端）。buffName 只写单段短名，不要带任何文件夹前缀或反斜杠；文件夹由用户在编辑器中手动维护。'
+        '\n\n【生成目标】工坊 Buff 集（云端）。命名是两段式：`folder` = 游戏原文案（原文照抄，只去掉增益数值，保留「持续10秒 / 切人掉 / 可叠加」这类限定语），`buffName` = 效果名+数值（层数/阶数/链用括号放末尾）。全名由系统拼成 `原文案 \\ 效果`：JSON 里**不要**写反斜杠，也不要把文件夹名塞进 buffName。'
     /** @desc 询问模式：强制每轮先问用户，不许直接产出 JSON */
     const askSection = options.askMode
         ? '\n\n【询问模式（已开启）】本次每完成一次调查后，必须调用 ask_user 向用户确认下一步（命名风格、范围、细节），得到回答再继续；**禁止直接输出 buffs JSON**。问题要具体、一次一个，建议带 2-5 个快捷选项。'

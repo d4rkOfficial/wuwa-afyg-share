@@ -27,9 +27,9 @@ interface Props {
 }
 
 const SELECT_CLASS =
-    'min-w-0 flex-1 rounded-sm border border-(--card-border) bg-(--input-bg) px-2 py-1 text-xs outline-none transition-colors focus:border-(--accent)'
+    'min-w-0 flex-1 rounded-sm border border-(--wk-line) bg-(--wk-input) px-2 py-1 text-xs outline-none transition-colors focus:border-(--wk-accent)'
 const READONLY_CLASS =
-    'w-24 shrink-0 rounded-sm border border-(--card-border) bg-(--card-hover) px-2 py-1 text-right text-xs mg-num text-(--muted)'
+    'w-24 shrink-0 rounded-sm border border-(--wk-line) bg-(--wk-s2) px-2 py-1 text-right text-xs wk-numeral text-(--wk-fg-3)'
 
 export default function SubstatSlotEditor({ index, slot, onChange }: Props) {
     const pool = MAIN_STAT_POOL[slot.cost] ?? []
@@ -56,16 +56,16 @@ export default function SubstatSlotEditor({ index, slot, onChange }: Props) {
     }
 
     return (
-        <div className="slot-card">
+        <div className="wk-slot">
             {/* 部位头：序号 + cost 切换（不限组合，合计 ≤ 12 由页面统一校验） */}
-            <div className="slot-card-head">
-                <span className="mg-title text-sm">
-                    部位 <span className="mg-num">{index + 1}</span>
-                    <span className="ml-1 text-[10px] font-normal text-(--muted)">
-                        cost <span className="mg-num">{slot.cost}</span>
+            <div className="wk-slot-head">
+                <span className="wk-title text-sm">
+                    部位 <span className="wk-numeral">{index + 1}</span>
+                    <span className="ml-1 text-[10px] font-normal text-(--wk-fg-3)">
+                        cost <span className="wk-numeral">{slot.cost}</span>
                     </span>
                 </span>
-                <div className="flex items-center gap-1 rounded-sm border border-(--card-border) bg-(--card-hover) p-0.5">
+                <div className="flex items-center gap-1 rounded-sm border border-(--wk-line) bg-(--wk-s2) p-0.5">
                     {ECHO_COSTS.map((c) => (
                         <button
                             key={c}
@@ -80,8 +80,8 @@ export default function SubstatSlotEditor({ index, slot, onChange }: Props) {
                             }
                             className={`rounded-sm px-2 py-0.5 text-[11px] font-medium transition-colors ${
                                 slot.cost === c
-                                    ? 'bg-(--accent) text-(--accent-fg)'
-                                    : 'text-(--muted) hover:text-(--fg)'
+                                    ? 'bg-(--wk-accent) text-(--wk-accent-fg)'
+                                    : 'text-(--wk-fg-3) hover:text-(--wk-fg)'
                             }`}
                             title={`声骸 cost ${c}（切换会按新 cost 重置主词条并自动推导副主词条）`}
                         >
@@ -91,12 +91,12 @@ export default function SubstatSlotEditor({ index, slot, onChange }: Props) {
                 </div>
             </div>
 
-            <div className="slot-card-body">
+            <div className="wk-slot-body">
             {/* 主词条：只选类型，数值固定满级 */}
             <div className="flex flex-col gap-1">
                 <div className="flex items-center justify-between gap-2">
-                    <span className="text-[11px] text-(--muted)">主词条</span>
-                    <span className="text-[10px] text-(--muted)">
+                    <span className="text-[11px] text-(--wk-fg-3)">主词条</span>
+                    <span className="text-[10px] text-(--wk-fg-3)">
                         {selectedMain ? '数值固定为满级上限' : `cost ${slot.cost} 可选 ${pool.length} 项`}
                     </span>
                 </div>
@@ -128,11 +128,11 @@ export default function SubstatSlotEditor({ index, slot, onChange }: Props) {
             {/* 副主词条：按 cost 自动推导，只读展示 */}
             <div className="flex flex-col gap-1">
                 <div className="flex items-center justify-between gap-2">
-                    <span className="text-[11px] text-(--muted)">副主词条（自动）</span>
-                    <span className="text-[10px] text-(--muted)">按 cost 自动推导，无需填写</span>
+                    <span className="text-[11px] text-(--wk-fg-3)">副主词条（自动）</span>
+                    <span className="text-[10px] text-(--wk-fg-3)">按 cost 自动推导，无需填写</span>
                 </div>
                 <div className="flex items-center gap-1.5">
-                    <span className="min-w-0 flex-1 truncate rounded-sm border border-(--card-border) bg-(--card-hover) px-2 py-1 text-xs text-(--muted)">
+                    <span className="min-w-0 flex-1 truncate rounded-sm border border-(--wk-line) bg-(--wk-s2) px-2 py-1 text-xs text-(--wk-fg-3)">
                         {autoSecond ? autoSecond.type : '—'}
                     </span>
                     <span className={READONLY_CLASS}>{autoSecond ? `+${autoSecond.value}` : '—'}</span>
@@ -140,16 +140,16 @@ export default function SubstatSlotEditor({ index, slot, onChange }: Props) {
             </div>
 
             {/* 副词条：类型 + 档位选择 */}
-            <div className="flex flex-col gap-2 border-t border-(--card-border) pt-2">
+            <div className="flex flex-col gap-2 border-t border-(--wk-line) pt-2">
                 <div className="flex items-center justify-between">
-                    <span className="text-[11px] text-(--muted)">
-                        副词条 <span className="mg-num">{slot.substats.length}</span>/
-                        <span className="mg-num">{SUBSTAT_MAX_PER_SLOT}</span>
+                    <span className="text-[11px] text-(--wk-fg-3)">
+                        副词条 <span className="wk-numeral">{slot.substats.length}</span>/
+                        <span className="wk-numeral">{SUBSTAT_MAX_PER_SLOT}</span>
                     </span>
                     <button
                         onClick={addSubstat}
                         disabled={slot.substats.length >= SUBSTAT_MAX_PER_SLOT}
-                        className="inline-flex items-center gap-1 rounded-sm border border-(--card-border) bg-(--card-hover) px-2 py-0.5 text-[11px] text-(--muted) transition-colors hover:text-(--fg) disabled:opacity-40"
+                        className="inline-flex items-center gap-1 rounded-sm border border-(--wk-line) bg-(--wk-s2) px-2 py-0.5 text-[11px] text-(--wk-fg-3) transition-colors hover:text-(--wk-fg) disabled:opacity-40"
                     >
                         <Icon icon="mdi:plus" className="size-3" />
                         添加
@@ -157,7 +157,7 @@ export default function SubstatSlotEditor({ index, slot, onChange }: Props) {
                 </div>
 
                 {slot.substats.length === 0 && (
-                    <p className="text-[11px] leading-relaxed text-(--muted) opacity-65">该部位暂无副词条（每部位 1-5 条）</p>
+                    <p className="text-[11px] leading-relaxed text-(--wk-fg-3) opacity-65">该部位暂无副词条（每部位 1-5 条）</p>
                 )}
 
                 {slot.substats.map((stat, i) => {
@@ -188,7 +188,7 @@ export default function SubstatSlotEditor({ index, slot, onChange }: Props) {
                                 onChange={(e) =>
                                     updateSubstat(i, { ...stat, value: Number(e.target.value) })
                                 }
-                                className="w-24 shrink-0 rounded-sm border border-(--card-border) bg-(--input-bg) px-2 py-1 text-right text-xs mg-num outline-none transition-colors focus:border-(--accent)"
+                                className="w-24 shrink-0 rounded-sm border border-(--wk-line) bg-(--wk-input) px-2 py-1 text-right text-xs wk-numeral outline-none transition-colors focus:border-(--wk-accent)"
                                 aria-label={`副词条 ${i + 1} 档位`}
                             >
                                 {tiers.map((t) => (
@@ -200,7 +200,7 @@ export default function SubstatSlotEditor({ index, slot, onChange }: Props) {
                             </select>
                             <button
                                 onClick={() => removeSubstat(i)}
-                                className="shrink-0 p-1 text-(--muted) transition-colors hover:text-(--danger)"
+                                className="shrink-0 p-1 text-(--wk-fg-3) transition-colors hover:text-(--wk-danger)"
                                 aria-label={`删除第 ${i + 1} 条副词条`}
                             >
                                 <Icon icon="mdi:close" className="size-3.5" />
