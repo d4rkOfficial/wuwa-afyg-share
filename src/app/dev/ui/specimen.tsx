@@ -307,7 +307,7 @@ export default function Specimen() {
                                         <span className="wk-meta">#23秒</span>
                                     </WkToolbar>
                                     <div className="wk-card-foot">
-                                        <span>阿散</span>
+                                        <span>长离手法大神</span>
                                         <span>·</span>
                                         <span>5 个月前</span>
                                         <WkSpacer />

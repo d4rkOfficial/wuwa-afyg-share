@@ -33,7 +33,7 @@ export default function SetupUsernameForm({ redirectTo }: { redirectTo: string }
                 <WkInput
                     value={username}
                     onChange={(event) => setUsername(event.target.value)}
-                    placeholder="例：阿散"
+                    placeholder="例：长离手法大神"
                     autoFocus
                     required
                     maxLength={20}
