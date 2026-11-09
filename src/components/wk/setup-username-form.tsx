@@ -6,7 +6,14 @@ import { useRouter } from 'next/navigation'
 import { WkButton, WkField, WkInput } from '@/design'
 import { updateUsername } from '@/lib/actions/profile'
 
-export default function SetupUsernameForm({ redirectTo }: { redirectTo: string }) {
+export default function SetupUsernameForm({
+    redirectTo,
+    exampleUsername
+}: {
+    redirectTo: string
+    /** @desc 服务端随机出来的示例用户名（例如「珂莱塔手法大神」）；客户端渲染随机值会 hydration 不一致 */
+    exampleUsername?: string
+}) {
     const router = useRouter()
     const [username, setUsername] = useState('')
     const [message, setMessage] = useState<string | null>(null)
@@ -33,7 +40,7 @@ export default function SetupUsernameForm({ redirectTo }: { redirectTo: string }
                 <WkInput
                     value={username}
                     onChange={(event) => setUsername(event.target.value)}
-                    placeholder="例：长离手法大神"
+                    placeholder={`例：${exampleUsername ?? '长离手法大神'}`}
                     autoFocus
                     required
                     maxLength={20}

@@ -3,6 +3,7 @@ import type { Metadata } from 'next'
 import SetupUsernameForm from '@/components/wk/setup-username-form'
 import { WkContainer, WkRoot } from '@/design'
 import { createClient, hasEnv } from '@/lib/supabase/server'
+import { sampleUsername } from '@/lib/data/sample-username'
 
 export const metadata: Metadata = {
     title: '设置用户名'
@@ -47,7 +48,7 @@ export default async function SetupUsernamePage({
                         </p>
                     </header>
                     <div className="wk-card wk-card-pad">
-                        <SetupUsernameForm redirectTo={redirectTo} />
+                        <SetupUsernameForm redirectTo={redirectTo} exampleUsername={sampleUsername()} />
                     </div>
                 </div>
             </WkContainer>

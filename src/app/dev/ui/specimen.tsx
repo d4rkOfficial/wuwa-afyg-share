@@ -48,7 +48,7 @@ function avatar(size: number): CSSProperties {
     }
 }
 
-export default function Specimen() {
+export default function Specimen({ sampleAuthor = '长离手法大神' }: { sampleAuthor?: string }) {
     const [tab, setTab] = useState<'latest' | 'hot'>('latest')
     const [on, setOn] = useState(true)
     const [dialog, setDialog] = useState(false)
@@ -307,7 +307,7 @@ export default function Specimen() {
                                         <span className="wk-meta">#23秒</span>
                                     </WkToolbar>
                                     <div className="wk-card-foot">
-                                        <span>长离手法大神</span>
+                                        <span>{sampleAuthor}</span>
                                         <span>·</span>
                                         <span>5 个月前</span>
                                         <WkSpacer />
