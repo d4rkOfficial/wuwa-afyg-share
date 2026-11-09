@@ -46,7 +46,6 @@ export default async function MePage() {
     const expiredCount = projects.filter(
         (project) => isExpiredProject(project.expires_at, project.author_name) || isGracePeriod(project.expires_at, project.author_name)
     ).length
-    const totalViews = projects.reduce((sum, project) => sum + (project.view_count ?? 0), 0)
     const totalClones = projects.reduce((sum, project) => sum + (project.clone_count ?? 0), 0)
 
     const { data: profile } = await supabase.from('profiles').select('username').eq('id', user.id).maybeSingle()
@@ -68,10 +67,8 @@ export default async function MePage() {
                         username={profile.username}
                         avatarPool={avatarPoolUrls}
                         stats={[
-                            { label: '工程', value: projects.length },
-                            { label: '已过期', value: expiredCount, danger: expiredCount > 0 },
-                            { label: '总浏览', value: totalViews },
-                            { label: '总克隆', value: totalClones }
+                            { label: '上传数', value: projects.length },
+                            { label: '下载量', value: totalClones }
                         ]}
                     />
                     <div style={{ minWidth: 0, display: 'grid', gap: 12, alignContent: 'start' }}>

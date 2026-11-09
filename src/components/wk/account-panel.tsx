@@ -121,10 +121,10 @@ export default function AccountPanel({
                 )}
             </div>
 
-            {/* 概览：四格一行，整数等宽靠列宽对齐 */}
+            {/* 概览：两格一行（上传数 / 下载量），整数等宽靠列宽对齐 */}
             <div style={{ display: 'grid', gap: 8, paddingTop: 12, borderTop: '1px solid var(--wk-line)' }}>
                 <div className="wk-label">概览</div>
-                <div style={{ display: 'grid', gap: 8, gridTemplateColumns: 'repeat(4, minmax(0, 1fr))' }}>
+                <div style={{ display: 'grid', gap: 8, gridTemplateColumns: `repeat(${stats.length}, minmax(0, 1fr))` }}>
                     {stats.map((stat) => (
                         <div
                             key={stat.label}
