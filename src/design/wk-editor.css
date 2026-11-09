@@ -205,6 +205,13 @@ body:has(.wk-workbench) footer {
     overflow: hidden;
 }
 
+/* 被条目级锁锁住的实体：标签上常驻一把小锁（不切页面也能看出来） */
+.wk-tab-lock {
+    flex-shrink: 0;
+    color: var(--wk-accent-text);
+    opacity: 0.9;
+}
+
 /* 保存条：粘在视口底部，实色底，不透明 */
 .wk-editor-savebar {
     position: sticky;

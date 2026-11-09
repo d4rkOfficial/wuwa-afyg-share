@@ -4,7 +4,8 @@ import { useEffect, useMemo, useState, useTransition } from 'react'
 import { useRouter } from 'next/navigation'
 import { Icon } from '@iconify/react'
 import { upsertBuffEntity, deleteBuffEntity } from '@/lib/actions/buff-sets'
-import { WkDropdown, wkToast } from '@/design'
+import { setBuffSetLock } from '@/lib/actions/edit-locks'
+import { WkDropdown, WkIconButton, wkToast } from '@/design'
 import {
     BUFF_ENTITY_LABELS,
     BUFF_ZONE_MAP,
@@ -66,6 +67,8 @@ interface Props {
     isAdmin: boolean
     /** @desc 当前实体是否可编辑（编辑锁开着且该实体未被单独锁定；管理员恒为 true） */
     canEdit?: boolean
+    /** @desc 该实体是否被单独锁定（条目级锁）；管理员可以在头部一键切换 */
+    locked?: boolean
     onEntityDeleted?: () => void
     /** @desc 草稿脏状态变化（上层据此在 sidebar / 标签页上打未保存标记） */
     onDirtyChange?: (dirty: boolean) => void
@@ -141,6 +144,7 @@ export default function BuffEntityEditor({
 
     isAdmin,
     canEdit = true,
+    locked = false,
     onEntityDeleted,
     onDirtyChange,
     onSaved
@@ -504,6 +508,25 @@ export default function BuffEntityEditor({
         })
     }
 
+    /**
+     * @desc 条目级编辑锁：锁定后这个实体只有管理员能写（全局锁之外的第二道闸）。
+     * 只影响「谁能写」，不影响管理员自己；切换后 router.refresh() 让服务端重新下发 buffLocks，
+     * 头部图标、标签页小锁、保存按钮的可用性会一起更新。
+     */
+    function onToggleLock() {
+        if (!entityName) return
+        const next = !locked
+        startTransition(async () => {
+            const result = await setBuffSetLock(entityType, entityName, next)
+            if (result?.error) {
+                wkToast(result.error, 'error')
+                return
+            }
+            wkToast(next ? '已锁定：该实体仅管理员可编辑' : '已解锁：登录用户可编辑', 'ok')
+            router.refresh()
+        })
+    }
+
     // ── AI ──
     // 把 AI 生成的 buffs 应用到列表（数字 → 字符串草稿）
         // 整体替换：用 AI 结果替换整个列表
@@ -521,7 +544,7 @@ export default function BuffEntityEditor({
      */
     return (
         <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
-            {/* 实体信息头：只有信息，不放按钮（关闭走标签页的 ×，删除走底部操作条） */}
+            {/* 实体信息头：信息 + 条目级编辑锁（仅管理员可切换） */}
             <div className="flex min-w-0 shrink-0 items-center gap-2 border-b border-(--wk-line) px-4 py-2.5">
                 <span className="shrink-0 rounded-sm bg-(--wk-accent) px-2 py-0.5 text-xs font-medium text-(--wk-accent-fg)">
                     {BUFF_ENTITY_LABELS[entityType]}
@@ -530,6 +553,24 @@ export default function BuffEntityEditor({
                 <span className="shrink-0 text-xs text-(--wk-fg-3)">
                     <span className="wk-numeral">{buffs.length}</span> 条 Buff
                 </span>
+                <span className="min-w-0 flex-1" />
+                {isAdmin && (
+                    <WkIconButton
+                        size="sm"
+                        variant="quiet"
+                        label={locked ? '解锁该实体（当前仅管理员可编辑）' : '锁定该实体（仅管理员可编辑）'}
+                        aria-pressed={locked}
+                        disabled={pending}
+                        onClick={onToggleLock}
+                    >
+                        <Icon
+                            icon={locked ? 'mdi:lock-outline' : 'mdi:lock-open-variant-outline'}
+                            className="size-4"
+                            style={locked ? { color: 'var(--wk-accent-text)' } : undefined}
+                            aria-hidden="true"
+                        />
+                    </WkIconButton>
+                )}
             </div>
 
             {/* 窄屏：左侧列表收起为「Buff 切换」下拉——条目切换始终可达（宽屏隐藏本行） */}

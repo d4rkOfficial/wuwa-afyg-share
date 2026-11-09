@@ -7,6 +7,7 @@
 // 5 个部位的编辑器仍是既有实现（SubstatSlotEditor），只换外壳与流程。
 import { useEffect, useMemo, useState, useTransition } from 'react'
 import { useRouter } from 'next/navigation'
+import { Icon } from '@iconify/react'
 import SubstatSlotEditor from '@/components/admin/substat-slot-editor'
 import {
     WkBadge,
@@ -14,6 +15,7 @@ import {
     WkConfirm,
     WkDialog,
     WkField,
+    WkIconButton,
     WkInput,
     WkMenu,
     WkDropdown,
@@ -228,6 +230,24 @@ export default function SubstatEditor({
                 <WkBadge tone={dirty ? 'warn' : 'ok'}>{dirty ? '未保存' : '已保存'}</WkBadge>
                 {loaded && locked && <WkBadge tone="accent">仅管理员可改</WkBadge>}
                 <WkSpacer />
+                {/* 条目级编辑锁：和 Buff 编辑台同一个位置语义（谁在看谁的那把锁），不再藏进「更多」 */}
+                {isAdmin && loaded && (
+                    <WkIconButton
+                        size="sm"
+                        variant="quiet"
+                        label={locked ? '解锁该角色（当前仅管理员可改）' : '锁定该角色（仅管理员可改）'}
+                        aria-pressed={locked}
+                        disabled={pending}
+                        onClick={onToggleLock}
+                    >
+                        <Icon
+                            icon={locked ? 'mdi:lock-outline' : 'mdi:lock-open-variant-outline'}
+                            className="size-4"
+                            style={locked ? { color: 'var(--wk-accent-text)' } : undefined}
+                            aria-hidden="true"
+                        />
+                    </WkIconButton>
+                )}
                 <div className="wk-pop">
                     <WkButton size="sm" variant="quiet" aria-haspopup="menu" onClick={() => setMenuOpen((value) => !value)}>
                         更多
@@ -252,15 +272,6 @@ export default function SubstatEditor({
                                         setJsonOpen(true)
                                     }
                                 },
-                                ...(isAdmin && loaded
-                                    ? [
-                                          {
-                                              key: 'lock',
-                                              label: locked ? '解锁该角色' : '锁定该角色',
-                                              onSelect: onToggleLock
-                                          }
-                                      ]
-                                    : []),
                                 ...(loaded
                                     ? [{ key: 'delete', label: '删除该角色方案', danger: true, onSelect: () => setConfirm('delete') }]
                                     : [])

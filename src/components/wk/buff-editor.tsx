@@ -135,18 +135,35 @@ export default function BuffEditor({
                     {opened.map((entity) => {
                         const active = entity.key === activeKey
                         const dirty = !!dirtyMap[entity.key]
+                        const locked = !!buffLocks[entity.key]
                         return (
-                            <div key={entity.key} className="wk-tab" data-active={active} data-dirty={dirty}>
+                            <div
+                                key={entity.key}
+                                className="wk-tab"
+                                data-active={active}
+                                data-dirty={dirty}
+                                data-locked={locked}
+                            >
                                 <button
                                     type="button"
                                     role="tab"
                                     aria-selected={active}
                                     className="wk-tab-name"
                                     onClick={() => setActiveKey(entity.key)}
-                                    title={entity.entityName}
+                                    title={locked ? `${entity.entityName}（已被管理员锁定）` : entity.entityName}
                                 >
                                     {entity.entityName}
                                 </button>
+                                {/* 锁定的实体在标签上就能看出来，不用切页 */}
+                                {locked && (
+                                    <Icon
+                                        icon="mdi:lock-outline"
+                                        width={11}
+                                        height={11}
+                                        className="wk-tab-lock"
+                                        aria-label="仅管理员可编辑"
+                                    />
+                                )}
                                 {dirty && <span className="wk-tab-dirty" aria-label="有未保存改动" />}
                                 <button
                                     type="button"
@@ -202,6 +219,7 @@ export default function BuffEditor({
                                 }}
                                 isAdmin={isAdmin}
                                 canEdit={isAdmin || !buffLocks[entity.key]}
+                                locked={!!buffLocks[entity.key]}
                                 onDirtyChange={(dirty) =>
                                     setDirtyMap((prev) =>
                                         prev[entity.key] === dirty ? prev : { ...prev, [entity.key]: dirty }
