@@ -250,7 +250,12 @@ export default function BuffSnapshotPanel() {
                 /* 用设计系统的遮罩与弹层外壳：与「打开实体」一致（--wk-scrim 半透明底 + 细边浮层），
                    顺带拿到 Esc 关闭与滚动锁；之前手写的 bg-(--overlay) 引的是不存在的令牌，
                    等于没有遮罩，页面内容会透上来。 */
-                <div className="wk wk-mask" onClick={() => setOpen(false)}>
+                <div
+            className="wk wk-mask"
+            onPointerDown={(event) => {
+                if (event.target === event.currentTarget) setOpen(false)
+            }}
+        >
                     <div
                         className="wk-dialog"
                         style={{ width: 'min(96vw, 1040px)' }}
@@ -552,7 +557,10 @@ export default function BuffSnapshotPanel() {
                     {/* 合并到根确认 */}
                     {confirmSquash && (
                         <div className="fixed inset-0 z-[60] flex items-center justify-center p-4">
-                            <div className="absolute inset-0 bg-(--wk-scrim)" onClick={() => setConfirmSquash(false)} />
+                            <div
+                                className="absolute inset-0 bg-(--wk-scrim)"
+                                onPointerDown={() => setConfirmSquash(false)}
+                            />
                             <div className="relative w-full max-w-sm wk-panel p-5">
                                 <div className="wk-section">
                                     <Icon icon="mdi:call-merge" className="size-5 shrink-0 text-(--wk-warn)" />

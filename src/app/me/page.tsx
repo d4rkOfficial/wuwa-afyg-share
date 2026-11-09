@@ -74,7 +74,13 @@ export default async function MePage() {
                             { label: '总克隆', value: totalClones }
                         ]}
                     />
-                    <div style={{ minWidth: 0 }}>
+                    <div style={{ minWidth: 0, display: 'grid', gap: 12, alignContent: 'start' }}>
+                        <div className="wk-section-head" style={{ marginBottom: 0 }}>
+                            <h2 style={{ fontSize: 'var(--wk-t-sec)' }}>我的工程</h2>
+                            <span className="wk-meta">
+                                共 {projects.length} 个{expiredCount > 0 ? ` · ${expiredCount} 个已过期` : ''}
+                            </span>
+                        </div>
                         <MeProjects projects={projects} elements={CHAR_ELEMENTS as Record<string, string>} />
                     </div>
                 </div>

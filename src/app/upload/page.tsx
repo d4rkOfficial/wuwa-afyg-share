@@ -25,10 +25,7 @@ export default async function UploadPage() {
     return (
         <WkRoot>
             <WkContainer>
-                <WkPageHead
-                    title="上传工程"
-                    sub="选择工具箱导出的 .json，填写分享信息后发布；标题 / 简介 / 标签 / 有效期都能在发布前改。"
-                />
+                <WkPageHead title="上传工程" sub="选择工具箱导出的 .json，填好分享信息后发布。" />
                 <div style={{ marginTop: 16 }}>
                     <UploadForm elements={CHAR_ELEMENTS as Record<string, string>} />
                 </div>

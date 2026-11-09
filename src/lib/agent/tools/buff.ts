@@ -9,6 +9,7 @@ import { fetchToolInfo, fetchToolList, prepareAiInfo } from '@/lib/ai/info'
 import { queryBuffSets } from '@/lib/ai/buff-query'
 import { sanitizeBuffs } from '@/lib/ai/client'
 import { deleteBuffEntity, deleteBuffPreset, upsertBuffEntity, upsertBuffSet } from '@/lib/actions/buff-sets'
+import { setBuffSetLock } from '@/lib/actions/edit-locks'
 import { canNonAdminEditBuff, buffLockKey, type EditLocksSnapshot } from '@/lib/edit-locks.shared'
 import { buffLeafName, joinBuffPath, sanitizeFolderName } from '@/lib/buff-names'
 import {
@@ -325,6 +326,23 @@ export const BUFF_TOOLS: ToolDefinition[] = [
                     entityName: { type: 'string' }
                 },
                 required: ['entityType', 'entityName']
+            }
+        }
+    },
+    {
+        type: 'function',
+        function: {
+            name: 'set_buff_entity_lock',
+            description:
+                '给某个 Buff 实体上锁/解锁（条目级编辑锁）。上锁后该实体只有管理员能改，登录用户保存会被拒；解锁后恢复「登录用户可改」。仅管理员可用，需要人工审批。',
+            parameters: {
+                type: 'object',
+                properties: {
+                    entityType: { type: 'string', enum: ENTITY_TYPES },
+                    entityName: { type: 'string' },
+                    locked: { type: 'boolean', description: 'true = 上锁（仅管理员可改），false = 解锁' }
+                },
+                required: ['entityType', 'entityName', 'locked']
             }
         }
     }
@@ -644,6 +662,48 @@ export async function executeBuffTool(
             const res = await deleteBuffEntity(entityType as BuffEntityType, entityName)
             if (res.error) return { text: JSON.stringify({ error: res.error }) }
             return { text: JSON.stringify({ ok: true, deletedEntity: `${entityType}/${entityName}` }) }
+        }
+        case 'set_buff_entity_lock': {
+            if (ctx.role !== 'admin') return { text: JSON.stringify({ error: '编辑锁仅管理员可用' }) }
+            const entityType = str(args.entityType)
+            const entityName = str(args.entityName)
+            const typeErr = validateEntityType(entityType)
+            if (typeErr) return { text: JSON.stringify({ error: typeErr }) }
+            if (!entityName) return { text: JSON.stringify({ error: 'entityName 不能为空' }) }
+            const locked = !!args.locked
+            const wasLocked = !!ctx.locks.buffLocks[buffLockKey(entityType, entityName)]
+            const gate = ctx.skipApproval
+                ? ({ ok: true } as const)
+                : await approve(ctx, {
+                      toolName: name,
+                      title: locked ? '锁定该实体的编辑权限' : '解锁该实体的编辑权限',
+                      target: `${entityType} / ${entityName}`,
+                      diff: [
+                          {
+                              kind: 'update',
+                              name: entityName,
+                              fields: [
+                                  {
+                                      label: '编辑权限',
+                                      from: wasLocked ? '仅管理员' : '登录用户',
+                                      to: locked ? '仅管理员' : '登录用户'
+                                  }
+                              ]
+                          }
+                      ],
+                      payload: args
+                  })
+            if (!gate.ok) return { text: JSON.stringify({ rejected: true, message: gate.text }) }
+            const res = await setBuffSetLock(entityType as BuffEntityType, entityName, locked)
+            if (res.error) return { text: JSON.stringify({ error: res.error }) }
+            return {
+                text: JSON.stringify({
+                    ok: true,
+                    entity: `${entityType}/${entityName}`,
+                    locked,
+                    effect: locked ? '该实体现在仅管理员可改' : '该实体恢复为登录用户可改'
+                })
+            }
         }
         default:
             return { text: JSON.stringify({ error: `未知工具：${name}` }) }

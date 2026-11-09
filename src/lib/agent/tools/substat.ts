@@ -5,6 +5,7 @@
 // AI 写之前先调 get_substat_spec 拿到白名单与档位，避免拼出不合法 plan 被服务端拒绝。
 import { createClient } from '@/lib/supabase/client'
 import { deleteSubstatSet, upsertSubstatSet } from '@/lib/actions/substat-sets'
+import { setSubstatSetLock } from '@/lib/actions/edit-locks'
 import { canNonAdminEditSubstat, type EditLocksSnapshot } from '@/lib/edit-locks.shared'
 import {
     ECHO_COST_MULTISET,
@@ -136,6 +137,22 @@ export const SUBSTAT_TOOLS: ToolDefinition[] = [
                 required: ['characterName']
             }
         }
+    },
+    {
+        type: 'function',
+        function: {
+            name: 'set_substat_set_lock',
+            description:
+                '给某个角色的标准词条集上锁/解锁（条目级编辑锁）。上锁后只有管理员能改这份方案，登录用户保存会被拒；解锁后恢复「登录用户可改」。仅管理员可用，需要人工审批。',
+            parameters: {
+                type: 'object',
+                properties: {
+                    characterName: { type: 'string' },
+                    locked: { type: 'boolean', description: 'true = 上锁（仅管理员可改），false = 解锁' }
+                },
+                required: ['characterName', 'locked']
+            }
+        }
     }
 ]
 
@@ -243,6 +260,45 @@ export async function executeSubstatTool(
             const res = await deleteSubstatSet(characterName)
             if (res.error) return { text: JSON.stringify({ error: res.error }) }
             return { text: JSON.stringify({ ok: true, deleted: characterName }) }
+        }
+        case 'set_substat_set_lock': {
+            if (ctx.role !== 'admin') return { text: JSON.stringify({ error: '编辑锁仅管理员可用' }) }
+            const characterName = str(args.characterName)
+            if (!characterName) return { text: JSON.stringify({ error: 'characterName 不能为空' }) }
+            const locked = !!args.locked
+            const wasLocked = !!ctx.locks.substatLocks[characterName]
+            const gate = ctx.skipApproval
+                ? ({ ok: true } as const)
+                : await approve(ctx, {
+                      toolName: name,
+                      title: locked ? '锁定该角色的标准词条集' : '解锁该角色的标准词条集',
+                      target: `character / ${characterName}`,
+                      diff: [
+                          {
+                              kind: 'update',
+                              name: characterName,
+                              fields: [
+                                  {
+                                      label: '编辑权限',
+                                      from: wasLocked ? '仅管理员' : '登录用户',
+                                      to: locked ? '仅管理员' : '登录用户'
+                                  }
+                              ]
+                          }
+                      ],
+                      payload: { characterName, locked }
+                  })
+            if (!gate.ok) return { text: JSON.stringify({ rejected: true, message: gate.text }) }
+            const res = await setSubstatSetLock(characterName, locked)
+            if (res.error) return { text: JSON.stringify({ error: res.error }) }
+            return {
+                text: JSON.stringify({
+                    ok: true,
+                    characterName,
+                    locked,
+                    effect: locked ? '该角色的标准词条集现在仅管理员可改' : '该角色的标准词条集恢复为登录用户可改'
+                })
+            }
         }
         default:
             return { text: JSON.stringify({ error: `未知工具：${name}` }) }

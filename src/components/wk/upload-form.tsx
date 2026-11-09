@@ -10,7 +10,7 @@
 // 6. 选文件前先做类型/大小预校验，错误内联显示，不用整块红条。
 import { useEffect, useRef, useState, useTransition } from 'react'
 import { useRouter } from 'next/navigation'
-import { WkBadge, WkButton, WkField, WkInput, WkSegmented, WkTagInput, WkTextarea } from '@/design'
+import { WkButton, WkField, WkInput, WkSegmented, WkTagInput, WkTextarea } from '@/design'
 import { publishProject } from '@/lib/actions/projects'
 import { parseProjectFile, safeJsonParse } from '@/lib/project/parse'
 import { teamDisplayNames } from '@/lib/project/extract'
@@ -272,7 +272,7 @@ export default function UploadForm({ elements }: { elements?: Record<string, str
                     />
                 </WkField>
 
-                <WkField label={`标签（${tags.length}/${MAX_TAGS}）`} hint="回车或逗号成词；从常用标签里点选也可以">
+                <WkField label={`标签（${tags.length}/${MAX_TAGS}）`} hint="回车 / 逗号 / 空格成词，常用标签可直接点选">
                     <WkTagInput value={tags} onChange={setTags} suggestions={PROJECT_TAGS} max={MAX_TAGS} />
                 </WkField>
 
@@ -312,7 +312,7 @@ export default function UploadForm({ elements }: { elements?: Record<string, str
             )}
 
             <div className="wk-actionbar">
-                <span className="wk-meta">{pending ? '发布中…' : '发布后可在「我的工程」里改标题、标签、有效期'}</span>
+                <span className="wk-meta">{pending ? '发布中…' : '发布后仍可在「我的工程」里改'}</span>
                 <span className="wk-spacer" />
                 <WkButton variant="quiet" onClick={() => router.back()} disabled={pending}>
                     取消
@@ -321,8 +321,6 @@ export default function UploadForm({ elements }: { elements?: Record<string, str
                     {pending ? '发布中…' : '发布分享'}
                 </WkButton>
             </div>
-
-            {dirty && <WkBadge>草稿不会自动保存</WkBadge>}
         </div>
     )
 }

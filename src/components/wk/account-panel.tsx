@@ -64,7 +64,9 @@ export default function AccountPanel({
     }
 
     return (
-        <aside style={{ display: 'grid', gap: 16 }}>
+        /* 整块放进一张卡片，内部用分割线分四段：身份 / 概览 / 操作 / 危险区。
+           左栏原来是"什么都没有的裸布局"，和右栏一排卡片放在一起看不出分区。 */
+        <aside className="wk-card wk-card-pad" style={{ display: 'grid', gap: 16, alignContent: 'start' }}>
             {/* 身份 */}
             <div style={{ display: 'grid', gap: 12 }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
@@ -113,34 +115,45 @@ export default function AccountPanel({
                 )}
             </div>
 
-            {/* 统计：四格一行，整数等宽靠列宽对齐 */}
-            <div style={{ display: 'grid', gap: 8, gridTemplateColumns: 'repeat(4, minmax(0, 1fr))' }}>
-                {stats.map((stat) => (
-                    <div
-                        key={stat.label}
-                        style={{
-                            border: '1px solid var(--wk-line)',
-                            borderRadius: 'var(--wk-r-2)',
-                            padding: '8px 6px',
-                            textAlign: 'center'
-                        }}
-                    >
+            {/* 概览：四格一行，整数等宽靠列宽对齐 */}
+            <div style={{ display: 'grid', gap: 8, paddingTop: 12, borderTop: '1px solid var(--wk-line)' }}>
+                <div className="wk-label">概览</div>
+                <div style={{ display: 'grid', gap: 8, gridTemplateColumns: 'repeat(4, minmax(0, 1fr))' }}>
+                    {stats.map((stat) => (
                         <div
+                            key={stat.label}
                             style={{
-                                fontSize: 'var(--wk-t-lead)',
-                                fontWeight: 600,
-                                color: stat.danger ? 'var(--wk-danger)' : 'var(--wk-fg)'
+                                border: '1px solid var(--wk-line)',
+                                borderRadius: 'var(--wk-r-2)',
+                                padding: '8px 6px',
+                                textAlign: 'center'
                             }}
                         >
-                            {stat.value.toLocaleString()}
+                            <div
+                                style={{
+                                    fontSize: 'var(--wk-t-lead)',
+                                    fontWeight: 600,
+                                    color: stat.danger ? 'var(--wk-danger)' : 'var(--wk-fg)'
+                                }}
+                            >
+                                {stat.value.toLocaleString()}
+                            </div>
+                            <div className="wk-meta">{stat.label}</div>
                         </div>
-                        <div className="wk-meta">{stat.label}</div>
-                    </div>
-                ))}
+                    ))}
+                </div>
             </div>
 
             {/* 操作 */}
-            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+            <div
+                style={{
+                    display: 'flex',
+                    flexWrap: 'wrap',
+                    gap: 8,
+                    paddingTop: 12,
+                    borderTop: '1px solid var(--wk-line)'
+                }}
+            >
                 <Link href="/upload" className="wk-btn wk-btn--sm wk-btn--primary">
                     上传工程
                 </Link>

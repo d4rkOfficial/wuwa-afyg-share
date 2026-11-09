@@ -34,7 +34,12 @@ export function Dialog({
 
     if (!open) return null
     return (
-        <div className="wk-mask" onClick={onClose}>
+        <div
+            className="wk-mask"
+            onPointerDown={(event) => {
+                if (event.target === event.currentTarget) onClose()
+            }}
+        >
             <div className="wk-dialog" style={{ width }} role="dialog" aria-modal="true" onClick={(e) => e.stopPropagation()}>
                 <div className="wk-dialog-head">
                     {icon}

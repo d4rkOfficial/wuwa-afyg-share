@@ -103,7 +103,12 @@ export default function BuffRefModal({ open, entityType, zoneId, initialRef, onS
     return (
         /* 与「打开实体」同一套遮罩（--wk-scrim）：原来写的 bg-(--overlay) 是个不存在的令牌，
            等于没有遮罩，底下编辑区会透上来。 */
-        <div className="wk wk-mask" onClick={onClose}>
+        <div
+            className="wk wk-mask"
+            onPointerDown={(event) => {
+                if (event.target === event.currentTarget) onClose()
+            }}
+        >
             <div
                 className="wk-dialog"
                 style={{ width: 'min(448px, 100%)' }}

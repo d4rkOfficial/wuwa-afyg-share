@@ -2,17 +2,30 @@
 
 // 设计系统 v2 · 标签输入
 // 上传页与「我的工程」编辑弹窗共用，避免两处各写一套 chip 逻辑。
+//
+// 行为对齐重构前的版本：
+// - 回车 / 逗号 / **空格** 成词（三种都算分隔符）；
+// - 粘贴 "a, b，c d" 自动拆成多个；
+// - 空输入按 Backspace 删最后一个；
+// - 常用标签是可点的胶囊（未选中是描边、选中是实心 + 勾），点一下加、再点一下去掉。
 import { useState } from 'react'
-import { cn } from './cn'
+import { Icon } from '@iconify/react'
 import { WkInput } from './form'
 import { isImeComposing } from '@/lib/keyboard'
+
+/** @desc 与后端 sanitizeTags 同口径：去掉 #、空白，限长 12 */
+function normalizeTag(raw: string): string {
+    return raw.trim().replace(/^#+/, '').replace(/\s+/g, '').slice(0, 12)
+}
+
+const SPLIT_RE = /[,，\s]+/
 
 export function WkTagInput({
     value,
     onChange,
     suggestions,
     max = 8,
-    placeholder = '输入后回车',
+    placeholder = '回车 / 逗号 / 空格成词',
     ariaLabel = '标签'
 }: {
     value: string[]
@@ -24,14 +37,21 @@ export function WkTagInput({
 }) {
     const [draft, setDraft] = useState('')
 
-    function add(raw: string) {
-        const next = raw.trim().replace(/^#/, '')
+    /** @desc 一次加多个（粘贴会拆成数组），去重 + 截断上限 */
+    function addMany(rawList: ReadonlyArray<string>) {
+        const next = [...value]
+        for (const raw of rawList) {
+            const tag = normalizeTag(raw)
+            if (!tag || next.includes(tag) || next.length >= max) continue
+            next.push(tag)
+        }
         setDraft('')
-        if (!next || value.length >= max || value.includes(next)) return
-        onChange([...value, next])
+        if (next.length !== value.length) onChange(next)
     }
 
-    const remaining = (suggestions ?? []).filter((tag) => !value.includes(tag))
+    function toggle(tag: string) {
+        onChange(value.includes(tag) ? value.filter((item) => item !== tag) : value.length >= max ? value : [...value, tag])
+    }
 
     return (
         <div style={{ display: 'grid', gap: 8 }}>
@@ -41,17 +61,27 @@ export function WkTagInput({
                 placeholder={placeholder}
                 onChange={(event) => setDraft(event.target.value)}
                 onKeyDown={(event) => {
-                    // 输入法候选阶段的 Enter / 逗号是「确认候选词」，不能被当成「加标签」
+                    // 输入法候选阶段的 Enter / 空格属于输入法，不能当成"成词"
                     if (isImeComposing(event)) return
-                    if (event.key === 'Enter' || event.key === ',' || event.key === '，') {
+                    if (event.key === 'Enter' || event.key === ',' || event.key === '，' || event.key === ' ') {
+                        if (!draft.trim()) {
+                            event.preventDefault()
+                            return
+                        }
                         event.preventDefault()
-                        add(draft)
+                        addMany([draft])
                     }
                     if (event.key === 'Backspace' && !draft && value.length > 0) {
                         onChange(value.slice(0, -1))
                     }
                 }}
-                onBlur={() => add(draft)}
+                onPaste={(event) => {
+                    const text = event.clipboardData.getData('text')
+                    if (!SPLIT_RE.test(text)) return
+                    event.preventDefault()
+                    addMany(text.split(SPLIT_RE))
+                }}
+                onBlur={() => addMany([draft])}
             />
 
             {value.length > 0 && (
@@ -72,21 +102,29 @@ export function WkTagInput({
                 </div>
             )}
 
-            {remaining.length > 0 && value.length < max && (
+            {suggestions && suggestions.length > 0 && (
                 <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
-                    {remaining.slice(0, 8).map((tag) => (
-                        <button
-                            key={tag}
-                            type="button"
-                            onClick={() => add(tag)}
-                            className={cn('wk-badge')}
-                            style={{ cursor: 'pointer', background: 'transparent' }}
-                        >
-                            + {tag}
-                        </button>
-                    ))}
+                    {suggestions.map((tag) => {
+                        const active = value.includes(tag)
+                        return (
+                            <button
+                                key={tag}
+                                type="button"
+                                onClick={() => toggle(tag)}
+                                aria-pressed={active}
+                                disabled={!active && value.length >= max}
+                                className="wk-tag-pick"
+                                data-active={active}
+                            >
+                                {active && <Icon icon="mdi:check" width={11} height={11} aria-hidden="true" />}
+                                {tag}
+                            </button>
+                        )
+                    })}
                 </div>
             )}
         </div>
     )
 }
+
+export { normalizeTag }

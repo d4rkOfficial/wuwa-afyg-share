@@ -508,6 +508,42 @@ html.light {
     cursor: pointer;
 }
 
+/* 常用标签：可点的胶囊（未选中描边、选中实心 + 勾）——对齐重构前的写法，
+   比"一个 badge 加个 + 号"更像按钮，一眼知道能点 */
+.wk-tag-pick {
+    display: inline-flex;
+    height: 24px;
+    align-items: center;
+    gap: 4px;
+    border: 1px solid var(--wk-ctrl-line);
+    border-radius: var(--wk-r-1);
+    background: var(--wk-s1);
+    padding: 0 8px;
+    color: var(--wk-fg-2);
+    font-family: inherit;
+    font-size: var(--wk-t-meta);
+    line-height: 1;
+    white-space: nowrap;
+    cursor: pointer;
+    transition: border-color 120ms ease-out, background-color 120ms ease-out, color 120ms ease-out;
+}
+
+.wk-tag-pick:hover:not(:disabled) {
+    border-color: var(--wk-accent);
+    color: var(--wk-fg);
+}
+
+.wk-tag-pick[data-active='true'] {
+    border-color: transparent;
+    background: var(--wk-accent-solid);
+    color: var(--wk-accent-fg);
+}
+
+.wk-tag-pick:disabled {
+    opacity: 0.45;
+    cursor: not-allowed;
+}
+
 /* ── 卡片：只保留外轮廓 1 条，禁止卡片套卡片；投影是内外各一层硬阴影 ────── */
 .wk-card {
     position: relative;

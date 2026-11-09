@@ -81,7 +81,15 @@ export function WkDialog({
     if (!open || typeof document === 'undefined') return null
 
     return createPortal(
-        <div className="wk wk-mask" onClick={onClose}>
+        /* 只在「按在遮罩上」时关闭：用 pointerdown 而不是 click。
+           用 click 的话，从对话框里按下、拖到遮罩上松手（选文字、拖滚动条）也会被判成点遮罩 → 误关；
+           鼠标只是划过遮罩则完全不会触发（没有任何 hover 逻辑）。 */
+        <div
+            className="wk wk-mask"
+            onPointerDown={(event) => {
+                if (event.target === event.currentTarget) onClose()
+            }}
+        >
             <div
                 ref={dialogRef}
                 className="wk-dialog"
@@ -90,7 +98,7 @@ export function WkDialog({
                 aria-labelledby={titleId}
                 tabIndex={-1}
                 style={width ? { width: `min(${width}px, 100%)` } : undefined}
-                onClick={(event) => event.stopPropagation()}
+                onPointerDown={(event) => event.stopPropagation()}
             >
                 <div className="wk-dialog-head" id={titleId}>
                     {title}
