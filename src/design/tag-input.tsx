@@ -3,14 +3,15 @@
 // 设计系统 v2 · 标签输入
 // 上传页与「我的工程」编辑弹窗共用，避免两处各写一套 chip 逻辑。
 //
-// 行为对齐重构前的版本：
+// 形态：一个描边编辑框，已选标签是**写在框内的 badge**（实心强调色，右侧 × 可删），
+// 光标后面跟一段可输入的空白。下方一行是「n/上限 + 常用标签胶囊」。
+// 行为：
 // - 回车 / 逗号 / **空格** 成词（三种都算分隔符）；
 // - 粘贴 "a, b，c d" 自动拆成多个；
 // - 空输入按 Backspace 删最后一个；
-// - 常用标签是可点的胶囊（未选中是描边、选中是实心 + 勾），点一下加、再点一下去掉。
-import { useState } from 'react'
+// - 常用标签点一下加、再点一下去掉；点框内空白处聚焦输入框。
+import { useRef, useState } from 'react'
 import { Icon } from '@iconify/react'
-import { WkInput } from './form'
 import { isImeComposing } from '@/lib/keyboard'
 
 /** @desc 与后端 sanitizeTags 同口径：去掉 #、空白，限长 12 */
@@ -25,7 +26,7 @@ export function WkTagInput({
     onChange,
     suggestions,
     max = 8,
-    placeholder = '回车 / 逗号 / 空格成词',
+    placeholder = '输入标签，回车 / 逗号 / 空格成词',
     ariaLabel = '标签'
 }: {
     value: string[]
@@ -36,6 +37,8 @@ export function WkTagInput({
     ariaLabel?: string
 }) {
     const [draft, setDraft] = useState('')
+    const inputRef = useRef<HTMLInputElement>(null)
+    const full = value.length >= max
 
     /** @desc 一次加多个（粘贴会拆成数组），去重 + 截断上限 */
     function addMany(rawList: ReadonlyArray<string>) {
@@ -50,79 +53,90 @@ export function WkTagInput({
     }
 
     function toggle(tag: string) {
-        onChange(value.includes(tag) ? value.filter((item) => item !== tag) : value.length >= max ? value : [...value, tag])
+        onChange(value.includes(tag) ? value.filter((item) => item !== tag) : full ? value : [...value, tag])
     }
 
     return (
-        <div style={{ display: 'grid', gap: 8 }}>
-            <WkInput
-                value={draft}
+        <div className="wk-tagbox-wrap">
+            <div
+                className="wk-tagbox"
+                onClick={() => inputRef.current?.focus()}
+                role="group"
                 aria-label={ariaLabel}
-                placeholder={placeholder}
-                onChange={(event) => setDraft(event.target.value)}
-                onKeyDown={(event) => {
-                    // 输入法候选阶段的 Enter / 空格属于输入法，不能当成"成词"
-                    if (isImeComposing(event)) return
-                    if (event.key === 'Enter' || event.key === ',' || event.key === '，' || event.key === ' ') {
-                        if (!draft.trim()) {
+            >
+                {value.map((tag) => (
+                    <span key={tag} className="wk-tagbox-chip">
+                        <span className="wk-tagbox-chip-text">#{tag}</span>
+                        <button
+                            type="button"
+                            className="wk-tag-remove"
+                            aria-label={`移除标签 ${tag}`}
+                            onClick={(event) => {
+                                event.stopPropagation()
+                                onChange(value.filter((item) => item !== tag))
+                            }}
+                        >
+                            <Icon icon="mdi:close" width={11} height={11} aria-hidden="true" />
+                        </button>
+                    </span>
+                ))}
+                <input
+                    ref={inputRef}
+                    className="wk-tagbox-input"
+                    aria-label={ariaLabel}
+                    value={draft}
+                    maxLength={12}
+                    disabled={full}
+                    placeholder={full ? `已达上限 ${max} 个` : value.length === 0 ? placeholder : ''}
+                    onChange={(event) => setDraft(event.target.value)}
+                    onKeyDown={(event) => {
+                        // 输入法候选阶段的 Enter / 空格属于输入法，不能当成"成词"
+                        if (isImeComposing(event)) return
+                        if (event.key === 'Enter' || event.key === ',' || event.key === '，' || event.key === ' ') {
+                            if (!draft.trim()) {
+                                event.preventDefault()
+                                return
+                            }
                             event.preventDefault()
-                            return
+                            addMany([draft])
                         }
+                        if (event.key === 'Backspace' && !draft && value.length > 0) {
+                            event.preventDefault()
+                            onChange(value.slice(0, -1))
+                        }
+                    }}
+                    onPaste={(event) => {
+                        const text = event.clipboardData.getData('text')
+                        if (!SPLIT_RE.test(text)) return
                         event.preventDefault()
-                        addMany([draft])
-                    }
-                    if (event.key === 'Backspace' && !draft && value.length > 0) {
-                        onChange(value.slice(0, -1))
-                    }
-                }}
-                onPaste={(event) => {
-                    const text = event.clipboardData.getData('text')
-                    if (!SPLIT_RE.test(text)) return
-                    event.preventDefault()
-                    addMany(text.split(SPLIT_RE))
-                }}
-                onBlur={() => addMany([draft])}
-            />
+                        addMany(text.split(SPLIT_RE))
+                    }}
+                    onBlur={() => addMany([draft])}
+                />
+            </div>
 
-            {value.length > 0 && (
-                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
-                    {value.map((tag) => (
-                        <span key={tag} className="wk-badge" style={{ gap: 6 }}>
-                            #{tag}
-                            <button
-                                type="button"
-                                onClick={() => onChange(value.filter((item) => item !== tag))}
-                                aria-label={`移除标签 ${tag}`}
-                                className="wk-tag-remove"
-                            >
-                                ×
-                            </button>
-                        </span>
-                    ))}
-                </div>
-            )}
-
-            {suggestions && suggestions.length > 0 && (
-                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
-                    {suggestions.map((tag) => {
-                        const active = value.includes(tag)
-                        return (
-                            <button
-                                key={tag}
-                                type="button"
-                                onClick={() => toggle(tag)}
-                                aria-pressed={active}
-                                disabled={!active && value.length >= max}
-                                className="wk-tag-pick"
-                                data-active={active}
-                            >
-                                {active && <Icon icon="mdi:check" width={11} height={11} aria-hidden="true" />}
-                                {tag}
-                            </button>
-                        )
-                    })}
-                </div>
-            )}
+            <div className="wk-tagbox-meta">
+                <span className="wk-tagbox-count">
+                    {value.length}/{max}
+                </span>
+                {suggestions?.map((tag) => {
+                    const active = value.includes(tag)
+                    return (
+                        <button
+                            key={tag}
+                            type="button"
+                            onClick={() => toggle(tag)}
+                            aria-pressed={active}
+                            disabled={!active && full}
+                            className="wk-tag-pick"
+                            data-active={active}
+                        >
+                            {active && <Icon icon="mdi:check" width={11} height={11} aria-hidden="true" />}
+                            {tag}
+                        </button>
+                    )
+                })}
+            </div>
         </div>
     )
 }

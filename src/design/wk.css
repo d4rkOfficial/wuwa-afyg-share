@@ -497,16 +497,93 @@ html.light {
 
 .wk-badge--danger { border-color: color-mix(in srgb, var(--wk-danger) 45%, transparent); color: var(--wk-danger); }
 
-/* 标签 chip 上的移除按钮：继承 chip 的字与色，只去掉按钮默认外观 */
-.wk-tag-remove {
+/* ── 标签输入：一个描边编辑框，已选的标签是**写在框内**的实心 badge ──────── */
+.wk-tagbox-wrap { display: grid; gap: 8px; min-width: 0; }
+
+.wk-tagbox {
+    display: flex;
+    min-height: var(--wk-h-md);
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 6px;
+    border: 1px solid var(--wk-ctrl-line);
+    border-radius: var(--wk-r-1);
+    background: var(--wk-input);
+    padding: 4px 8px;
+    cursor: text;
+    box-shadow: var(--wk-elev-1), var(--wk-inset-1);
+    transition: border-color 120ms ease-out;
+}
+
+.wk-tagbox:focus-within { border-color: var(--wk-accent); }
+
+.wk-tagbox-chip {
+    display: inline-flex;
+    max-width: 100%;
+    height: 24px;
+    flex-shrink: 0;
+    align-items: center;
+    gap: 4px;
+    border: 1px solid color-mix(in srgb, var(--wk-accent-solid) 58%, #000);
+    border-radius: var(--wk-r-1);
+    background: var(--wk-accent-solid);
+    padding: 0 4px 0 7px;
+    color: var(--wk-accent-fg);
+    font-size: var(--wk-t-meta);
+    line-height: 1;
+    box-shadow: var(--wk-btn-shadow);
+}
+
+.wk-tagbox-chip-text {
+    max-width: 168px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.wk-tagbox-input {
+    min-width: 96px;
+    height: 24px;
+    flex: 1;
     border: 0;
+    background: transparent;
+    padding: 0 2px;
+    color: var(--wk-fg);
+    font-family: inherit;
+    font-size: var(--wk-t-body);
+    outline: none;
+}
+
+.wk-tagbox-input::placeholder { color: var(--wk-fg-3); }
+
+.wk-tagbox-input:disabled { cursor: not-allowed; }
+
+.wk-tagbox-meta { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; }
+
+.wk-tagbox-count { font-size: var(--wk-t-meta); color: var(--wk-fg-3); }
+
+/* 标签 chip 上的移除按钮：继承 chip 的字与色，只把默认按钮外观去掉 */
+.wk-tag-remove {
+    display: inline-flex;
+    width: 14px;
+    height: 14px;
+    align-items: center;
+    justify-content: center;
+    border: 0;
+    border-radius: 2px;
     background: transparent;
     color: inherit;
     font: inherit;
     line-height: 1;
     padding: 0;
+    opacity: 0.8;
     cursor: pointer;
+    transition: background-color 120ms ease-out, opacity 120ms ease-out;
 }
+
+.wk-tag-remove:hover { background: color-mix(in srgb, var(--wk-accent-fg) 24%, transparent); opacity: 1; }
+
+.wk-tag-remove:focus-visible { outline: 2px solid var(--wk-accent-fg); outline-offset: -1px; }
 
 /* 常用标签：可点的胶囊（未选中描边、选中实心 + 勾）——对齐重构前的写法，
    比"一个 badge 加个 + 号"更像按钮，一眼知道能点 */
