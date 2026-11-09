@@ -24,6 +24,8 @@
 .DS_Store
 *.pem
 .tmp/
+# 本地临时区：不对外展示的内部文档（UI 规范 / 设计稿 / 迁移 runbook）放这里，不入库
+/tmp/
 
 # debug
 npm-debug.log*

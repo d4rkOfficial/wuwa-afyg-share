@@ -2,7 +2,7 @@
 
 // 设计系统 v2 样本页（/dev/ui）
 // 只用于开发期验收：每加一个 primitive 就在这里放一组样例，业务页只做组合。
-// 规范见 docs/ui-spec-v2.md；视觉样张见 docs/ui-redesign-preview.html
+// 规范正文在 tmp/docs/ui-spec-v2.md（内部文档，不入库）；这个页面本身就是唯一的视觉样张
 import { useState } from 'react'
 import type { CSSProperties } from 'react'
 import {

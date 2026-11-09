@@ -1,4 +1,4 @@
-// 验收清单自动取证（docs/ui-spec-v2.md §九）
+// 验收清单自动取证（规范正文见 tmp/docs/ui-spec-v2.md 第九节；内部文档不入库）
 // 能自动判定的项直接算，需要人工判断的项标 MANUAL 并给出检查方法。
 import { readFile, readdir, stat } from 'node:fs/promises'
 import { join } from 'node:path'
