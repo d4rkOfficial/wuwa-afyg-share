@@ -858,7 +858,7 @@ export default function AgentConsole({ role, locks, userId }: Props) {
                                 <Icon icon="mdi:robot-outline" className="size-8" style={{ color: 'var(--agent-fg-3)' }} />
                                 <p className="agent-text">说清目标，AI 查数据、给方案；每个写入都等你批准</p>
                                 <p className="agent-muted">
-                                    例：把「莉莉」的 buff 按 原文案 \ 效果 命名整体重做 / 列出命名不规范的条目
+                                    例：帮我搜一下嘉贝的表 / 帮我做新角色的buff / 帮我调一下景燃的表级词条
                                 </p>
                             </div>
                         )}
