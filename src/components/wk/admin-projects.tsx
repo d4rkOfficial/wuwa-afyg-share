@@ -30,6 +30,7 @@ import { setProjectProtected } from '@/lib/actions/project-protection'
 import { formatCount, formatDate } from '@/lib/utils/format'
 import { isExpiredProject, isGracePeriod } from '@/lib/utils/expiry'
 import type { ProjectListItem } from '@/lib/types/db'
+import { isImeComposing } from '@/lib/keyboard'
 
 const PAGE_SIZE = 20
 
@@ -350,7 +351,10 @@ export default function AdminProjects() {
                     <WkInput
                         value={cleanUser}
                         onChange={(event) => setCleanUser(event.target.value)}
-                        onKeyDown={(event) => event.key === 'Enter' && lookupUser()}
+                        onKeyDown={(event) => {
+                            if (isImeComposing(event)) return
+                            if (event.key === 'Enter') lookupUser()
+                        }}
                         placeholder="用户名"
                         aria-label="要清空的用户名"
                         style={{ maxWidth: 220 }}

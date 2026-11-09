@@ -9,6 +9,7 @@ import { useCallback, useEffect, useId, useMemo, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { Icon } from '@iconify/react'
 import type { CSSProperties, ReactNode } from 'react'
+import { isImeComposing } from '@/lib/keyboard'
 
 export interface WkDropdownOption {
     value: string
@@ -105,6 +106,8 @@ export function WkDropdown({
 
     function onKeyDown(event: React.KeyboardEvent<HTMLButtonElement>) {
         if (disabled) return
+        // 组合输入中的按键属于输入法候选窗，不参与下拉的键盘导航（否则 Enter/Space 会被这里抢走）
+        if (isImeComposing(event)) return
         if (!open) {
             if (event.key === 'ArrowDown' || event.key === 'ArrowUp' || event.key === 'Enter' || event.key === ' ') {
                 event.preventDefault()

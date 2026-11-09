@@ -26,6 +26,7 @@ import {
 import { buildAgentSystemPrompt } from '@/lib/agent/prompt'
 import { runAgent } from '@/lib/agent/run'
 import { deleteTask, listTasks, normalizeRestoredTask, putTask } from '@/lib/agent/db'
+import { isImeComposing } from '@/lib/keyboard'
 import Markdown from '@/components/agent/markdown'
 import { loadPromptSettings, savePromptSettings, type PromptSettings } from '@/lib/agent/prompt-store'
 import { wkToast } from '@/design'
@@ -917,6 +918,8 @@ export default function AgentConsole({ role, locks, userId }: Props) {
                                 value={input}
                                 onChange={(e) => setInput(e.target.value)}
                                 onKeyDown={(e) => {
+                                    // 组合输入阶段（拼音候选）的 Enter 是确认候选词，不能触发发送
+                                    if (isImeComposing(e)) return
                                     if (e.key === 'Enter' && !e.shiftKey) {
                                         e.preventDefault()
                                         send()
@@ -1150,6 +1153,7 @@ function AskCard({
                         value={text}
                         onChange={(e) => setText(e.target.value)}
                         onKeyDown={(e) => {
+                            if (isImeComposing(e)) return
                             if (e.key === 'Enter' && text.trim()) onAnswer(text.trim())
                         }}
                         placeholder="自由作答，Enter 提交"

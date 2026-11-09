@@ -11,6 +11,7 @@ import { WkButton, WkDialog, WkField, WkInput, wkToast } from '@/design'
 import { updateUsername } from '@/lib/actions/profile'
 import { deleteMyContent } from '@/lib/actions/project-protection'
 import { signOut } from '@/lib/actions/auth'
+import { isImeComposing } from '@/lib/keyboard'
 
 const CONFIRM_TEXT = '确认删除'
 
@@ -94,6 +95,7 @@ export default function AccountPanel({
                                 onChange={(event) => setDraft(event.target.value)}
                                 maxLength={32}
                                 onKeyDown={(event) => {
+                                    if (isImeComposing(event)) return
                                     if (event.key === 'Enter') saveUsername()
                                     if (event.key === 'Escape') setEditing(false)
                                 }}

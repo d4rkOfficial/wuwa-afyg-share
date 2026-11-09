@@ -5,6 +5,7 @@
 import { useState } from 'react'
 import { cn } from './cn'
 import { WkInput } from './form'
+import { isImeComposing } from '@/lib/keyboard'
 
 export function WkTagInput({
     value,
@@ -40,6 +41,8 @@ export function WkTagInput({
                 placeholder={placeholder}
                 onChange={(event) => setDraft(event.target.value)}
                 onKeyDown={(event) => {
+                    // 输入法候选阶段的 Enter / 逗号是「确认候选词」，不能被当成「加标签」
+                    if (isImeComposing(event)) return
                     if (event.key === 'Enter' || event.key === ',' || event.key === '，') {
                         event.preventDefault()
                         add(draft)

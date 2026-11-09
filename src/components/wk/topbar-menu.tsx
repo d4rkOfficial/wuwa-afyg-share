@@ -5,6 +5,7 @@ import { useEffect, useRef, useState } from 'react'
 import Link from 'next/link'
 import { Icon } from '@iconify/react'
 import { WkButton, WkIconButton } from '@/design'
+import { isImeComposing } from '@/lib/keyboard'
 
 export interface WkTopbarMenuItem {
     key: string
@@ -37,6 +38,7 @@ export default function WkTopbarMenu({
             setOpen(false)
         }
         function onKey(event: KeyboardEvent) {
+            if (isImeComposing(event)) return
             if (event.key === 'Escape') setOpen(false)
         }
         document.addEventListener('mousedown', onDown)

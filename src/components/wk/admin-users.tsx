@@ -10,6 +10,7 @@ import { useRouter } from 'next/navigation'
 import { Icon } from '@iconify/react'
 import { WkBadge, WkButton, WkConfirm, WkEmpty, WkField, WkInput, wkToast } from '@/design'
 import { adminGrantAdmin, adminRevokeAdmin } from '@/lib/actions/admin-users'
+import { isImeComposing } from '@/lib/keyboard'
 
 export interface AdminViewItem {
     id: string
@@ -231,7 +232,10 @@ export default function AdminUsers({ admins }: { admins: AdminViewItem[] }) {
                         <WkInput
                             value={username}
                             onChange={(event) => setUsername(event.target.value)}
-                            onKeyDown={(event) => event.key === 'Enter' && grant()}
+                            onKeyDown={(event) => {
+                            if (isImeComposing(event)) return
+                            if (event.key === 'Enter') grant()
+                        }}
                             placeholder="输入用户名"
                             aria-label="要授权的用户名"
                         />

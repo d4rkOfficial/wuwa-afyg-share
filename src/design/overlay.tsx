@@ -8,6 +8,7 @@ import { createPortal } from 'react-dom'
 import type { ReactNode } from 'react'
 import { cn } from './cn'
 import { WkButton } from './button'
+import { isImeComposing } from '@/lib/keyboard'
 
 const FOCUSABLE =
     'a[href],button:not([disabled]),input:not([disabled]),select:not([disabled]),textarea:not([disabled]),[tabindex]:not([tabindex="-1"])'
@@ -44,6 +45,8 @@ export function WkDialog({
         })
 
         function onKeyDown(event: KeyboardEvent) {
+            // 输入法组合中的 Esc 只用来取消候选窗，不该顺手把弹窗关掉
+            if (isImeComposing(event)) return
             if (event.key === 'Escape') {
                 event.stopPropagation()
                 onClose()
@@ -189,6 +192,7 @@ export function WkMenu({
     }, [onClose])
 
     const onKeyDown = useCallback((event: React.KeyboardEvent<HTMLDivElement>) => {
+        if (isImeComposing(event)) return
         if (event.key === 'Escape') {
             event.stopPropagation()
             onClose()

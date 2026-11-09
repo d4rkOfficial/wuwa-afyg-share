@@ -2,6 +2,7 @@
 
 // 设计系统原语 · 浮层（保留 API，输出 .wk-* 类）
 import { useEffect, type ReactNode } from 'react'
+import { isImeComposing } from '@/lib/keyboard'
 
 export function Dialog({
     open,
@@ -24,6 +25,7 @@ export function Dialog({
     useEffect(() => {
         if (!open) return
         const onKey = (e: KeyboardEvent) => {
+            if (isImeComposing(e)) return
             if (e.key === 'Escape') onClose()
         }
         window.addEventListener('keydown', onKey)

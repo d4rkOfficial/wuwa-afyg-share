@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { Icon } from '@iconify/react'
+import { isImeComposing } from '@/lib/keyboard'
 
 export interface SelectOption {
     value: string
@@ -77,6 +78,7 @@ export default function SelectMenu({
             setOpen(false)
         }
         function onDocKey(e: KeyboardEvent) {
+            if (isImeComposing(e)) return
             if (e.key === 'Escape') setOpen(false)
         }
         function onScroll(e: Event) {

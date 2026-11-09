@@ -7,6 +7,7 @@ import { useRouter } from 'next/navigation'
 import { Icon } from '@iconify/react'
 import { WkIconButton, WkSwitch, wkToast } from '@/design'
 import { setEditLock } from '@/lib/actions/edit-locks'
+import { isImeComposing } from '@/lib/keyboard'
 import type { EditScope } from '@/lib/types/db'
 
 const ROWS: Array<{ scope: EditScope; label: string; hint: string }> = [
@@ -37,6 +38,7 @@ export default function WkLockPopover({
             setOpen(false)
         }
         function onKey(event: KeyboardEvent) {
+            if (isImeComposing(event)) return
             if (event.key === 'Escape') setOpen(false)
         }
         document.addEventListener('mousedown', onDown)

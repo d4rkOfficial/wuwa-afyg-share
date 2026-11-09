@@ -7,6 +7,7 @@ import { useEffect, useRef, useState, useTransition } from 'react'
 import { useRouter } from 'next/navigation'
 import { Icon } from '@iconify/react'
 import { wkToast } from '@/design'
+import { isImeComposing } from '@/lib/keyboard'
 import {
     saveBuffSnapshot,
     getBuffSnapshotDiff,
@@ -186,6 +187,7 @@ export default function BuffSnapshotPanel() {
         const previousOverflow = document.body.style.overflow
         document.body.style.overflow = 'hidden'
         const onKeyDown = (event: KeyboardEvent) => {
+            if (isImeComposing(event)) return
             if (event.key === 'Escape') setOpen(false)
         }
         document.addEventListener('keydown', onKeyDown)
