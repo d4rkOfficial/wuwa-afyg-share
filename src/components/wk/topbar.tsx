@@ -15,7 +15,8 @@ import WkTopbarMenu from './topbar-menu'
 const PRIMARY = [
     { key: 'home', label: '广场', href: '/', icon: 'mdi:compass-outline' },
     { key: 'buff', label: 'Buff 集', href: '/buff-sets', icon: 'mdi:view-dashboard-outline' },
-    { key: 'substat', label: '标准词条集', href: '/substat-sets', icon: 'mdi:format-list-checks' }
+    { key: 'substat', label: '标准词条集', href: '/substat-sets', icon: 'mdi:format-list-checks' },
+    { key: 'launcher', label: '椰果工具箱启动器', href: '/launcher', icon: 'mdi:rocket-launch-outline' }
 ]
 
 export default async function WkTopbar() {
