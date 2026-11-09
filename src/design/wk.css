@@ -678,6 +678,17 @@ html.light {
     font-size: var(--wk-t-body);
 }
 
+/* 空态当卡片用：整块撑满列表区，不在旁边留一片空白。
+   高度跟着视口走（clamp 兜住手机与超高的屏），和左栏账号卡大致等高。 */
+.wk-empty--card {
+    min-height: clamp(280px, 46vh, 480px);
+    border: 1px solid var(--wk-line);
+    border-radius: var(--wk-r-2);
+    background: var(--wk-s1);
+    padding: 56px 24px;
+    box-shadow: var(--wk-elev-1), var(--wk-inset-2);
+}
+
 /* ── 菜单 / popover ─────────────────────────────────────────────────────── */
 .wk-menu {
     position: absolute;

@@ -119,15 +119,19 @@ export function WkEmpty({
     icon,
     title,
     hint,
-    action
+    action,
+    className
 }: {
     icon?: ReactNode
     title: ReactNode
     hint?: ReactNode
     action?: ReactNode
+    /** @desc 额外类名：`wk-empty--card` 可以把空态撑成一张大卡片，避免页面留白 */
+    className?: string
 }) {
     return (
-        <div className="wk-empty">
+        <div className={cn('wk-empty', className)}>
+
             {icon}
             <p style={{ color: 'var(--wk-fg-2)', fontSize: 'var(--wk-t-body)' }}>{title}</p>
             {hint && <p className="wk-meta">{hint}</p>}

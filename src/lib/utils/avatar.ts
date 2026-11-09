@@ -32,6 +32,30 @@ export function sortedCharacterNames(icons: Record<string, string> | null | unde
 }
 
 /**
+ * @desc 头像池：按「排序后的角色名」顺序排好的 url 列表。
+ * 客户端只需要这一串 url 就能算出同一个头像（不必把整张「角色名 → url」表传下去），
+ * 所以「改名时头像实时预览」和「服务端渲染的头像」永远是同一个。
+ */
+export function avatarPool(icons: Record<string, string> | null | undefined): string[] {
+    const pool: string[] = []
+    for (const name of sortedCharacterNames(icons)) {
+        const url = icons?.[name]
+        if (url) pool.push(url)
+    }
+    return pool
+}
+
+/** @desc 用户名 + 头像池 → 头像地址（与 `pickCharacterAvatar` 同口径，客户端可算） */
+export function pickAvatarFromPool(
+    username: string | null | undefined,
+    pool: ReadonlyArray<string>
+): string | null {
+    const name = String(username ?? '').trim()
+    if (!name || pool.length === 0) return null
+    return pool[hashUsername(name) % pool.length] ?? null
+}
+
+/**
  * @desc 用户名 → 角色头像。
  * @param username 用户名（空 / 非法时返回 null，调用方自行降级）
  * @param icons 角色名 → 头像地址（`getCharacterIcons()` 的返回值）

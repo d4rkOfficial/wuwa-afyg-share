@@ -11,7 +11,7 @@ import { getAvatarIcons } from '@/lib/data/avatar-icons'
 import { CHAR_ELEMENTS } from '@/lib/data/char-elements.generated'
 import { LIST_COLUMNS } from '@/lib/project/query'
 import { isExpiredProject, isGracePeriod } from '@/lib/utils/expiry'
-import { pickCharacterAvatar } from '@/lib/utils/avatar'
+import { avatarPool } from '@/lib/utils/avatar'
 import type { ProjectListItem } from '@/lib/types/db'
 
 export const metadata: Metadata = {
@@ -53,7 +53,7 @@ export default async function MePage() {
     if (!profile?.username) redirect('/setup-username?redirect=/me')
 
     const icons = await getAvatarIcons()
-    const avatar = pickCharacterAvatar(profile.username, icons)
+    const avatarPoolUrls = avatarPool(icons)
 
     return (
         <WkRoot>
@@ -66,7 +66,7 @@ export default async function MePage() {
                 <div className="wk-me-layout" style={{ marginTop: 20 }}>
                     <AccountPanel
                         username={profile.username}
-                        avatarUrl={avatar?.url}
+                        avatarPool={avatarPoolUrls}
                         stats={[
                             { label: '工程', value: projects.length },
                             { label: '已过期', value: expiredCount, danger: expiredCount > 0 },

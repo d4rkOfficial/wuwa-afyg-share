@@ -12,16 +12,18 @@ import { updateUsername } from '@/lib/actions/profile'
 import { deleteMyContent } from '@/lib/actions/project-protection'
 import { signOut } from '@/lib/actions/auth'
 import { isImeComposing } from '@/lib/keyboard'
+import { pickAvatarFromPool } from '@/lib/utils/avatar'
 
 const CONFIRM_TEXT = '确认删除'
 
 export default function AccountPanel({
     username,
-    avatarUrl,
+    avatarPool,
     stats
 }: {
     username: string
-    avatarUrl?: string
+    /** @desc 头像池（服务端按角色名排序好的 url 列表）：改名时前端用同一套算法实时预览 */
+    avatarPool: string[]
     stats: { label: string; value: number; danger?: boolean }[]
 }) {
     const router = useRouter()
@@ -30,6 +32,10 @@ export default function AccountPanel({
     const [draft, setDraft] = useState(username)
     const [clearing, setClearing] = useState(false)
     const [confirmInput, setConfirmInput] = useState('')
+
+    // 头像跟着输入框里的名字走：还没保存也能立刻看到改名后的头像
+    const previewName = editing ? draft.trim() || username : username
+    const avatarUrl = pickAvatarFromPool(previewName, avatarPool)
 
     function saveUsername() {
         const next = draft.trim()
@@ -78,7 +84,7 @@ export default function AccountPanel({
                     </span>
                     <div style={{ minWidth: 0, flex: 1 }}>
                         <div style={{ fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                            {username}
+                            {previewName}
                         </div>
                         <div className="wk-meta">已登录</div>
                     </div>
@@ -91,7 +97,7 @@ export default function AccountPanel({
 
                 {editing && (
                     <div style={{ display: 'grid', gap: 8 }}>
-                        <WkField label="用户名" hint="改名后旧名字的工程仍然属于你">
+                        <WkField label="用户名">
                             <WkInput
                                 value={draft}
                                 onChange={(event) => setDraft(event.target.value)}

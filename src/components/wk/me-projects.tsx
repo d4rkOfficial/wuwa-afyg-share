@@ -101,8 +101,13 @@ export default function MeProjects({
 
             {items.length === 0 ? (
                 <WkEmpty
+                    className="wk-empty--card"
                     title={query ? `没有匹配「${query.trim()}」的工程` : '还没有上传过工程'}
-                    hint={query ? '换个关键词试试' : '去工具箱导出工程 JSON，做第一个分享者'}
+                    hint={
+                        query
+                            ? '换个关键词试试'
+                            : '椰果工具箱左侧栏右键工程导出 JSON，上传你的第一个工程'
+                    }
                     action={
                         query ? (
                             <WkButton size="sm" onClick={() => setQuery('')}>
