@@ -24,9 +24,9 @@ export default async function UploadPage() {
 
     return (
         <WkRoot>
-            <WkContainer>
+            <WkContainer className="wk-upload-page">
                 <WkPageHead title="上传工程" sub="选择工具箱导出的 .json，填好分享信息后发布。" />
-                <div style={{ marginTop: 16 }}>
+                <div className="wk-upload-body">
                     <UploadForm elements={CHAR_ELEMENTS as Record<string, string>} />
                 </div>
             </WkContainer>

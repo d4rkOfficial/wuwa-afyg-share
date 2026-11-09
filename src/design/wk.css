@@ -667,6 +667,47 @@ html.light {
 
 .wk-page-sub { margin-top: 6px; font-size: var(--wk-t-body); color: var(--wk-fg-3); }
 
+/* ── 上传页：拖拽区与两栏编辑区 ─────────────────────────────────────────── */
+/* 整页按视口铺满：页头先占位，剩下全给导入区，换字体/文案也不会在底部露出空白 */
+.wk-upload-page {
+    display: flex;
+    flex-direction: column;
+    min-height: calc(100dvh - var(--wk-topbar-h) - 1px);
+}
+
+.wk-upload-body {
+    display: flex;
+    flex-direction: column;
+    flex: 1 0 auto;
+    margin-top: 16px;
+    min-height: 0;
+}
+
+.wk-upload-body > * {
+    flex: 1;
+    min-height: 0;
+}
+
+/* 拖拽区：内容居中，横向撑满（与页头分割线同宽） */
+.wk-dropzone {
+    align-content: center;
+    min-height: 280px;
+}
+
+/* 已选文件后的编辑区：左列标题/简介，右列标签/有效期；两列各自成卡且等高 */
+.wk-upload-cols {
+    display: grid;
+    gap: 16px;
+    grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr);
+    align-items: stretch;
+}
+
+@media (max-width: 900px) {
+    .wk-upload-cols {
+        grid-template-columns: minmax(0, 1fr);
+    }
+}
+
 /* ── 空态 ───────────────────────────────────────────────────────────────── */
 .wk-empty {
     display: flex;

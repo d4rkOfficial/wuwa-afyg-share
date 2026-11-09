@@ -166,11 +166,12 @@ export default function UploadForm({ elements }: { elements?: Record<string, str
         <input ref={fileRef} type="file" accept=".json,application/json" onChange={onPick} style={{ display: 'none' }} />
     )
 
-    // ── 未选文件：居中导入框 ──
+    // ── 未选文件：整幅导入区（与页头分割线同宽，吃满剩余高度） ──
     if (!meta) {
         return (
-            <div style={{ maxWidth: 560, margin: '0 auto', paddingTop: 24 }}>
+            <div style={{ display: 'flex', flexDirection: 'column', minHeight: 0 }}>
                 <div
+                    className="wk-dropzone"
                     onDragOver={(event) => {
                         event.preventDefault()
                         setDragging(true)
@@ -179,6 +180,7 @@ export default function UploadForm({ elements }: { elements?: Record<string, str
                     onDrop={onDrop}
                     style={{
                         display: 'grid',
+                        flex: 1,
                         gap: 12,
                         justifyItems: 'center',
                         padding: '40px 24px',
@@ -203,9 +205,9 @@ export default function UploadForm({ elements }: { elements?: Record<string, str
         )
     }
 
-    // ── 已选文件：预览 + 分享信息 + 底部发布条 ──
+    // ── 已选文件：文件卡（整行）+ 双列编辑区 + 底部发布条 ──
     return (
-        <div style={{ display: 'grid', gap: 16, maxWidth: 720, paddingTop: 8 }}>
+        <div style={{ display: 'grid', gap: 16, paddingTop: 8 }}>
             <div className="wk-card wk-card-pad">
                 <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 8 }}>
                     <span style={{ fontWeight: 600, flex: 1, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
@@ -252,59 +254,63 @@ export default function UploadForm({ elements }: { elements?: Record<string, str
                 {fileInput}
             </div>
 
-            <div className="wk-card wk-card-pad" style={{ display: 'grid', gap: 16 }}>
-                <WkField label="标题" hint={`留空则用工程名「${meta.name}」`}>
-                    <WkInput
-                        value={title}
-                        onChange={(event) => setTitle(event.target.value)}
-                        placeholder="例：今汐·衍射队 23 秒循环"
-                        maxLength={60}
-                    />
-                </WkField>
-
-                <WkField label="简介" hint="有无参考轴视频？操作难度如何？">
-                    <WkTextarea
-                        value={description}
-                        onChange={(event) => setDescription(event.target.value)}
-                        placeholder="例：默认轴，共鸣回路在第一次变奏后再开"
-                        rows={3}
-                        maxLength={500}
-                    />
-                </WkField>
-
-                <WkField label={`标签（${tags.length}/${MAX_TAGS}）`} hint="回车 / 逗号 / 空格成词，常用标签可直接点选">
-                    <WkTagInput value={tags} onChange={setTags} suggestions={PROJECT_TAGS} max={MAX_TAGS} />
-                </WkField>
-
-                <WkField
-                    label="有效期"
-                    hint={
-                        expireDate
-                            ? `到期日 ${expireDate} 23:59（东八区）后链接自动失效；可随时在「我的工程」改期`
-                            : '永久有效，不会自动失效'
-                    }
-                >
-                    <div style={{ display: 'grid', gap: 8 }}>
-                        <WkSegmented<string>
-                            value={preset}
-                            onChange={setPreset}
-                            ariaLabel="有效期"
-                            options={PRESETS}
-                        />
+            <div className="wk-upload-cols">
+                <div className="wk-card wk-card-pad" style={{ display: 'grid', gap: 16, alignContent: 'start' }}>
+                    <WkField label="标题" hint={`留空则用工程名「${meta.name}」`}>
                         <WkInput
-                            type="date"
-                            value={preset === 'perm' ? '' : expireDate}
-                            min={todayISO()}
-                            disabled={preset === 'perm'}
-                            onChange={(event) => {
-                                setCustomDate(event.target.value)
-                                setPreset('custom')
-                            }}
-                            aria-label="自定义到期日期"
-                            style={{ maxWidth: 220 }}
+                            value={title}
+                            onChange={(event) => setTitle(event.target.value)}
+                            placeholder="例：今汐·衍射队 23 秒循环"
+                            maxLength={60}
                         />
-                    </div>
-                </WkField>
+                    </WkField>
+
+                    <WkField label="简介" hint="有无参考轴视频？操作难度如何？">
+                        <WkTextarea
+                            value={description}
+                            onChange={(event) => setDescription(event.target.value)}
+                            placeholder="例：默认轴，共鸣回路在第一次变奏后再开"
+                            rows={4}
+                            maxLength={500}
+                        />
+                    </WkField>
+                </div>
+
+                <div className="wk-card wk-card-pad" style={{ display: 'grid', gap: 16, alignContent: 'start' }}>
+                    <WkField label={`标签（${tags.length}/${MAX_TAGS}）`} hint="回车 / 逗号 / 空格成词，常用标签可直接点选">
+                        <WkTagInput value={tags} onChange={setTags} suggestions={PROJECT_TAGS} max={MAX_TAGS} />
+                    </WkField>
+
+                    <WkField
+                        label="有效期"
+                        hint={
+                            expireDate
+                                ? `到期日 ${expireDate} 23:59（东八区）后链接自动失效；可随时在「我的工程」改期`
+                                : '永久有效，不会自动失效'
+                        }
+                    >
+                        <div style={{ display: 'grid', gap: 8 }}>
+                            <WkSegmented<string>
+                                value={preset}
+                                onChange={setPreset}
+                                ariaLabel="有效期"
+                                options={PRESETS}
+                            />
+                            <WkInput
+                                type="date"
+                                value={preset === 'perm' ? '' : expireDate}
+                                min={todayISO()}
+                                disabled={preset === 'perm'}
+                                onChange={(event) => {
+                                    setCustomDate(event.target.value)
+                                    setPreset('custom')
+                                }}
+                                aria-label="自定义到期日期"
+                                style={{ maxWidth: 220 }}
+                            />
+                        </div>
+                    </WkField>
+                </div>
             </div>
 
             {submitError && (
