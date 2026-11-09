@@ -1018,23 +1018,56 @@ html.light {
     color: var(--wk-fg-3);
 }
 
-.wk-skeleton {
-    border-radius: var(--wk-r-1);
-    background: var(--wk-s2);
-    animation: wk-skeleton-pulse 1.4s ease-in-out infinite;
+/* ── 加载态：转圈（不用骨架屏） ─────────────────────────────────────────── */
+/* 一圈留缺口的描边环，靠 transform 旋转；颜色走强调色，两种主题下都清楚 */
+.wk-loading {
+    display: grid;
+    /* 撑高时把这两行挤到中间（不加 align-content，auto 行会被拉高、圈和文字被拆到上下两半） */
+    align-content: center;
+    place-items: center;
+    gap: 10px;
+    padding: 48px 16px;
 }
 
-@keyframes wk-skeleton-pulse {
-    0%,
-    100% { opacity: 0.55; }
-    50% { opacity: 1; }
+.wk-spinner {
+    width: 26px;
+    height: 26px;
+    border: 2px solid color-mix(in srgb, var(--wk-accent) 26%, transparent);
+    border-top-color: var(--wk-accent);
+    border-radius: 999px;
+    animation: wk-spin 0.8s linear infinite;
 }
 
+.wk-spinner--lg {
+    width: 34px;
+    height: 34px;
+    border-width: 3px;
+}
+
+.wk-loading-label {
+    font-size: var(--wk-t-meta);
+    color: var(--wk-fg-3);
+}
+
+@keyframes wk-spin {
+    to { transform: rotate(360deg); }
+}
+
+/* 路由级加载：占满「顶栏以下、容器内边距以内」的整块内容区，圈在正中 */
+.wk-loading--page {
+    min-height: calc(100dvh - var(--wk-topbar-h) - 1px - 80px);
+}
+
+@media (max-width: 767px) {
+    .wk-loading--page {
+        min-height: calc(100dvh - var(--wk-topbar-h) - 1px - 72px);
+    }
+}
+
+/* 降低动态：转慢一点，仍能看出在加载 */
 @media (prefers-reduced-motion: reduce) {
-    .wk-skeleton { animation: none; opacity: 0.7; }
+    .wk-spinner { animation-duration: 2.4s; }
 }
-
-.wk-skeleton-stack { display: grid; gap: 12px; }
 
 .wk-actionbar {
     position: sticky;

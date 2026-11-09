@@ -1,9 +1,11 @@
-import LoadingIndicator from '@/components/ui/loading-indicator'
+﻿import { WkContainer, WkLoading, WkRoot } from '@/design'
 
 export default function Loading() {
     return (
-        <div className="mx-auto flex min-h-[60vh] w-full max-w-6xl items-center justify-center">
-            <LoadingIndicator label="加载我的工程…" />
-        </div>
+        <WkRoot>
+            <WkContainer>
+                <WkLoading label="加载我的工程…" large page />
+            </WkContainer>
+        </WkRoot>
     )
 }

@@ -115,6 +115,31 @@ export function WkNum({ children }: { children: ReactNode }) {
     return <span className="wk-num">{children}</span>
 }
 
+export function WkLoading({
+    label = '加载中…',
+    large,
+    page,
+    className
+}: {
+    label?: ReactNode
+    /** @desc 大号转圈（路由级整页加载用） */
+    large?: boolean
+    /** @desc 占满内容区并居中（路由级 loading.tsx 用） */
+    page?: boolean
+    className?: string
+}) {
+    return (
+        <div
+            className={cn('wk-loading', page && 'wk-loading--page', className)}
+            role="status"
+            aria-live="polite"
+        >
+            <span className={cn('wk-spinner', large && 'wk-spinner--lg')} aria-hidden="true" />
+            {label && <span className="wk-loading-label">{label}</span>}
+        </div>
+    )
+}
+
 export function WkEmpty({
     icon,
     title,

@@ -24,6 +24,7 @@ export {
     WkCard,
     WkDivider,
     WkEmpty,
+    WkLoading,
     WkNum,
     WkPageHead,
     WkRow,

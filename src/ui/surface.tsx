@@ -72,10 +72,6 @@ export function EmptyState({
     )
 }
 
-export function Skeleton({ className = '', height = '1rem' }: { className?: string; height?: string }) {
-    return <div className={`wk-skeleton ${className}`} style={{ height }} />
-}
-
 /** @desc 统一页面标题区（标题 + 一句说明 + 右侧操作） */
 export function PageHeader({
     title,

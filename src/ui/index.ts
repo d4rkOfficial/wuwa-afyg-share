@@ -9,7 +9,6 @@ export {
     Divider,
     EmptyState,
     PageHeader,
-    Skeleton,
     Table,
     Toolbar,
     ToolbarSep,
