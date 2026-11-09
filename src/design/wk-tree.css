@@ -82,24 +82,3 @@
     display: inline-flex;
     margin-left: auto;
 }
-
-/* 一个节点下级过多时的折叠条 */
-.wk-tree-more > summary {
-    padding: 6px 0;
-    color: var(--wk-fg-3);
-    font-size: var(--wk-t-meta);
-    list-style: none;
-    cursor: pointer;
-}
-
-.wk-tree-more > summary::-webkit-details-marker {
-    display: none;
-}
-
-.wk-tree-more > summary:hover {
-    color: var(--wk-fg);
-}
-
-.wk-tree-more > * {
-    min-width: 0;
-}

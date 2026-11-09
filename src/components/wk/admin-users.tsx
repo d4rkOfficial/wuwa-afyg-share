@@ -3,7 +3,7 @@
 // 管理员管理（新系统）
 // 权限是「谁授给谁」的从属关系，所以用**从上到下的树**而不是平铺列表：
 // 缩进 + 一条竖直导线表达层级，同级再多也只是往下排，不会横向撑爆（这是列表 / 组织图做不到的）。
-// 一对多的两种极端都有兜底：单节点超过 CHILD_WINDOW 个下级时折叠成「展开其余 N 位」；
+// 下级一次全量铺开（不再抽成「展开其余 N 位」那种折叠条，读起来会像多出来一个假节点）；
 // 行内元素（用户名、徽标、撤销按钮）全部可换行，窄屏只是变高，不会溢出。
 import { useMemo, useState, useTransition } from 'react'
 import { useRouter } from 'next/navigation'
@@ -25,9 +25,6 @@ interface TreeNode {
     /** 上级不在管理员列表里（比如上级已被撤权），只能挂到顶层并标注 */
     orphan: boolean
 }
-
-/** 一个节点默认最多直接铺 6 个下级，超出的收进「展开其余 N 位」 */
-const CHILD_WINDOW = 6
 
 /**
  * @desc 把扁平的「谁授给谁」列表还原成森林。
@@ -161,9 +158,6 @@ function TreeNodeView({
         )
     }
 
-    const head = children.slice(0, CHILD_WINDOW)
-    const rest = children.slice(CHILD_WINDOW)
-
     return (
         <details className="wk-tree-node wk-tree-branch" open>
             <summary>
@@ -171,17 +165,9 @@ function TreeNodeView({
                 <NodeRow node={node} childCount={children.length} pending={pending} onRevoke={onRevoke} />
             </summary>
             <div className="wk-tree-children">
-                {head.map((child) => (
+                {children.map((child) => (
                     <TreeNodeView key={child.item.id} node={child} pending={pending} onRevoke={onRevoke} />
                 ))}
-                {rest.length > 0 && (
-                    <details className="wk-tree-more">
-                        <summary>展开其余 {rest.length} 位下级</summary>
-                        {rest.map((child) => (
-                            <TreeNodeView key={child.item.id} node={child} pending={pending} onRevoke={onRevoke} />
-                        ))}
-                    </details>
-                )}
             </div>
         </details>
     )
