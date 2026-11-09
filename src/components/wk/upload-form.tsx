@@ -255,22 +255,25 @@ export default function UploadForm({ elements }: { elements?: Record<string, str
             </div>
 
             <div className="wk-upload-cols">
-                <div className="wk-card wk-card-pad" style={{ display: 'grid', gap: 16, alignContent: 'start' }}>
+                <div
+                    className="wk-card wk-card-pad"
+                    style={{ display: 'grid', gap: 16, gridTemplateRows: 'auto minmax(0, 1fr)' }}
+                >
                     <WkField label="标题" hint={`留空则用工程名「${meta.name}」`}>
                         <WkInput
                             value={title}
                             onChange={(event) => setTitle(event.target.value)}
-                            placeholder="例：今汐·衍射队 23 秒循环"
+                            placeholder="例：长船露10锚神轴 首轮+循环 适用1链以上露帕"
                             maxLength={60}
                         />
                     </WkField>
 
-                    <WkField label="简介" hint="有无参考轴视频？操作难度如何？">
+                    <WkField className="wk-field--fill" label="简介" hint="有无参考轴视频？操作难度如何？">
                         <WkTextarea
+                            className="wk-textarea--fill"
                             value={description}
                             onChange={(event) => setDescription(event.target.value)}
-                            placeholder="例：默认轴，共鸣回路在第一次变奏后再开"
-                            rows={4}
+                            placeholder={'例：\n参考视频：https://xxx.tv/114514\n这个轴很简单，有手就行吧。'}
                             maxLength={500}
                         />
                     </WkField>

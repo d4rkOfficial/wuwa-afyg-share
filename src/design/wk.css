@@ -398,6 +398,17 @@ html.light {
     field-sizing: content;
 }
 
+/* 多行框吃掉字段里的剩余高度（卡片被拉高时不留空白）：关掉内容自适应，改由网格 1fr 决定 */
+.wk-textarea--fill {
+    height: 100%;
+    field-sizing: fixed;
+}
+
+/* 字段整体拉伸：标签在上、控件占满中间、提示贴底 */
+.wk-field--fill {
+    grid-template-rows: auto minmax(0, 1fr) auto;
+}
+
 .wk-select { appearance: none; padding-right: 26px;
     background-image: url("data:image/svg+xml;charset=utf-8,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%238a8175' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
     background-repeat: no-repeat;
