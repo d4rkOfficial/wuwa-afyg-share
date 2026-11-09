@@ -76,6 +76,8 @@
     --wk-row: 44px;
     --wk-trow: 40px;
     --wk-thead: 36px;
+    /* 顶栏内容高（含下边框由使用方 +1px），粘性侧栏 / 目录靠它算 top */
+    --wk-topbar-h: 56px;
 
     --wk-gap: 12px;
     --wk-pad: 16px;
@@ -819,7 +821,7 @@ html.light {
     display: flex;
     align-items: center;
     gap: 6px;
-    height: 56px;
+    height: var(--wk-topbar-h);
     max-width: var(--wk-max);
     margin: 0 auto;
     padding: 0 16px;

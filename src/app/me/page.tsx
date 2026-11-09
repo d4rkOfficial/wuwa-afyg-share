@@ -63,14 +63,17 @@ export default async function MePage() {
                 />
 
                 <div className="wk-me-layout" style={{ marginTop: 20 }}>
-                    <AccountPanel
-                        username={profile.username}
-                        avatarPool={avatarPoolUrls}
-                        stats={[
-                            { label: '上传数', value: projects.length },
-                            { label: '下载量', value: totalClones }
-                        ]}
-                    />
+                    {/* 有工程时左栏粘住（长列表滚动不带走账号卡）；空态时拉伸到与右栏等高，两卡下沿对齐 */}
+                    <div className={projects.length === 0 ? 'wk-me-side wk-me-side--fill' : 'wk-me-side wk-me-side--sticky'}>
+                        <AccountPanel
+                            username={profile.username}
+                            avatarPool={avatarPoolUrls}
+                            stats={[
+                                { label: '上传数', value: projects.length },
+                                { label: '下载量', value: totalClones }
+                            ]}
+                        />
+                    </div>
                     <div style={{ minWidth: 0, display: 'grid', gap: 12, alignContent: 'start' }}>
                         <div className="wk-section-head" style={{ marginBottom: 0 }}>
                             <h2 style={{ fontSize: 'var(--wk-t-sec)' }}>我的工程</h2>

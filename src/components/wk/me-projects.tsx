@@ -81,22 +81,18 @@ export default function MeProjects({
                     }}
                     placeholder="搜索标题 / 简介 / 标签 / 分享码"
                     aria-label="搜索我的工程"
-                    style={{ flex: 1, minWidth: 200, maxWidth: 320 }}
+                    style={{ flex: 1, minWidth: 200 }}
                 />
                 {query && (
                     <WkButton size="sm" variant="quiet" onClick={() => setQuery('')}>
                         清空
                     </WkButton>
                 )}
-                <span className="wk-meta">
-                    {query ? (
-                        <>
-                            匹配 {filtered.length} / {projects.length}
-                        </>
-                    ) : (
-                        <>共 {projects.length} 个</>
-                    )}
-                </span>
+                {query && (
+                    <span className="wk-meta">
+                        匹配 {filtered.length} / {projects.length}
+                    </span>
+                )}
             </div>
 
             {items.length === 0 ? (

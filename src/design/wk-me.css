@@ -6,8 +6,28 @@
     grid-template-columns: minmax(0, 1fr);
     align-items: start;
 }
+
+/* 左栏外层：宽度交给列定义，自己不加最小宽 */
+.wk-me-side { min-width: 0; }
+
 @media (min-width: 1024px) {
     .wk-me-layout {
         grid-template-columns: 280px minmax(0, 1fr);
+    }
+
+    /* 有工程：左栏粘在顶栏下方，右栏长列表滚动时账号卡不会跟着滚出视野 */
+    .wk-me-side--sticky {
+        position: sticky;
+        top: calc(var(--wk-topbar-h) + 1px + 16px);
+    }
+
+    /* 空态：右栏只有一张占位卡片，把左栏拉到与右栏等高，两张卡片下沿对齐 */
+    .wk-me-side--fill {
+        display: grid;
+        align-self: stretch;
+    }
+
+    .wk-me-side--fill > * {
+        height: 100%;
     }
 }
