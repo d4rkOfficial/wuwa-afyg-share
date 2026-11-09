@@ -58,13 +58,13 @@ export default function SubstatSetsBrowser({
                 </p>
             ) : (
                 <div>
-                    {visible.map((row, index) => {
+                    {visible.map((row) => {
                         const total = countPlanSubstats(row.plan)
                         const cost = row.plan.slots.reduce((sum, slot) => sum + slot.cost, 0)
                         const avatar = icons[row.character_name]
 
                         return (
-                            <details key={row.id} className="wk-acc" open={index === 0}>
+                            <details key={row.id} className="wk-acc">
                                 <summary>
                                     <span className="wk-pcard-avatar" style={{ width: 28, height: 28 }}>
                                         {avatar ? (

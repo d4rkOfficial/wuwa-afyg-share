@@ -1,10 +1,10 @@
-# 部署与运维
+﻿# 部署与运维
 
 本页是椰果工坊的部署、环境配置与运维说明。项目介绍与功能见 [README](../README.md)，接口清单见 [api.md](api.md)。
 
 ## 部署到 Cloudflare Workers
 
-基于 `@opennextjs/cloudflare`（支持 Next.js 16，Node runtime）。提交 `main` 后由 Cloudflare **Workers Builds**（连接 GitHub）自动构建部署。
+基于 `@opennextjs/cloudflare`（支持 Next.js 16，Node runtime）。提交 `master` 后由 Cloudflare **Workers Builds**（连接 GitHub）自动构建部署。
 
 ```bash
 pnpm install
