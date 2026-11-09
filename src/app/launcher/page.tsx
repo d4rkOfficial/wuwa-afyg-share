@@ -1,5 +1,4 @@
 import type { Metadata } from 'next'
-import Link from 'next/link'
 import LauncherDownloads from '@/components/wk/launcher-downloads'
 import WkCopyButton from '@/components/wk/copy-button'
 import { WkBadge, WkContainer, WkRoot } from '@/design'
@@ -44,9 +43,6 @@ export default function LauncherPage() {
                 <div style={{ display: 'grid', gap: 40, maxWidth: 860 }}>
                     {/* 刊头 */}
                     <header style={{ display: 'grid', gap: 12, paddingBottom: 24, borderBottom: '1px solid var(--wk-line)' }}>
-                        <Link href="/" className="wk-clear">
-                            返回工坊首页
-                        </Link>
                         <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 8 }}>
                             <WkBadge>{LAUNCHER_VERSION}</WkBadge>
                             <WkBadge>Windows 10 / 11</WkBadge>
