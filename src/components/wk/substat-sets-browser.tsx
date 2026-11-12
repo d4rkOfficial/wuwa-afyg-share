@@ -150,13 +150,9 @@ export default function SubstatSetsBrowser({
                                 <span className="wk-stat-name">{row.character_name}</span>
                                 <span className="wk-stat-mains">
                                     {row.plan.slots.map((slot, slotIndex) => (
-                                        <span className="wk-stat-main" key={slotIndex}>
-                                            <span className="wk-stat-cost" data-cost={slot.cost}>
-                                                {slot.cost}C
-                                            </span>
-                                            <span className="wk-stat-main-name">
-                                                {mainStatShort(slot.mainStat?.type) || '—'}
-                                            </span>
+                                        <span className="wk-stat-badge" data-cost={slot.cost} key={slotIndex}>
+                                            <span className="wk-stat-badge-cost">{slot.cost}C</span>
+                                            <span>{mainStatShort(slot.mainStat?.type) || '—'}</span>
                                         </span>
                                     ))}
                                 </span>

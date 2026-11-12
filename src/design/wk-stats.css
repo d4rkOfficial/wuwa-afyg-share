@@ -69,9 +69,32 @@
     gap: 6px;
 }
 
-/* 一个部位：cost 徽标 + 主词条缩写，两者紧挨着读成「4C 暴击」 */
-.wk-stat-main { display: inline-flex; align-items: center; gap: 4px; }
+/* 一个部位 = 一枚徽标，cost 与主词条写在同一个 badge 里（「4C 暴伤」） */
+.wk-stat-badge {
+    display: inline-flex;
+    height: 22px;
+    align-items: center;
+    gap: 5px;
+    border: 1px solid var(--wk-ctrl-line);
+    border-radius: var(--wk-r-1);
+    background: var(--wk-s1);
+    padding: 0 7px;
+    color: var(--wk-fg);
+    font-size: var(--wk-t-meta);
+    line-height: 1;
+    white-space: nowrap;
+}
 
+.wk-stat-badge[data-cost='4'] { border-color: var(--wk-accent); }
+
+.wk-stat-badge-cost {
+    color: var(--wk-fg-3);
+    font-variant-numeric: tabular-nums;
+}
+
+.wk-stat-badge[data-cost='4'] .wk-stat-badge-cost { color: var(--wk-accent-text); }
+
+/* 展开后的部位明细里 cost 仍是独立小徽标：旁边还跟着数值，合成一枚会太长 */
 .wk-stat-cost {
     display: inline-flex;
     height: 20px;
@@ -90,12 +113,6 @@
 .wk-stat-cost[data-cost='4'] {
     border-color: var(--wk-accent);
     color: var(--wk-accent-text);
-}
-
-.wk-stat-main-name {
-    color: var(--wk-fg);
-    font-size: var(--wk-t-meta);
-    white-space: nowrap;
 }
 
 .wk-stat-note {
