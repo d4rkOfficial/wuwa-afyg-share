@@ -170,7 +170,7 @@ export default function SubstatSetsBrowser({
                                                 <span className="wk-stat-slot-main">{statText(slot.mainStat)}</span>
                                                 {slot.secondMainStat && (
                                                     <span className="wk-stat-slot-second">
-                                                        副主词条 {statText(slot.secondMainStat)}
+                                                        {statText(slot.secondMainStat)}
                                                     </span>
                                                 )}
                                             </div>
