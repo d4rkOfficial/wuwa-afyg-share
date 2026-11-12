@@ -146,11 +146,6 @@ export default function BuffEditor({
 
     return (
         <>
-            <div className="wk-workbench-head">
-                <span className="wk-workbench-title">{title}</span>
-                {action && <span className="wk-spacer" />}
-                {action}
-            </div>
             <div className="wk-tabs-card">
                 <div className="wk-tabs" role="tablist" aria-label="已打开的实体">
                     {opened.map((entity) => {
@@ -208,6 +203,7 @@ export default function BuffEditor({
                         <Icon icon="mdi:plus" width={14} height={14} />
                     </button>
                     {dirtyCount > 0 && <span className="wk-tabs-note">未保存 {dirtyCount}</span>}
+                    {action && <div className="wk-tabs-actions">{action}</div>}
                 </div>
 
                 <div className="wk-tabs-body">

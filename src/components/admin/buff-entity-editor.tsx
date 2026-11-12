@@ -189,7 +189,6 @@ export default function BuffEntityEditor({
     // ── buff 列表与就地编辑 ──
     // 默认选中第一条：进来就有内容可编辑（窄屏下拉也才不会与状态不一致）
     const [activeBuffIdx, setActiveBuffIdx] = useState<number | null>(buffs.length > 0 ? 0 : null)
-    const [condPanelOpen, setCondPanelOpen] = useState(false)
     /** @desc 展开行内「乘区条件」面板的乘区下标（同一乘区可有多条，故用下标定位） */
     const [expandedZoneIdx, setExpandedZoneIdx] = useState<number | null>(null)
 
@@ -334,7 +333,6 @@ export default function BuffEntityEditor({
 
     function clearBuffCondition() {
         updateActiveBuff({ condition: null })
-        setCondPanelOpen(false)
     }
 
     /** @desc 添加一条乘区贡献条目（同一乘区可添加多次，各自独立配置） */
@@ -693,6 +691,62 @@ export default function BuffEntityEditor({
                                             title: BUFF_SCOPE_LABELS[t.value]
                                         }))}
                                     />
+                                    {/* 链 / 阶条件：不再折叠，直接排在作用范围右侧（链阶互斥） */}
+                                    {canChain ? (
+                                        <div className="flex items-center gap-2 rounded-sm border border-(--wk-line) bg-(--wk-input) px-2 py-1">
+                                            <span className="text-[11px] text-(--wk-fg)">共鸣链</span>
+                                            <div className="flex overflow-hidden rounded-sm border border-(--wk-line)">
+                                                {Array.from({ length: CHAIN_MAX + 1 }, (_, k) => k).map((n) => (
+                                                    <button
+                                                        key={n}
+                                                        onClick={() => setBuffChain(n)}
+                                                        title={n === 0 ? '本体（0链）' : `≥${n}链`}
+                                                        className={`flex h-6 min-w-6 items-center justify-center px-1 text-[11px] transition-colors ${
+                                                            chainMinOf(activeBuff.condition) === n
+                                                                ? 'bg-(--wk-accent) text-(--wk-accent-fg)'
+                                                                : 'text-(--wk-fg-3) hover:text-(--wk-fg)'
+                                                        }`}
+                                                    >
+                                                        {n === 0 ? '本体' : n}
+                                                    </button>
+                                                ))}
+                                            </div>
+                                        </div>
+                                    ) : (
+                                        <span className="text-[10px] text-(--wk-fg-3)">
+                                            {entityType === 'weapon' ? '链条件只用于角色实体' : '链/阶条件只用于角色 / 武器实体'}
+                                        </span>
+                                    )}
+                                    {canRefinement && (
+                                        <div className="flex items-center gap-2 rounded-sm border border-(--wk-line) bg-(--wk-input) px-2 py-1">
+                                            <span className="text-[11px] text-(--wk-fg)">精炼</span>
+                                            <div className="flex overflow-hidden rounded-sm border border-(--wk-line)">
+                                                {Array.from({ length: REFINE_MAX }, (_, k) => k + 1).map((n) => (
+                                                    <button
+                                                        key={n}
+                                                        onClick={() => setBuffRefinement(n)}
+                                                        title={`≥${n}阶`}
+                                                        className={`flex h-6 min-w-6 items-center justify-center px-1 text-[11px] transition-colors ${
+                                                            (activeBuff.condition?.refinements?.[0]?.min ??
+                                                                activeBuff.condition?.refinement) === n
+                                                                ? 'bg-(--wk-accent) text-(--wk-accent-fg)'
+                                                                : 'text-(--wk-fg-3) hover:text-(--wk-fg)'
+                                                        }`}
+                                                    >
+                                                        {n}
+                                                    </button>
+                                                ))}
+                                            </div>
+                                        </div>
+                                    )}
+                                    <button
+                                        onClick={clearBuffCondition}
+                                        title={conditionSummary ? `当前条件：${conditionSummary}` : '清除链/阶条件'}
+                                        className="flex h-6 items-center gap-1 rounded-sm border border-(--wk-line) px-2 text-[10px] text-(--wk-fg-3) transition-colors hover:border-(--wk-danger) hover:text-(--wk-danger)"
+                                    >
+                                        <Icon icon="mdi:close-circle-outline" className="size-3" />
+                                        清除条件
+                                    </button>
                                     <div className="flex-1" />
                                     <Button
                                         variant="danger"
@@ -703,88 +757,8 @@ export default function BuffEntityEditor({
                                 </div>
                             </section>
 
-                            {/* 实例级生效条件（折叠面板：链 / 阶硬门槛，互斥；属性·类型挂在乘区上） */}
-                            <section className="wk-card" style={{ flexShrink: 0, overflow: 'hidden' }}>
-                                <button
-                                    onClick={() => setCondPanelOpen((v) => !v)}
-                                    className={`flex w-full items-center gap-1.5 px-3 py-2 text-left text-[11px] transition-colors hover:bg-(--wk-s2) ${
-                                        conditionSummary ? 'text-(--wk-accent-text)' : 'text-(--wk-fg-3)'
-                                    }`}
-                                    title="链/阶条件（硬性门槛，链阶互斥）"
-                                >
-                                    <Icon
-                                        icon={condPanelOpen ? 'mdi:chevron-down' : 'mdi:chevron-right'}
-                                        className="size-3.5 shrink-0 text-(--wk-fg-3)"
-                                    />
-                                    <span className="shrink-0">链/阶条件</span>
-                                    {conditionSummary && (
-                                        <span className="min-w-0 truncate text-[11px]">：{conditionSummary}</span>
-                                    )}
-                                </button>
-                                {condPanelOpen && (
-                                    <div className="flex flex-wrap items-center gap-2 px-3 pb-2.5">
-                                        {canChain ? (
-                                            <div className="flex items-center gap-2 rounded-sm border border-(--wk-line) bg-(--wk-input) px-2 py-1">
-                                                <span className="text-[11px] text-(--wk-fg)">共鸣链</span>
-                                                <div className="flex overflow-hidden rounded-sm border border-(--wk-line)">
-                                                    {Array.from({ length: CHAIN_MAX + 1 }, (_, k) => k).map((n) => (
-                                                        <button
-                                                            key={n}
-                                                            onClick={() => setBuffChain(n)}
-                                                            title={n === 0 ? '本体（0链）' : `≥${n}链`}
-                                                            className={`flex h-6 min-w-6 items-center justify-center px-1 text-[11px] transition-colors ${
-                                                                chainMinOf(activeBuff.condition) === n
-                                                                    ? 'bg-(--wk-accent) text-(--wk-accent-fg)'
-                                                                    : 'text-(--wk-fg-3) hover:text-(--wk-fg)'
-                                                            }`}
-                                                        >
-                                                            {n === 0 ? '本体' : n}
-                                                        </button>
-                                                    ))}
-                                                </div>
-                                            </div>
-                                        ) : (
-                                            <span className="text-[10px] text-(--wk-fg-3)">
-                                                {entityType === 'weapon'
-                                                    ? '链条件只用于角色实体'
-                                                    : '链/阶条件只用于角色 / 武器实体'}
-                                            </span>
-                                        )}
-                                        {canRefinement && (
-                                            <div className="flex items-center gap-2 rounded-sm border border-(--wk-line) bg-(--wk-input) px-2 py-1">
-                                                <span className="text-[11px] text-(--wk-fg)">精炼</span>
-                                                <div className="flex overflow-hidden rounded-sm border border-(--wk-line)">
-                                                    {Array.from({ length: REFINE_MAX }, (_, k) => k + 1).map((n) => (
-                                                        <button
-                                                            key={n}
-                                                            onClick={() => setBuffRefinement(n)}
-                                                            title={`≥${n}阶`}
-                                                            className={`flex h-6 min-w-6 items-center justify-center px-1 text-[11px] transition-colors ${
-                                                                (activeBuff.condition?.refinements?.[0]?.min ??
-                                                                    activeBuff.condition?.refinement) === n
-                                                                    ? 'bg-(--wk-accent) text-(--wk-accent-fg)'
-                                                                    : 'text-(--wk-fg-3) hover:text-(--wk-fg)'
-                                                            }`}
-                                                        >
-                                                            {n}
-                                                        </button>
-                                                    ))}
-                                                </div>
-                                            </div>
-                                        )}
-                                        <button
-                                            onClick={clearBuffCondition}
-                                            className="flex h-6 items-center gap-1 rounded-sm border border-(--wk-line) px-2 text-[10px] text-(--wk-fg-3) transition-colors hover:border-(--wk-danger) hover:text-(--wk-danger)"
-                                        >
-                                            <Icon icon="mdi:close-circle-outline" className="size-3" />
-                                            清除
-                                        </button>
-                                    </div>
-                                )}
-                            </section>
-
-                            {/* 主区：左 = 乘区条目，右 = 「添加乘区」栏（常驻，不再折叠） */}
-                            <section className="wk-card" style={{ display: 'flex', minHeight: 0, flex: 1, flexDirection: 'column', overflow: 'hidden' }}><div className="flex min-h-0 flex-1 flex-col md:flex-row">
+                            {/* 乘区贡献条目卡片（「添加乘区」清单单独成卡，在整页最右一列） */}
+                            <section className="wk-card" style={{ display: 'flex', minHeight: 0, flex: 1, flexDirection: 'column', overflow: 'hidden' }}>
                             {/* 乘区贡献条目列表（同一乘区可多条，各自带数值 / 引用 / 覆盖 / 乘区级条件） */}
                             <div className="min-h-0 flex-1 space-y-1 overflow-y-auto p-2">
                                 {activeZones.length === 0 ? (
@@ -997,8 +971,18 @@ export default function BuffEntityEditor({
                                 )}
                             </div>
 
-                            {/* 添加乘区：右侧固定栏，一直可见（不再折叠、不再压在列表下方） */}
-                            <aside className="min-h-0 w-full shrink-0 overflow-y-auto border-t border-(--wk-line) bg-(--wk-s2) p-2 md:w-60 md:border-t-0 md:border-l">
+                            </section>
+                        </>
+                    ) : (
+                        <div className="flex flex-1 items-center justify-center text-xs text-(--wk-fg-3)">
+                            选择一条 Buff 开始编辑（或点「新增」）
+                        </div>
+                    )}
+                </div>
+                </div>
+
+                {/* 添加乘区：独立一张卡片，与左侧 Buff 列表等高 */}
+                <aside className="wk-card wk-zone-add">
                                 <div className="flex items-center gap-1.5 pb-1.5">
                                     <Icon icon="mdi:playlist-plus" className="size-3.5 shrink-0 text-(--wk-accent-text)" />
                                     <span className="wk-title text-[11px]">添加乘区</span>
@@ -1038,17 +1022,6 @@ export default function BuffEntityEditor({
                                     ))}
                                 </div>
                             </aside>
-                            </div>
-                            </section>
-                        </>
-                    ) : (
-                        <div className="flex flex-1 items-center justify-center text-xs text-(--wk-fg-3)">
-                            选择一条 Buff 开始编辑（或点「新增」）
-                        </div>
-                    )}
-                </div>
-                </div>
-
             </div>
 
             {refTargetIdx !== null && (

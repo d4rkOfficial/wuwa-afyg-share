@@ -299,18 +299,7 @@ body:has(.wk-workbench) footer {
     box-shadow: var(--wk-elev-1), var(--wk-inset-2);
 }
 
-/* ── 工作台标题栏：全屏铺满，但保留一条标题（不再是大段说明文字） ─────────── */
-.wk-workbench-head {
-    display: flex;
-    height: 50px;
-    flex-shrink: 0;
-    align-items: center;
-    gap: 8px;
-    padding: 0 16px;
-    border-bottom: 1px solid var(--wk-line);
-    background: var(--wk-s1);
-}
-
+/* ── 工作台标题：编辑态没有独立标题栏，标题只出现在空态占位卡片的头部 ────── */
 .wk-workbench-title {
     min-width: 0;
     overflow: hidden;
@@ -319,6 +308,16 @@ body:has(.wk-workbench) footer {
     font-weight: 600;
     text-overflow: ellipsis;
     white-space: nowrap;
+}
+
+/* 标签栏右端的动作（快照）：编辑态挂在标签条最右侧，不另占一行 */
+.wk-tabs-actions {
+    display: flex;
+    flex-shrink: 0;
+    align-items: center;
+    gap: 6px;
+    margin-left: auto;
+    padding: 0 8px;
 }
 
 /* ── 未打开对象时的占位：几乎整屏的一张卡，只留一点边距 ─────────────────── */
@@ -355,6 +354,26 @@ body:has(.wk-workbench) footer {
     gap: 10px;
     padding: 24px;
     text-align: center;
+}
+
+/* 添加乘区：独立卡片，与左侧 Buff 列表等高（整页最右一列） */
+.wk-zone-add {
+    display: flex;
+    width: 236px;
+    min-width: 0;
+    flex-shrink: 0;
+    flex-direction: column;
+    gap: 6px;
+    overflow-y: auto;
+    margin: 12px 12px 12px 0;
+    padding: 10px;
+}
+
+@media (max-width: 1100px) {
+    .wk-zone-add {
+        width: 100%;
+        margin: 0 12px 12px;
+    }
 }
 
 /* ── 标准词条集编辑台：左部位列表 + 右编辑区 + 底部保存条 ───────────────────

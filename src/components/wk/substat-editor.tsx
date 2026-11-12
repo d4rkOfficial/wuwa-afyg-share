@@ -187,9 +187,6 @@ export default function SubstatEditor({
 
     return (
         <>
-            <div className="wk-workbench-head">
-                <span className="wk-workbench-title">{title}</span>
-            </div>
             <div className="wk-tabs-card">
                 <div className="wk-tabs" role="tablist" aria-label="已打开的角色">
                     {opened.map((name) => {
