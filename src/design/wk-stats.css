@@ -1,0 +1,174 @@
+/* 标准词条集浏览页：凹槽里的六属性 tab + 角色条目 + 部位明细。由 /substat-sets 导入。 */
+
+/* ── 属性切换：一条凹槽里放六个 tab ─────────────────────────────────────── */
+.wk-stat-groove {
+    display: grid;
+    gap: 8px;
+    min-width: 0;
+    border: 1px solid var(--wk-line);
+    border-radius: var(--wk-r-2);
+    background: var(--wk-s2);
+    padding: 8px;
+    box-shadow: var(--wk-inset-1);
+}
+
+.wk-stat-tabs {
+    display: flex;
+    min-width: 0;
+    flex-wrap: wrap;
+    gap: 4px;
+}
+
+.wk-stat-tab {
+    height: var(--wk-h-sm);
+    min-width: 68px;
+    flex: 1;
+    border: 1px solid transparent;
+    border-radius: var(--wk-r-1);
+    background: transparent;
+    padding: 0 10px;
+    color: var(--wk-fg-3);
+    font-family: inherit;
+    font-size: var(--wk-t-body);
+    line-height: 1;
+    white-space: nowrap;
+    cursor: pointer;
+    transition: background-color 120ms ease-out, color 120ms ease-out, border-color 120ms ease-out;
+}
+
+.wk-stat-tab:hover:not(:disabled) { color: var(--wk-fg); }
+
+.wk-stat-tab[data-active='true'] {
+    border-color: var(--wk-ctrl-line);
+    background: var(--wk-s1);
+    color: var(--wk-fg);
+    font-weight: 600;
+    box-shadow: var(--wk-elev-1), var(--wk-inset-2);
+}
+
+.wk-stat-tab:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+}
+
+.wk-stat-tab-count {
+    margin-left: 5px;
+    color: var(--wk-fg-3);
+    font-size: var(--wk-t-meta);
+    font-variant-numeric: tabular-nums;
+}
+
+/* ── 角色条目 ───────────────────────────────────────────────────────────── */
+.wk-stat-name { flex-shrink: 0; font-weight: 600; }
+
+.wk-stat-mains {
+    display: flex;
+    min-width: 0;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 6px;
+}
+
+/* 一个部位：cost 徽标 + 主词条缩写，两者紧挨着读成「4C 暴击」 */
+.wk-stat-main { display: inline-flex; align-items: center; gap: 4px; }
+
+.wk-stat-cost {
+    display: inline-flex;
+    height: 20px;
+    flex-shrink: 0;
+    align-items: center;
+    border: 1px solid var(--wk-ctrl-line);
+    border-radius: var(--wk-r-1);
+    background: var(--wk-s1);
+    padding: 0 5px;
+    color: var(--wk-fg-2);
+    font-size: var(--wk-t-meta);
+    font-variant-numeric: tabular-nums;
+    line-height: 1;
+}
+
+.wk-stat-cost[data-cost='4'] {
+    border-color: var(--wk-accent);
+    color: var(--wk-accent-text);
+}
+
+.wk-stat-main-name {
+    color: var(--wk-fg);
+    font-size: var(--wk-t-meta);
+    white-space: nowrap;
+}
+
+.wk-stat-note {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+/* ── 展开后的部位明细 ───────────────────────────────────────────────────── */
+.wk-stat-slots {
+    display: grid;
+    min-width: 0;
+    /* 与摘要行的头像缩进对齐，明细不贴着卡片边缘 */
+    padding: 2px 16px 8px;
+}
+
+.wk-stat-slot {
+    display: grid;
+    gap: 6px;
+    min-width: 0;
+    padding: 10px 0;
+    border-top: 1px solid var(--wk-line);
+}
+
+.wk-stat-slot:first-child { border-top: 0; padding-top: 6px; }
+
+.wk-stat-slot-head {
+    display: flex;
+    min-width: 0;
+    flex-wrap: wrap;
+    align-items: center;
+    /* cost 与主词条只隔 6px，读成一组 */
+    gap: 6px;
+}
+
+.wk-stat-slot-main {
+    color: var(--wk-fg);
+    font-size: var(--wk-t-body);
+    font-weight: 600;
+    white-space: nowrap;
+}
+
+.wk-stat-slot-second {
+    color: var(--wk-fg-3);
+    font-size: var(--wk-t-meta);
+    white-space: nowrap;
+}
+
+.wk-stat-slot-subs {
+    display: flex;
+    min-width: 0;
+    flex-wrap: wrap;
+    gap: 4px;
+}
+
+.wk-stat-chip {
+    display: inline-flex;
+    height: 20px;
+    align-items: center;
+    border: 1px solid var(--wk-line);
+    border-radius: var(--wk-r-1);
+    background: var(--wk-s1);
+    padding: 0 6px;
+    color: var(--wk-fg-2);
+    font-size: var(--wk-t-meta);
+    font-variant-numeric: tabular-nums;
+    line-height: 1;
+    white-space: nowrap;
+}
+
+/* 固定值（生命/攻击/防御）与百分比同屏时靠底色区分，扫一眼就知道是哪种 */
+.wk-stat-chip[data-unit=''] {
+    background: var(--wk-s2);
+    color: var(--wk-fg);
+}

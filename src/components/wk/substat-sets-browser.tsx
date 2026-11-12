@@ -1,132 +1,203 @@
 'use client'
 
 // 标准词条集浏览（新系统）
-// 原来的「左侧角色栏 + 右侧明细」工作台被去掉：列表页用不着常驻侧栏，
-// 角色切换改成可展开的条目（原生 <details>，无 JS 也能用）。
+// 结构：搜索 + 一条凹槽（六个属性 tab）+ 该属性下的角色条目（原生 <details>）。
+// 条目摘要直接铺五个部位的「cost + 主词条缩写」，展开后是每个部位的
+// 主词条 / 副主词条 / 副词条（副词条用缩写，固定值带「生命 / 攻击 / 防御」字样）。
 import { useMemo, useState } from 'react'
-import type { CSSProperties } from 'react'
-import { WkBadge, WkInput, WkToolbar } from '@/design'
-import { countPlanSubstats } from '@/lib/utils/echo-plan'
-import { ECHO_MAX_TOTAL_COST, SUBSTAT_TOTAL_COUNT } from '@/lib/consts/echo-stats'
+import { WkInput } from '@/design'
+import { mainStatShort, substatShort } from '@/lib/consts/echo-stats'
 import type { EchoStatValue, StandardSubstatSetRow } from '@/lib/types/db'
+
+/** @desc 六个元素属性（游戏内没有「物理伤害加成」主词条，物伤角色归到「其它」） */
+const ELEMENT_ORDER = ['冷凝', '热熔', '导电', '气动', '衍射', '湮灭'] as const
+const OTHER = '其它'
 
 function statText(stat: EchoStatValue | null | undefined): string {
     if (!stat) return '—'
-    return `${stat.type}${stat.value}${stat.unit ?? ''}`
+    return `${stat.type} ${stat.value}${stat.unit ?? ''}`
+}
+
+function substatText(stat: EchoStatValue): string {
+    return `${substatShort(stat.type)} ${stat.value}${stat.unit ?? ''}`
 }
 
 export default function SubstatSetsBrowser({
     rows,
-    icons = {}
+    icons = {},
+    elements = {}
 }: {
     rows: StandardSubstatSetRow[]
     icons?: Record<string, string>
+    /** @desc 角色名 → 属性（服务端传入的静态表） */
+    elements?: Record<string, string>
 }) {
     const [search, setSearch] = useState('')
+    const [picked, setPicked] = useState<string | null>(null)
+
+    const keyword = search.trim()
+
+    /** @desc 先按属性分组（顺序固定为六元素，其它排最后），再按角色名排序 */
+    const groups = useMemo(() => {
+        const map = new Map<string, StandardSubstatSetRow[]>()
+        for (const row of rows) {
+            const element = elements[row.character_name]
+            const key = element && (ELEMENT_ORDER as readonly string[]).includes(element) ? element : OTHER
+            const list = map.get(key) ?? []
+            list.push(row)
+            map.set(key, list)
+        }
+        for (const list of map.values()) list.sort((a, b) => a.character_name.localeCompare(b.character_name, 'zh'))
+        return map
+    }, [rows, elements])
+
+    const tabs = useMemo(() => [...ELEMENT_ORDER, OTHER].filter((element) => groups.has(element)), [groups])
+
+    /** 默认选中第一个有角色的属性；搜索后当前属性空了也回退到第一个有结果的属性 */
+    const activeTab = picked && groups.has(picked) ? picked : (tabs[0] ?? OTHER)
 
     const visible = useMemo(() => {
-        const key = search.trim()
-        const list = key ? rows.filter((row) => row.character_name.includes(key)) : rows
-        return [...list].sort((a, b) => a.character_name.localeCompare(b.character_name, 'zh'))
-    }, [rows, search])
+        const list = groups.get(activeTab) ?? []
+        return keyword ? list.filter((row) => row.character_name.includes(keyword)) : list
+    }, [groups, activeTab, keyword])
+
+    /** @desc 搜索命中在别的属性下时，给一条可点的提示 */
+    const matchesElsewhere = useMemo(() => {
+        if (!keyword) return []
+        return tabs
+            .filter((element) => element !== activeTab)
+            .map((element) => ({
+                element,
+                count: (groups.get(element) ?? []).filter((row) => row.character_name.includes(keyword)).length
+            }))
+            .filter((item) => item.count > 0)
+    }, [keyword, tabs, groups, activeTab])
 
     return (
         <div style={{ display: 'grid', gap: 12 }}>
-            <WkToolbar>
+            <div className="wk-toolbar">
                 <WkInput
                     value={search}
                     onChange={(event) => setSearch(event.target.value)}
                     placeholder="搜索角色名"
                     aria-label="搜索角色"
-                    style={{ flex: 1, minWidth: 180, maxWidth: 260 }}
+                    style={{ flex: 1, minWidth: 180 }}
                 />
                 {search && (
-                    <WkToolbar>
-                        <button type="button" className="wk-clear" onClick={() => setSearch('')}>
-                            清空
-                        </button>
-                    </WkToolbar>
+                    <button type="button" className="wk-clear" onClick={() => setSearch('')}>
+                        清空
+                    </button>
                 )}
-                <span className="wk-meta">
-                    {search ? `匹配 ${visible.length} / ${rows.length}` : `共 ${rows.length} 个角色`}
-                </span>
-            </WkToolbar>
+            </div>
+
+            <div className="wk-stat-groove">
+                <div className="wk-stat-tabs" role="tablist" aria-label="属性">
+                    {[...ELEMENT_ORDER, OTHER].map((element) => {
+                        const list = groups.get(element) ?? []
+                        const empty = list.length === 0
+                        return (
+                            <button
+                                key={element}
+                                type="button"
+                                role="tab"
+                                aria-selected={element === activeTab}
+                                disabled={empty}
+                                className="wk-stat-tab"
+                                data-active={element === activeTab}
+                                onClick={() => setPicked(element)}
+                            >
+                                {element}
+                                {!empty && <span className="wk-stat-tab-count">{list.length}</span>}
+                            </button>
+                        )
+                    })}
+                </div>
+            </div>
 
             {visible.length === 0 ? (
-                <p className="wk-meta" style={{ padding: '24px 0' }}>
-                    没有匹配「{search.trim()}」的角色
+                <p className="wk-meta" style={{ padding: '16px 0' }}>
+                    {keyword
+                        ? `「${activeTab}」下没有匹配「${keyword}」的角色`
+                        : `「${activeTab}」下还没有收录角色`}
+                    {matchesElsewhere.length > 0 && (
+                        <>
+                            ，另有：
+                            {matchesElsewhere.map((item) => (
+                                <button
+                                    key={item.element}
+                                    type="button"
+                                    className="wk-stat-tab"
+                                    style={{ minWidth: 0, height: 24, padding: '0 8px', marginLeft: 6 }}
+                                    onClick={() => setPicked(item.element)}
+                                >
+                                    {item.element} {item.count}
+                                </button>
+                            ))}
+                        </>
+                    )}
                 </p>
             ) : (
                 <div>
-                    {visible.map((row) => {
-                        const total = countPlanSubstats(row.plan)
-                        const cost = row.plan.slots.reduce((sum, slot) => sum + slot.cost, 0)
-                        const avatar = icons[row.character_name]
-
-                        return (
-                            <details key={row.id} className="wk-acc">
-                                <summary>
-                                    <span className="wk-pcard-avatar" style={{ width: 28, height: 28 }}>
-                                        {avatar ? (
-                                            // eslint-disable-next-line @next/next/no-img-element
-                                            <img src={avatar} alt="" loading="lazy" />
-                                        ) : null}
-                                    </span>
-                                    <span style={{ fontWeight: 600, whiteSpace: 'nowrap' }}>{row.character_name}</span>
-                                    <WkBadge>cost {cost}/{ECHO_MAX_TOTAL_COST}</WkBadge>
-                                    <WkBadge tone={total === SUBSTAT_TOTAL_COUNT ? 'ok' : 'warn'}>
-                                        {total} 条
-                                    </WkBadge>
-                                    {row.note && (
-                                        <span className="wk-meta" style={{ minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                                            {row.note}
+                    {visible.map((row) => (
+                        <details key={row.id} className="wk-acc">
+                            <summary>
+                                <span className="wk-pcard-avatar" style={{ width: 28, height: 28 }}>
+                                    {icons[row.character_name] ? (
+                                        // eslint-disable-next-line @next/next/no-img-element
+                                        <img src={icons[row.character_name]} alt="" loading="lazy" />
+                                    ) : null}
+                                </span>
+                                <span className="wk-stat-name">{row.character_name}</span>
+                                <span className="wk-stat-mains">
+                                    {row.plan.slots.map((slot, slotIndex) => (
+                                        <span className="wk-stat-main" key={slotIndex}>
+                                            <span className="wk-stat-cost" data-cost={slot.cost}>
+                                                {slot.cost}C
+                                            </span>
+                                            <span className="wk-stat-main-name">
+                                                {mainStatShort(slot.mainStat?.type) || '—'}
+                                            </span>
                                         </span>
-                                    )}
-                                </summary>
+                                    ))}
+                                </span>
+                                {row.note && <span className="wk-meta wk-stat-note">{row.note}</span>}
+                            </summary>
 
-                                <div className="wk-acc-body">
-                                    <div className="wk-rows" style={{ '--wk-cols': '96px minmax(0, 1fr)' } as CSSProperties}>
-                                        {row.plan.slots.map((slot, slotIndex) => (
-                                            <div className="wk-tr wk-tr--body" key={slotIndex}>
-                                                <span style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                                                    <WkBadge tone="accent">{slot.cost}C</WkBadge>
-                                                    <span className="wk-meta">{slotIndex + 1}</span>
+                            <div className="wk-acc-body">
+                                <div className="wk-stat-slots">
+                                    {row.plan.slots.map((slot, slotIndex) => (
+                                        <div className="wk-stat-slot" key={slotIndex}>
+                                            <div className="wk-stat-slot-head">
+                                                <span className="wk-stat-cost" data-cost={slot.cost}>
+                                                    {slot.cost}C
                                                 </span>
-                                                <span
-                                                    style={{
-                                                        display: 'flex',
-                                                        flexWrap: 'wrap',
-                                                        alignItems: 'center',
-                                                        gap: 6,
-                                                        minWidth: 0
-                                                    }}
-                                                >
-                                                    <span style={{ fontSize: 'var(--wk-t-meta)', color: 'var(--wk-fg)' }}>
-                                                        {statText(slot.mainStat)}
-                                                        {slot.secondMainStat && (
-                                                            <span className="wk-meta"> +{slot.secondMainStat.value}</span>
-                                                        )}
+                                                <span className="wk-stat-slot-main">{statText(slot.mainStat)}</span>
+                                                {slot.secondMainStat && (
+                                                    <span className="wk-stat-slot-second">
+                                                        副主词条 {statText(slot.secondMainStat)}
                                                     </span>
-                                                    {(slot.substats ?? []).map((stat, statIndex) => (
-                                                        <span
-                                                            key={`${stat.type}-${statIndex}`}
-                                                            className="wk-badge"
-                                                            style={{ height: 18, padding: '0 5px' }}
-                                                        >
-                                                            {statText(stat)}
-                                                        </span>
-                                                    ))}
-                                                    {(slot.substats?.length ?? 0) === 0 && (
-                                                        <span className="wk-meta">无副词条</span>
-                                                    )}
-                                                </span>
+                                                )}
                                             </div>
-                                        ))}
-                                    </div>
+                                            <div className="wk-stat-slot-subs">
+                                                {(slot.substats ?? []).map((stat, statIndex) => (
+                                                    <span
+                                                        className="wk-stat-chip"
+                                                        data-unit={stat.unit ?? ''}
+                                                        key={`${stat.type}-${statIndex}`}
+                                                    >
+                                                        {substatText(stat)}
+                                                    </span>
+                                                ))}
+                                                {(slot.substats?.length ?? 0) === 0 && (
+                                                    <span className="wk-meta">无副词条</span>
+                                                )}
+                                            </div>
+                                        </div>
+                                    ))}
                                 </div>
-                            </details>
-                        )
-                    })}
+                            </div>
+                        </details>
+                    ))}
                 </div>
             )}
         </div>

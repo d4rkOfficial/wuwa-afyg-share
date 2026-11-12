@@ -1,3 +1,4 @@
+import '@/design/wk-stats.css'
 import '@/design/wk-rows.css'
 import '@/design/wk-data.css'
 import type { Metadata } from 'next'
@@ -8,6 +9,7 @@ import { WkContainer, WkPageHead, WkRoot } from '@/design'
 import { createClient, hasEnv } from '@/lib/supabase/server'
 import { getViewerLocks } from '@/lib/edit-locks'
 import { getEntityIcons } from '@/lib/data/avatar-icons'
+import { CHAR_ELEMENTS } from '@/lib/data/char-elements.generated'
 import type { StandardSubstatSetRow } from '@/lib/types/db'
 
 export const metadata: Metadata = {
@@ -65,7 +67,11 @@ export default async function SubstatSetsPage() {
                             暂时还没有收录任何特殊角色的标准词条集
                         </p>
                     ) : (
-                        <SubstatSetsBrowser rows={rows} icons={icons} />
+                        <SubstatSetsBrowser
+                            rows={rows}
+                            icons={icons}
+                            elements={CHAR_ELEMENTS as Record<string, string>}
+                        />
                     )}
                 </div>
             </WkContainer>

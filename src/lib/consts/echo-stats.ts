@@ -171,3 +171,35 @@ export function defaultStatUnit(type: string): '' | '%' {
     return '%'
 }
 
+// ── 展示用缩写（列表摘要、词条徽标） ─────────────────────────────────────
+// 「暴击率 / 暴击伤害 / 共鸣效率」太长，列表里挤不下；「X伤害加成」只留属性名。
+// 固定值 vs 百分比靠 `%` 区分（生命 / 生命%），不做「小生命 / 大生命」那种叫法。
+const STAT_SHORT: Record<string, string> = {
+    暴击率: '暴击',
+    暴击伤害: '暴伤',
+    共鸣效率: '共效',
+    普攻伤害加成: '普攻',
+    重击伤害加成: '重击',
+    共鸣技能伤害加成: '共技',
+    共鸣解放伤害加成: '共解'
+}
+
+function baseShortName(type: string | null | undefined): string {
+    const raw = String(type ?? '').trim()
+    if (!raw) return ''
+    const mapped = STAT_SHORT[raw]
+    if (mapped) return mapped
+    if (raw.endsWith('伤害加成')) return raw.slice(0, -'伤害加成'.length)
+    return raw
+}
+
+/** @desc 主词条缩写：暴击率→暴击、暴击伤害→暴伤、共鸣效率→共效、衍射伤害加成→衍射、攻击%→攻击 */
+export function mainStatShort(type: string | null | undefined): string {
+    return baseShortName(type).replace(/%$/, '')
+}
+
+/** @desc 副词条缩写：同上，但保留 `%` 以区分固定值（生命 320）与百分比（生命% 8.6%） */
+export function substatShort(type: string | null | undefined): string {
+    return baseShortName(type)
+}
+
