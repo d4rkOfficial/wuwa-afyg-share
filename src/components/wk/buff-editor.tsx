@@ -31,7 +31,8 @@ export default function BuffEditor({
     isAdmin,
     buffLocks,
     entityIcons,
-    actions
+    title,
+    action
 }: {
     rows: BuffSetRow[]
     folders: BuffFolderRow[]
@@ -39,8 +40,10 @@ export default function BuffEditor({
     buffLocks: Record<string, boolean>
     /** 实体头像表：打开实体弹窗里每行左侧的图标（拿不到时降级成通用图标） */
     entityIcons?: EntityIconMaps
-    /** 标签栏右端的附加动作（快照面板等）：页面不再单独占一行标题 */
-    actions?: ReactNode
+    /** 顶部标题栏的文字 */
+    title: string
+    /** 标题栏右端的动作（快照面板）；没打开实体时它会被放进占位卡片里 */
+    action?: ReactNode
 }) {
     const router = useRouter()
     const [opened, setOpened] = useState<Entity[]>([])
@@ -106,20 +109,26 @@ export default function BuffEditor({
     if (opened.length === 0) {
         return (
             <>
-                {actions && <div className="wk-workbench-actions">{actions}</div>}
-                <div className="wk-card wk-card-pad" style={{ display: 'grid', gap: 10, justifyItems: 'center', padding: '56px 24px', textAlign: 'center' }}>
-                    <p style={{ fontSize: 'var(--wk-t-lead)' }}>还没有打开实体</p>
-                    <p className="wk-meta" style={{ maxWidth: 420 }}>
-                        搜索并选择一个实体开始编辑；标签页之间切换不会丢未保存的改动。
-                    </p>
-                    <WkButton
-                        variant="primary"
-                        size="md"
-                        onClick={() => setPickerOpen(true)}
-                        leading={<Icon icon="mdi:folder-search-outline" className="wk-nav-icon" aria-hidden="true" />}
-                    >
-                        打开实体
-                    </WkButton>
+                <div className="wk-workbench-head">
+                    <span className="wk-workbench-title">{title}</span>
+                </div>
+                {/* 没打开实体：占位卡片几乎撑满整屏，只留一点边距；快照入口放进这张卡片里 */}
+                <div className="wk-workbench-empty">
+                    {action && <div className="wk-workbench-empty-head">{action}</div>}
+                    <div className="wk-workbench-empty-body">
+                        <p style={{ fontSize: 'var(--wk-t-lead)' }}>还没有打开实体</p>
+                        <p className="wk-meta" style={{ maxWidth: 460 }}>
+                            搜索并选择一个实体开始编辑；标签页之间切换不会丢未保存的改动。
+                        </p>
+                        <WkButton
+                            variant="primary"
+                            size="md"
+                            onClick={() => setPickerOpen(true)}
+                            leading={<Icon icon="mdi:folder-search-outline" className="wk-nav-icon" aria-hidden="true" />}
+                        >
+                            打开实体
+                        </WkButton>
+                    </div>
                 </div>
                 <BuffEntityPicker
                     open={pickerOpen}
@@ -136,6 +145,11 @@ export default function BuffEditor({
 
     return (
         <>
+            <div className="wk-workbench-head">
+                <span className="wk-workbench-title">{title}</span>
+                {action && <span className="wk-spacer" />}
+                {action}
+            </div>
             <div className="wk-tabs-card">
                 <div className="wk-tabs" role="tablist" aria-label="已打开的实体">
                     {opened.map((entity) => {
@@ -193,7 +207,6 @@ export default function BuffEditor({
                         <Icon icon="mdi:plus" width={14} height={14} />
                     </button>
                     {dirtyCount > 0 && <span className="wk-tabs-note">未保存 {dirtyCount}</span>}
-                    {actions && <div className="wk-tabs-actions">{actions}</div>}
                 </div>
 
                 <div className="wk-tabs-body">

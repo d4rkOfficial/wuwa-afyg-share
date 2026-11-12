@@ -77,7 +77,8 @@ export default async function EditBuffSetsPage() {
                         isAdmin={isAdmin}
                         buffLocks={locks.buffLocks}
                         entityIcons={entityIcons}
-                        actions={isAdmin ? <BuffSnapshotPanel /> : undefined}
+                        title={isAdmin ? 'Buff 集管理' : 'Buff 集编辑'}
+                        action={isAdmin ? <BuffSnapshotPanel /> : undefined}
                     />
                 </div>
             </WkContainer>

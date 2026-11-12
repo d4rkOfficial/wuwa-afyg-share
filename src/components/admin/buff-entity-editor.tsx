@@ -645,11 +645,11 @@ export default function BuffEntityEditor({
 
                 {/* 右侧工作区：手工编辑 / AI 工作区都保持挂载，切换只隐藏，避免丢失聊天与编辑状态 */}
                 <div className="flex min-h-0 min-w-0 flex-1 flex-col">
-                <div className="wk-editor-main flex min-h-0 min-w-0 flex-1 flex-col">
+                <div className="wk-editor-main flex min-h-0 min-w-0 flex-1 flex-col" style={{ padding: 12, gap: 12 }}>
                     {activeBuff && activeBuffIdx !== null ? (
                         <>
                             {/* 名称区：组名 + Buff 名 两个单行框（组名决定左侧分组，Buff 名决定条目显示） */}
-                            <div className="shrink-0 space-y-2 border-b border-(--wk-line) px-3 py-2.5">
+                            <section className="wk-card wk-card-pad" style={{ display: 'grid', gap: 10, flexShrink: 0 }}>
                                 <div className="grid gap-2 md:grid-cols-[minmax(0,1fr)_minmax(0,2fr)]">
                                     <label className="wk-field">
                                         <span className="wk-field-label">组名</span>
@@ -701,10 +701,10 @@ export default function BuffEntityEditor({
                                         删除该条
                                     </Button>
                                 </div>
-                            </div>
+                            </section>
 
                             {/* 实例级生效条件（折叠面板：链 / 阶硬门槛，互斥；属性·类型挂在乘区上） */}
-                            <div className="shrink-0 border-b border-(--wk-line)">
+                            <section className="wk-card" style={{ flexShrink: 0, overflow: 'hidden' }}>
                                 <button
                                     onClick={() => setCondPanelOpen((v) => !v)}
                                     className={`flex w-full items-center gap-1.5 px-3 py-2 text-left text-[11px] transition-colors hover:bg-(--wk-s2) ${
@@ -781,10 +781,10 @@ export default function BuffEntityEditor({
                                         </button>
                                     </div>
                                 )}
-                            </div>
+                            </section>
 
                             {/* 主区：左 = 乘区条目，右 = 「添加乘区」栏（常驻，不再折叠） */}
-                            <div className="flex min-h-0 flex-1 flex-col md:flex-row">
+                            <section className="wk-card" style={{ display: 'flex', minHeight: 0, flex: 1, flexDirection: 'column', overflow: 'hidden' }}><div className="flex min-h-0 flex-1 flex-col md:flex-row">
                             {/* 乘区贡献条目列表（同一乘区可多条，各自带数值 / 引用 / 覆盖 / 乘区级条件） */}
                             <div className="min-h-0 flex-1 space-y-1 overflow-y-auto p-2">
                                 {activeZones.length === 0 ? (
@@ -1039,6 +1039,7 @@ export default function BuffEntityEditor({
                                 </div>
                             </aside>
                             </div>
+                            </section>
                         </>
                     ) : (
                         <div className="flex flex-1 items-center justify-center text-xs text-(--wk-fg-3)">

@@ -23,10 +23,9 @@
     gap: 8px;
 }
 .wk-editor-picker { position: relative; flex: 1; min-width: 200px; max-width: 320px; }
-/* ── 工作台页面壳：整页锁一屏，只有编辑卡内部滚动 ──────────────────────────
-   高度 = 一屏 − 顶栏；页头（标题 + 快照）与卡片各占剩余空间，
-   卡片的标签栏固定在卡片顶部（不会滚走），保存条固定在卡片底部。
-   工作台页面隐藏站点页脚：否则页面会多出 60px 纵向滚动，底栏永远差一点。 */
+/* ── 工作台页面壳：整页锁一屏，只有编辑区内部滚动 ──────────────────────────
+   编辑台是**全屏**的：容器不留内边距、工作区不带外框，标签栏直接贴顶栏下沿，
+   内容区自己按「多张卡片」组织。工作台页面隐藏站点页脚（否则底栏永远差一点）。 */
 .wk-workbench {
     display: flex;
     height: calc(100dvh - 57px);
@@ -45,8 +44,9 @@ body:has(.wk-workbench) footer {
     min-height: 0;
     flex: 1;
     flex-direction: column;
-    padding-top: 12px;
-    padding-bottom: 12px;
+    /* 全屏：顶栏以下不留白，工作区自己贴边 */
+    padding: 0;
+    max-width: none;
 }
 
 .wk-workbench-in .wk-page-head {
@@ -60,7 +60,6 @@ body:has(.wk-workbench) footer {
     min-height: 0;
     flex: 1;
     flex-direction: column;
-    margin-top: 12px;
 }
 
 /* 有标签页时编辑卡吃满剩余高度；空态卡片保持内容高度 */
@@ -71,18 +70,17 @@ body:has(.wk-workbench) footer {
 
 .wk-editor-body { display: grid; gap: var(--wk-pad); }
 
-/* ── 工作区：VSCode 风格顶部标签页 + 内容，整体是一张卡 ─────────────────────
-   标签条在卡片里面（不再浮在卡片外当 chip）：底 s2、当前页 s1、页顶一道 accent，
-   右侧常驻一个「＋打开实体」，等同 VSCode 的标签栏动作区。 */
+/* ── 工作区：VSCode 风格顶部标签页 + 内容 ─────────────────────────────────
+   全屏形态：没有外框、没有圆角，标签条贴在页面顶部；分区靠内部卡片表达。 */
 .wk-tabs-card {
     display: flex;
     min-width: 0;
     flex-direction: column;
     overflow: hidden;
-    border: 1px solid var(--wk-line);
-    border-radius: var(--wk-r-2);
-    background: var(--wk-s1);
-    box-shadow: var(--wk-elev-1), var(--wk-inset-2);
+    border: 0;
+    border-radius: 0;
+    background: var(--wk-bg);
+    box-shadow: none;
 }
 
 .wk-tabs {
@@ -301,23 +299,63 @@ body:has(.wk-workbench) footer {
     box-shadow: var(--wk-elev-1), var(--wk-inset-2);
 }
 
-/* 标签栏右端的附加动作（快照等）：页面不再为它单独留一行标题 */
-.wk-tabs-actions {
+/* ── 工作台标题栏：全屏铺满，但保留一条标题（不再是大段说明文字） ─────────── */
+.wk-workbench-head {
     display: flex;
+    height: 50px;
     flex-shrink: 0;
     align-items: center;
-    gap: 6px;
-    margin-left: auto;
-    padding: 0 8px;
+    gap: 8px;
+    padding: 0 16px;
+    border-bottom: 1px solid var(--wk-line);
+    background: var(--wk-s1);
 }
 
-/* 空态时同一动作放在内容上方右对齐 */
-.wk-workbench-actions {
+.wk-workbench-title {
+    min-width: 0;
+    overflow: hidden;
+    color: var(--wk-fg);
+    font-size: var(--wk-t-sec);
+    font-weight: 600;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+/* ── 未打开对象时的占位：几乎整屏的一张卡，只留一点边距 ─────────────────── */
+.wk-workbench-empty {
     display: flex;
+    min-height: 0;
+    flex: 1;
+    flex-direction: column;
+    overflow: hidden;
+    margin: 8px;
+    border: 1px solid var(--wk-line);
+    border-radius: var(--wk-r-2);
+    background: var(--wk-s1);
+    box-shadow: var(--wk-elev-1), var(--wk-inset-2);
+}
+
+.wk-workbench-empty-head {
+    display: flex;
+    height: 44px;
+    flex-shrink: 0;
     align-items: center;
     justify-content: flex-end;
     gap: 8px;
-    margin-bottom: 8px;
+    padding: 0 12px;
+    border-bottom: 1px solid var(--wk-line);
+}
+
+.wk-workbench-empty-body {
+    display: flex;
+    min-height: 0;
+    flex: 1;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    padding: 24px;
+    text-align: center;
 }
 
 /* ── 标准词条集编辑台：左部位列表 + 右编辑区 + 底部保存条 ───────────────────

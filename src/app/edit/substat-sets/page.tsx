@@ -65,6 +65,7 @@ export default async function EditSubstatSetsPage() {
                         isAdmin={isAdmin}
                         substatLocks={locks.substatLocks}
                         characterIcons={characterIcons}
+                        title={isAdmin ? '标准词条集管理' : '标准词条集编辑'}
                     />
                 </div>
             </WkContainer>

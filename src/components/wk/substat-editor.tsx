@@ -15,13 +15,16 @@ export default function SubstatEditor({
     rows,
     isAdmin,
     substatLocks,
-    characterIcons = {}
+    characterIcons = {},
+    title
 }: {
     rows: StandardSubstatSetRow[]
     isAdmin: boolean
     substatLocks: Record<string, boolean>
     /** @desc 角色头像（弹窗列表左侧图标；拿不到时降级成通用圆点） */
     characterIcons?: Record<string, string>
+    /** @desc 顶部标题栏文字 */
+    title: string
 }) {
     const router = useRouter()
     const [opened, setOpened] = useState<string[]>([])
@@ -158,22 +161,24 @@ export default function SubstatEditor({
     if (opened.length === 0) {
         return (
             <>
-                <div
-                    className="wk-card wk-card-pad"
-                    style={{ display: 'grid', gap: 10, justifyItems: 'center', padding: '56px 24px', textAlign: 'center' }}
-                >
-                    <p style={{ fontSize: 'var(--wk-t-lead)' }}>还没有打开角色</p>
-                    <p className="wk-meta" style={{ maxWidth: 460 }}>
-                        从角色列表里添加要编辑的对象，一个角色一个标签页；左侧列出五个声骸部位，点哪个改哪个。
-                    </p>
-                    <WkButton
-                        variant="primary"
-                        size="md"
-                        onClick={() => setPickerOpen(true)}
-                        leading={<Icon icon="mdi:account-search-outline" className="wk-nav-icon" aria-hidden="true" />}
-                    >
-                        添加角色
-                    </WkButton>
+                <div className="wk-workbench-head">
+                    <span className="wk-workbench-title">{title}</span>
+                </div>
+                <div className="wk-workbench-empty">
+                    <div className="wk-workbench-empty-body">
+                        <p style={{ fontSize: 'var(--wk-t-lead)' }}>还没有打开角色</p>
+                        <p className="wk-meta" style={{ maxWidth: 460 }}>
+                            从角色列表里添加要编辑的对象，一个角色一个标签页；左侧列出五个声骸部位，点哪个改哪个。
+                        </p>
+                        <WkButton
+                            variant="primary"
+                            size="md"
+                            onClick={() => setPickerOpen(true)}
+                            leading={<Icon icon="mdi:account-search-outline" className="wk-nav-icon" aria-hidden="true" />}
+                        >
+                            添加角色
+                        </WkButton>
+                    </div>
                 </div>
                 {picker}
             </>
@@ -182,6 +187,9 @@ export default function SubstatEditor({
 
     return (
         <>
+            <div className="wk-workbench-head">
+                <span className="wk-workbench-title">{title}</span>
+            </div>
             <div className="wk-tabs-card">
                 <div className="wk-tabs" role="tablist" aria-label="已打开的角色">
                     {opened.map((name) => {
