@@ -1,5 +1,4 @@
-import '@/design/wk-rows.css'
-import '@/design/wk-data.css'
+import '@/design/wk-buffs.css'
 import Link from 'next/link'
 import SetupNotice from '@/components/setup-notice'
 import BuffSetsBrowser from '@/components/wk/buff-sets-browser'

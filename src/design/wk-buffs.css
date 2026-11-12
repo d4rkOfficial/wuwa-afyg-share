@@ -1,0 +1,261 @@
+/* Buff 集浏览页：左侧实体栏 + 右侧「凹槽 + 文件夹卡片 + Buff 小卡」。
+   由 /buff-sets 导入。 */
+
+/* ── 两栏：左实体、右明细 ────────────────────────────────────────────────── */
+.wk-buffs {
+    display: grid;
+    gap: 16px;
+    grid-template-columns: minmax(0, 1fr);
+    align-items: start;
+}
+
+@media (min-width: 1024px) {
+    .wk-buffs {
+        grid-template-columns: 226px minmax(0, 1fr);
+    }
+}
+
+.wk-buffs-side {
+    display: flex;
+    min-width: 0;
+    flex-direction: column;
+    gap: 10px;
+    border: 1px solid var(--wk-line);
+    border-radius: var(--wk-r-2);
+    background: var(--wk-s1);
+    padding: 10px;
+    box-shadow: var(--wk-elev-1), var(--wk-inset-2);
+}
+
+@media (min-width: 1024px) {
+    /* 实体多的时候只滚这一列，右边的明细不跟着走 */
+    .wk-buffs-side {
+        position: sticky;
+        top: calc(var(--wk-topbar-h) + 1px + 16px);
+        max-height: calc(100dvh - var(--wk-topbar-h) - 1px - 32px);
+    }
+}
+
+.wk-buffs-side-controls { display: grid; gap: 8px; }
+
+.wk-buffs-entities {
+    display: grid;
+    gap: 2px;
+    min-height: 0;
+    max-height: 320px;
+    overflow-y: auto;
+    margin: 0 -2px;
+    padding: 0 2px;
+    scrollbar-width: thin;
+}
+
+@media (min-width: 1024px) {
+    .wk-buffs-entities { max-height: none; flex: 1; }
+}
+
+.wk-buffs-entity {
+    display: flex;
+    width: 100%;
+    min-width: 0;
+    align-items: center;
+    gap: 8px;
+    border: 1px solid transparent;
+    border-radius: var(--wk-r-1);
+    background: transparent;
+    padding: 5px 6px;
+    color: var(--wk-fg-2);
+    font-family: inherit;
+    font-size: var(--wk-t-body);
+    text-align: left;
+    cursor: pointer;
+    transition: background-color 120ms ease-out, color 120ms ease-out, border-color 120ms ease-out;
+}
+
+.wk-buffs-entity:hover { background: var(--wk-s2); color: var(--wk-fg); }
+
+.wk-buffs-entity[data-active='true'] {
+    border-color: var(--wk-ctrl-line);
+    background: var(--wk-s2);
+    color: var(--wk-fg);
+    font-weight: 600;
+    box-shadow: var(--wk-inset-1);
+}
+
+.wk-buffs-entity-name {
+    min-width: 0;
+    flex: 1;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.wk-buffs-entity-count {
+    flex-shrink: 0;
+    color: var(--wk-fg-3);
+    font-size: var(--wk-t-meta);
+    font-variant-numeric: tabular-nums;
+}
+
+/* ── 右侧明细 ───────────────────────────────────────────────────────────── */
+.wk-buffs-main { display: grid; min-width: 0; gap: 12px; align-content: start; }
+
+.wk-buffs-main-head {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 10px;
+    padding-bottom: 10px;
+    border-bottom: 1px solid var(--wk-line);
+}
+
+.wk-buffs-main-title { font-size: var(--wk-t-lead); font-weight: 600; }
+
+/* 大凹槽：整个明细区是一块内凹的底，文件夹卡片浮在上面 */
+.wk-buffs-groove {
+    display: grid;
+    gap: 12px;
+    min-width: 0;
+    border: 1px solid var(--wk-line);
+    border-radius: var(--wk-r-2);
+    background: var(--wk-s2);
+    padding: 12px;
+    box-shadow: var(--wk-inset-1);
+}
+
+/* ── 文件夹 = 一张大卡 ─────────────────────────────────────────────────── */
+.wk-folder-card {
+    min-width: 0;
+    overflow: hidden;
+    border: 1px solid var(--wk-line);
+    border-radius: var(--wk-r-2);
+    background: var(--wk-s1);
+    box-shadow: var(--wk-elev-1), var(--wk-inset-2);
+}
+
+.wk-folder-head {
+    display: flex;
+    align-items: baseline;
+    gap: 8px;
+    padding: 9px 12px;
+    border-bottom: 1px solid var(--wk-line);
+    background: var(--wk-s3);
+}
+
+.wk-folder-name {
+    min-width: 0;
+    flex: 1;
+    color: var(--wk-fg);
+    font-size: var(--wk-t-body);
+    font-weight: 600;
+    line-height: 1.55;
+    overflow-wrap: anywhere;
+}
+
+.wk-folder-count {
+    flex-shrink: 0;
+    color: var(--wk-fg-3);
+    font-size: var(--wk-t-meta);
+    font-variant-numeric: tabular-nums;
+}
+
+.wk-buff-grid {
+    display: grid;
+    gap: 8px;
+    padding: 12px;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+}
+
+/* ── Buff 小卡 ─────────────────────────────────────────────────────────── */
+.wk-buff-card {
+    display: grid;
+    min-width: 0;
+    align-content: start;
+    gap: 8px;
+    border: 1px solid var(--wk-line);
+    border-radius: var(--wk-r-1);
+    background: var(--wk-s2);
+    padding: 9px 10px;
+}
+
+.wk-buff-head {
+    display: flex;
+    min-width: 0;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 6px;
+}
+
+.wk-buff-name {
+    min-width: 0;
+    color: var(--wk-fg);
+    font-size: var(--wk-t-body);
+    font-weight: 600;
+    line-height: 1.4;
+    overflow-wrap: anywhere;
+}
+
+/* 门槛：实心，最先看到；适用范围：描边 */
+.wk-buff-gate {
+    display: inline-flex;
+    height: 20px;
+    flex-shrink: 0;
+    align-items: center;
+    border: 1px solid color-mix(in srgb, var(--wk-accent-solid) 58%, #000);
+    border-radius: var(--wk-r-1);
+    background: var(--wk-accent-solid);
+    padding: 0 6px;
+    color: var(--wk-accent-fg);
+    font-size: var(--wk-t-meta);
+    font-variant-numeric: tabular-nums;
+    line-height: 1;
+    white-space: nowrap;
+    box-shadow: var(--wk-btn-shadow);
+}
+
+/* ── 小卡里的「数值 / 转模 / 类型 / 属性」 ──────────────────────────────── */
+.wk-buff-facts { display: grid; gap: 5px; }
+
+.wk-buff-fact {
+    display: grid;
+    grid-template-columns: 34px minmax(0, 1fr);
+    gap: 8px;
+    align-items: baseline;
+}
+
+.wk-buff-fact > dt { color: var(--wk-fg-3); font-size: var(--wk-t-meta); }
+
+.wk-buff-fact > dd { margin: 0; min-width: 0; color: var(--wk-fg-2); font-size: var(--wk-t-body); line-height: 1.5; }
+
+.wk-buff-values { display: grid; gap: 2px; }
+
+.wk-buff-value-line {
+    display: flex;
+    align-items: baseline;
+    gap: 8px;
+}
+
+.wk-buff-value-line > .wk-buff-zone { min-width: 0; color: var(--wk-fg-3); }
+
+.wk-buff-value-line > .wk-buff-num {
+    margin-left: auto;
+    flex-shrink: 0;
+    color: var(--wk-fg);
+    font-weight: 600;
+    font-variant-numeric: tabular-nums;
+}
+
+.wk-buff-chip-row { display: flex; flex-wrap: wrap; align-items: center; gap: 4px; }
+
+.wk-buff-chip {
+    display: inline-flex;
+    height: 20px;
+    align-items: center;
+    border: 1px solid var(--wk-ctrl-line);
+    border-radius: var(--wk-r-1);
+    background: var(--wk-s1);
+    padding: 0 6px;
+    color: var(--wk-fg-2);
+    font-size: var(--wk-t-meta);
+    line-height: 1;
+    white-space: nowrap;
+}

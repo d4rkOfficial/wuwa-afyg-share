@@ -1,23 +1,58 @@
 'use client'
 
 // Buff 集浏览（新系统）
-// 去掉「左侧实体栏 + 右侧明细」的工作台：实体用可展开条目（原生 <details>），
-// 顶部只留搜索 + 类型筛选。每个 Buff 显示短名、覆盖对象、条件与影响的乘区标签。
+// 结构：左侧实体栏（类型分页 + 搜索 + 实体列表），右侧一片「凹槽」——
+// 凹槽里按文件夹铺卡片，每张文件夹卡片里再放该文件夹下的 Buff 小卡。
+//
+// 小卡的阅读顺序固定：门槛徽标（≥6链 / ≥5阶）→ 适用范围（全队 / 队友 / 自己 / 效应）
+// → Buff 名 → 换行后的「数值 / 转模 / 类型 / 属性」四行细节。
 import { useMemo, useState } from 'react'
-import { WkBadge, WkInput, WkSegmented, WkToolbar } from '@/design'
-import { BUFF_ENTITY_LABELS, BUFF_SCOPE_LABELS, BUFF_ZONE_MAP, describeZoneConditionBadge } from '@/lib/consts/buff-zones'
+import { WkBadge, WkInput, WkSegmented } from '@/design'
+import {
+    BUFF_DAMAGE_TYPE_SHORT,
+    BUFF_ENTITY_LABELS,
+    BUFF_SCOPE_LABELS,
+    BUFF_ZONE_MAP,
+    describeZoneRef
+} from '@/lib/consts/buff-zones'
 import { buffFolderName, buffLeafName } from '@/lib/buff-names'
-import type { BuffEntityType, BuffSetRow } from '@/lib/types/db'
+import type { BuffCondition, BuffEntityType, BuffScope, BuffSetRow } from '@/lib/types/db'
 import type { EntityIconMaps } from '@/lib/data/avatar-icons'
 
-// 类型筛选：不再给「全部」——列表默认就是角色，其余类型一次点击切换。
-// 「全部」既浪费一格宽度，又让计数行和列表对不上（全部=259 个实体，段落里却只显示一部分）。
 const TYPE_FILTERS = [
     { value: 'character', label: '角色' },
     { value: 'weapon', label: '武器' },
     { value: 'echo', label: '声骸' },
     { value: 'set', label: '套装' }
 ]
+
+/** @desc 适用范围：武器 / 首位声骸 / 套装没有「自己」，说「装备者」 */
+function scopeLabel(scope: BuffScope, isCharacter: boolean): string {
+    if (scope === 'self') return isCharacter ? '自己' : '装备者'
+    if (scope === 'team') return '全队'
+    if (scope === 'self_except') return '队友'
+    if (scope === 'effect_only') return '效应'
+    return BUFF_SCOPE_LABELS[scope] ?? scope
+}
+
+/**
+ * @desc 门槛徽标：链条件取最大 min → 「≥6链」；阶条件 → 「≥5阶」。
+ * 0 链（角色本体）不算门槛，返回 null。
+ */
+function gateLabel(condition: BuffCondition | null | undefined): string | null {
+    if (!condition) return null
+    const chainMin = Math.max(
+        ...(condition.chains ?? []).map((clause) => clause.min),
+        typeof condition.chain === 'number' ? condition.chain : 0
+    )
+    const refineMin = Math.max(
+        ...(condition.refinements ?? []).map((clause) => clause.min),
+        typeof condition.refinement === 'number' ? condition.refinement : 0
+    )
+    if (chainMin > 0) return `≥${chainMin}链`
+    if (refineMin > 0) return `≥${refineMin}阶`
+    return null
+}
 
 function isSetType(type: BuffEntityType): boolean {
     return /^[1-5]set$/.test(type)
@@ -43,6 +78,50 @@ interface EntityGroup {
     buffs: BuffSetRow[]
 }
 
+interface FolderGroup {
+    /** @desc 文件夹名；根 Buff 为空串，展示为「未分组」 */
+    name: string
+    buffs: BuffSetRow[]
+}
+
+/** @desc 按文件夹分组：沿用查询顺序（sort_order 已把文件夹排在前） */
+function groupByFolder(buffs: BuffSetRow[]): FolderGroup[] {
+    const map = new Map<string, FolderGroup>()
+    for (const buff of buffs) {
+        const name = buffFolderName(buff.buff_name)
+        const group = map.get(name)
+        if (group) group.buffs.push(buff)
+        else map.set(name, { name, buffs: [buff] })
+    }
+    return [...map.values()]
+}
+
+/** @desc 一个 Buff 小卡的全部展示事实 */
+function buffFacts(buff: BuffSetRow) {
+    const zones = buff.buff_set ?? []
+    const values = zones.map((zone) => {
+        const def = BUFF_ZONE_MAP.get(zone.zoneId)
+        const unit = def?.unit === '%' ? '%' : ''
+        const plain = `${zone.value}${unit}`
+        return {
+            label: def?.label ?? zone.zoneId,
+            // 引用型乘区常把绝对值写 0（换算在工具箱里做）：别显示假的 0%，直接写「转模」
+            value: zone.ref ? (zone.value !== 0 ? plain : '转模') : plain,
+            ref: zone.ref ? describeZoneRef(zone.ref) : ''
+        }
+    })
+    const refs = [...new Set(values.map((item) => item.ref).filter(Boolean))]
+    const types = [
+        ...new Set(
+            zones
+                .flatMap((zone) => zone.condition?.damageTypes ?? [])
+                .map((type) => BUFF_DAMAGE_TYPE_SHORT[type] ?? type)
+        )
+    ]
+    const elements = [...new Set(zones.flatMap((zone) => zone.condition?.elements ?? []))]
+    return { values, refs, types, elements }
+}
+
 export default function BuffSetsBrowser({
     rows,
     entityIcons
@@ -52,6 +131,7 @@ export default function BuffSetsBrowser({
 }) {
     const [search, setSearch] = useState('')
     const [typeFilter, setTypeFilter] = useState('character')
+    const [activeKey, setActiveKey] = useState<string | null>(null)
 
     const entities = useMemo<EntityGroup[]>(() => {
         const map = new Map<string, EntityGroup>()
@@ -64,119 +144,220 @@ export default function BuffSetsBrowser({
             }
             entity.buffs.push(row)
         }
-        return [...map.values()].sort((a, b) => {
-            if (a.type !== b.type) return a.type.localeCompare(b.type)
-            return a.name.localeCompare(b.name, 'zh-Hans-CN')
-        })
+        return [...map.values()].sort((a, b) => a.name.localeCompare(b.name, 'zh-Hans-CN'))
     }, [rows])
 
-    const visible = useMemo(() => {
-        const key = search.trim().toLowerCase()
-        return entities.filter((entity) => {
-            if (typeGroup(entity.type) !== typeFilter) return false
-            if (!key) return true
-            return (
-                entity.name.toLowerCase().includes(key) ||
-                entity.buffs.some((buff) => buff.buff_name.toLowerCase().includes(key))
-            )
-        })
-    }, [entities, search, typeFilter])
+    const keyword = search.trim().toLowerCase()
 
-    const visibleBuffs = visible.reduce((sum, entity) => sum + entity.buffs.length, 0)
+    /** 左栏列表：类型过滤 + 关键词（命中实体名或它下面任一 Buff） */
+    const pool = useMemo(
+        () =>
+            entities.filter((entity) => {
+                if (typeGroup(entity.type) !== typeFilter) return false
+                if (!keyword) return true
+                return (
+                    entity.name.toLowerCase().includes(keyword) ||
+                    entity.buffs.some((buff) => buff.buff_name.toLowerCase().includes(keyword))
+                )
+            }),
+        [entities, typeFilter, keyword]
+    )
+
+    const active = pool.find((entity) => entity.key === activeKey) ?? pool[0] ?? null
+
+    /** 右栏：命中实体名时给全部 Buff；只命中 Buff 名时只留命中的那几条 */
+    const activeBuffs = useMemo(() => {
+        if (!active) return []
+        if (!keyword || active.name.toLowerCase().includes(keyword)) return active.buffs
+        return active.buffs.filter((buff) => buff.buff_name.toLowerCase().includes(keyword))
+    }, [active, keyword])
+
+    const folders = useMemo(() => groupByFolder(activeBuffs), [activeBuffs])
+    const activeIsCharacter = active ? active.type === 'character' : true
 
     return (
-        <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1fr)', gap: 12 }}>
-            <WkToolbar>
-                <WkInput
-                    value={search}
-                    onChange={(event) => setSearch(event.target.value)}
-                    placeholder="搜索实体或 Buff 名称"
-                    aria-label="搜索 Buff"
-                    style={{ flex: 1, minWidth: 180, maxWidth: 280 }}
-                />
-                <WkSegmented value={typeFilter} onChange={setTypeFilter} ariaLabel="实体类型" options={TYPE_FILTERS} />
-                <span className="wk-meta">
-                    {visible.length} 个实体 · {visibleBuffs} 条 Buff
-                    {search.trim() ? ` · 关键词「${search.trim()}」` : ''}
-                </span>
-            </WkToolbar>
+        <div className="wk-buffs">
+            <aside className="wk-buffs-side" aria-label="实体">
+                <div className="wk-buffs-side-controls">
+                    <WkSegmented
+                        value={typeFilter}
+                        onChange={(next) => {
+                            setTypeFilter(next)
+                            setActiveKey(null)
+                        }}
+                        ariaLabel="实体类型"
+                        options={TYPE_FILTERS}
+                    />
+                    <WkInput
+                        value={search}
+                        onChange={(event) => setSearch(event.target.value)}
+                        placeholder="搜索实体或 Buff"
+                        aria-label="搜索实体或 Buff"
+                    />
+                </div>
 
-            {visible.length === 0 ? (
-                <p className="wk-meta" style={{ padding: '24px 0' }}>
-                    {search.trim() ? `没有匹配「${search.trim()}」的实体或 Buff` : '这个类型下还没有收录任何 Buff'}
-                </p>
-            ) : (
-                <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1fr)' }}>
-                    {visible.map((entity) => {
-                        const icon = iconFor(entity.type, entity.name, entityIcons)
-                        return (
-                            // 进页面时全部收起：默认展开第一条会让列表看起来"只有一个实体"，
-                            // 而且用户一进来其实是在找实体，先给全貌再按需展开
-                            <details key={entity.key} className="wk-acc">
-                                <summary>
-                                    <span className="wk-pcard-avatar" style={{ width: 28, height: 28 }}>
+                <div className="wk-buffs-entities">
+                    {pool.length === 0 ? (
+                        <p className="wk-meta" style={{ padding: '8px 6px' }}>
+                            没有匹配的实体
+                        </p>
+                    ) : (
+                        pool.map((entity) => {
+                            const icon = iconFor(entity.type, entity.name, entityIcons)
+                            const selected = active?.key === entity.key
+                            return (
+                                <button
+                                    key={entity.key}
+                                    type="button"
+                                    className="wk-buffs-entity"
+                                    data-active={selected}
+                                    aria-current={selected ? 'true' : undefined}
+                                    onClick={() => setActiveKey(entity.key)}
+                                >
+                                    <span className="wk-pcard-avatar" style={{ width: 26, height: 26, flexShrink: 0 }}>
                                         {icon ? (
                                             // eslint-disable-next-line @next/next/no-img-element
                                             <img src={icon} alt="" loading="lazy" />
                                         ) : null}
                                     </span>
-                                    <span style={{ fontWeight: 600, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                                    <span className="wk-buffs-entity-name" title={entity.name}>
                                         {entity.name}
                                     </span>
-                                    <WkBadge>{BUFF_ENTITY_LABELS[entity.type]}</WkBadge>
-                                    <WkBadge>{entity.buffs.length} 条</WkBadge>
-                                    {/* 这里不再渲染分组名：它是「游戏原文案」级别的一长串，
-                                        放进摘要会把 69 个字符塞到「展开」前面，信息密度全被它吃掉 */}
-                                </summary>
-
-                                <div className="wk-acc-body">
-                                    <div className="wk-rows">
-                                        {entity.buffs.map((buff) => {
-                                            const condition = describeZoneConditionBadge(buff.condition ?? null)
-                                            const folder = buffFolderName(buff.buff_name)
-                                            // 乘区条目：数值带单位（引用型没有绝对值，显示「引用」）
-                                            const zones = (buff.buff_set ?? []).map((zone) => {
-                                                const def = BUFF_ZONE_MAP.get(zone.zoneId)
-                                                return {
-                                                    label: def?.label ?? zone.zoneId,
-                                                    value: zone.ref ? '引用' : `${zone.value}${def?.unit === '%' ? '%' : ''}`
-                                                }
-                                            })
-                                            return (
-                                                <div className="wk-tr wk-tr--two" key={buff.id}>
-                                                    <div className="wk-line" data-has-folder={folder ? 'true' : undefined}>
-                                                        <span className="wk-line-name" title={buff.buff_name}>
-                                                            {buffLeafName(buff.buff_name)}
-                                                        </span>
-                                                        {folder && (
-                                                            <span className="wk-line-folder" title={folder}>
-                                                                {folder}
-                                                            </span>
-                                                        )}
-                                                    </div>
-                                                    <div className="wk-facts">
-                                                        <WkBadge>{BUFF_SCOPE_LABELS[buff.scope] ?? buff.scope}</WkBadge>
-                                                        {buff.exclusive && <WkBadge tone="accent">独占</WkBadge>}
-                                                        {zones.length > 0 && (
-                                                            <span className="wk-fact-value">
-                                                                {zones.map((zone) => zone.value).join(' / ')}
-                                                            </span>
-                                                        )}
-                                                        {condition && <WkBadge tone="warn">{condition}</WkBadge>}
-                                                        {zones.map((zone, zoneIdx) => (
-                                                            <WkBadge key={`${zone.label}-${zoneIdx}`}>{zone.label}</WkBadge>
-                                                        ))}
-                                                    </div>
-                                                </div>
-                                            )
-                                        })}
-                                    </div>
-                                </div>
-                            </details>
-                        )
-                    })}
+                                    <span className="wk-buffs-entity-count">{entity.buffs.length}</span>
+                                </button>
+                            )
+                        })
+                    )}
                 </div>
-            )}
+            </aside>
+
+            <section className="wk-buffs-main">
+                {active ? (
+                    <>
+                        <div className="wk-buffs-main-head">
+                            <span className="wk-pcard-avatar" style={{ width: 36, height: 36, flexShrink: 0 }}>
+                                {iconFor(active.type, active.name, entityIcons) ? (
+                                    // eslint-disable-next-line @next/next/no-img-element
+                                    <img src={iconFor(active.type, active.name, entityIcons)} alt="" loading="lazy" />
+                                ) : null}
+                            </span>
+                            <span className="wk-buffs-main-title">{active.name}</span>
+                            <WkBadge>{BUFF_ENTITY_LABELS[active.type]}</WkBadge>
+                            <span className="wk-meta">
+                                {activeBuffs.length} 条 Buff · {folders.length} 个文件夹
+                            </span>
+                        </div>
+
+                        <div className="wk-buffs-groove">
+                            {folders.length === 0 ? (
+                                <p className="wk-meta">这个实体还没有收录 Buff</p>
+                            ) : (
+                                folders.map((folder) => (
+                                    <article key={folder.name || '__root'} className="wk-folder-card">
+                                        <header className="wk-folder-head">
+                                            <span className="wk-folder-name" title={folder.name || undefined}>
+                                                {folder.name || '未分组'}
+                                            </span>
+                                            <span className="wk-folder-count">{folder.buffs.length} 条</span>
+                                        </header>
+                                        <div className="wk-buff-grid">
+                                            {folder.buffs.map((buff) => (
+                                                <BuffCard
+                                                    key={buff.id ?? buff.buff_name}
+                                                    buff={buff}
+                                                    isCharacter={activeIsCharacter}
+                                                />
+                                            ))}
+                                        </div>
+                                    </article>
+                                ))
+                            )}
+                        </div>
+                    </>
+                ) : (
+                    <p className="wk-meta" style={{ padding: '24px 0' }}>
+                        {keyword ? `没有匹配「${search.trim()}」的实体或 Buff` : '这个类型下还没有收录任何 Buff'}
+                    </p>
+                )}
+            </section>
         </div>
+    )
+}
+
+function BuffCard({ buff, isCharacter }: { buff: BuffSetRow; isCharacter: boolean }) {
+    const gate = gateLabel(buff.condition)
+    const facts = buffFacts(buff)
+
+    return (
+        <article className="wk-buff-card">
+            <div className="wk-buff-head">
+                {gate && <span className="wk-buff-gate">{gate}</span>}
+                <WkBadge>{scopeLabel(buff.scope, isCharacter)}</WkBadge>
+                {buff.exclusive && <WkBadge tone="warn">独占</WkBadge>}
+                <span className="wk-buff-name" title={buffLeafName(buff.buff_name)}>
+                    {buffLeafName(buff.buff_name)}
+                </span>
+            </div>
+
+            <dl className="wk-buff-facts">
+                <div className="wk-buff-fact">
+                    <dt>数值</dt>
+                    <dd>
+                        {facts.values.length === 0 ? (
+                            '—'
+                        ) : (
+                            <span className="wk-buff-values">
+                                {facts.values.map((item, index) => (
+                                    <span className="wk-buff-value-line" key={`${item.label}-${index}`}>
+                                        <span className="wk-buff-zone">{item.label}</span>
+                                        <span className="wk-buff-num">{item.value}</span>
+                                    </span>
+                                ))}
+                            </span>
+                        )}
+                    </dd>
+                </div>
+
+                {facts.refs.length > 0 && (
+                    <div className="wk-buff-fact">
+                        <dt>转模</dt>
+                        <dd>{facts.refs.join('；')}</dd>
+                    </div>
+                )}
+
+                {facts.types.length > 0 && (
+                    <div className="wk-buff-fact">
+                        <dt>类型</dt>
+                        <dd className="wk-buff-chip-row">
+                            {facts.types.map((type) => (
+                                <span className="wk-buff-chip" key={type}>
+                                    {type}
+                                </span>
+                            ))}
+                        </dd>
+                    </div>
+                )}
+
+                {facts.elements.length > 0 && (
+                    <div className="wk-buff-fact">
+                        <dt>属性</dt>
+                        <dd className="wk-buff-chip-row">
+                            {facts.elements.map((element) => (
+                                <span
+                                    className="wk-buff-chip"
+                                    key={element}
+                                    style={{
+                                        color: `var(--element-${element})`,
+                                        borderColor: `color-mix(in srgb, var(--element-${element}) 55%, transparent)`
+                                    }}
+                                >
+                                    {element}
+                                </span>
+                            ))}
+                        </dd>
+                    </div>
+                )}
+            </dl>
+        </article>
     )
 }
