@@ -1,410 +1,283 @@
 'use client'
 
-// 标准词条集编辑台（新系统 · 单列）
-// 结构变化：去掉「左侧已保存方案栏」，对象用顶部下拉切换；编辑区单列限宽 820；
-// 底部粘性保存条（未脏时禁用保存）；载入 / 新建 / 清空 / 删除 一律走统一确认弹窗；
-// 补上原先「有 state 却没有任何输入控件」的备注字段。
-// 5 个部位的编辑器仍是既有实现（SubstatSlotEditor），只换外壳与流程。
-import { useEffect, useMemo, useState, useTransition } from 'react'
+// 标准词条集编辑台（新系统）：整页占满顶栏以下，只有内部滚动。
+// 外壳 = VSCode 风格标签栏（已打开的角色）+ 每个角色的编辑台。
+// 角色**从列表里添加**（弹窗可搜索），不再手输角色名；每个角色一个标签页，切换不丢草稿。
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { Icon } from '@iconify/react'
-import SubstatSlotEditor from '@/components/admin/substat-slot-editor'
-import {
-    WkBadge,
-    WkButton,
-    WkConfirm,
-    WkDialog,
-    WkField,
-    WkIconButton,
-    WkInput,
-    WkMenu,
-    WkDropdown,
-    WkSpacer,
-    WkTextarea,
-    WkToolbar,
-    wkToast
-} from '@/design'
-import { deleteSubstatSet, upsertSubstatSet } from '@/lib/actions/substat-sets'
-import { setSubstatSetLock } from '@/lib/actions/edit-locks'
-import { ECHO_MAX_TOTAL_COST, SUBSTAT_TOTAL_COUNT } from '@/lib/consts/echo-stats'
+import SubstatCharacterEditor from './substat-character-editor'
+import { WkButton, WkConfirm, WkDialog, WkInput, wkToast } from '@/design'
 import { fetchEntityList } from '@/lib/upstream'
-import { countPlanSubstats, createEmptyEchoPlan, validateEchoPlan } from '@/lib/utils/echo-plan'
-import { timeAgo } from '@/lib/utils/format'
-import type { EchoPlan, EchoPlanSlot, StandardSubstatSetRow } from '@/lib/types/db'
-
-type ConfirmKind = 'new' | 'clear' | 'delete' | 'load' | null
-
-function snapshot(name: string, note: string, plan: EchoPlan): string {
-    return JSON.stringify({ name: name.trim(), note: note.trim(), plan })
-}
+import type { StandardSubstatSetRow } from '@/lib/types/db'
 
 export default function SubstatEditor({
     rows,
     isAdmin,
-    substatLocks
+    substatLocks,
+    characterIcons = {}
 }: {
     rows: StandardSubstatSetRow[]
     isAdmin: boolean
     substatLocks: Record<string, boolean>
+    /** @desc 角色头像（弹窗列表左侧图标；拿不到时降级成通用圆点） */
+    characterIcons?: Record<string, string>
 }) {
     const router = useRouter()
-    const [pending, startTransition] = useTransition()
-
-    const [name, setName] = useState('')
-    const [note, setNote] = useState('')
-    const [plan, setPlan] = useState<EchoPlan>(() => createEmptyEchoPlan())
-    const [planVersion, setPlanVersion] = useState(0)
-    const [baseline, setBaseline] = useState(() => snapshot('', '', createEmptyEchoPlan()))
-    const [loaded, setLoaded] = useState<string | null>(null)
-
-    const [confirm, setConfirm] = useState<ConfirmKind>(null)
-    const [pendingRow, setPendingRow] = useState<StandardSubstatSetRow | null>(null)
-    const [menuOpen, setMenuOpen] = useState(false)
-    const [jsonOpen, setJsonOpen] = useState(false)
-    const [jsonText, setJsonText] = useState('')
-    const [characters, setCharacters] = useState<string[]>([])
+    const [opened, setOpened] = useState<string[]>([])
+    const [activeKey, setActiveKey] = useState<string | null>(null)
+    const [dirtyMap, setDirtyMap] = useState<Record<string, boolean>>({})
+    const [pickerOpen, setPickerOpen] = useState(false)
+    const [pickerSearch, setPickerSearch] = useState('')
+    const [closing, setClosing] = useState<string | null>(null)
+    const [catalog, setCatalog] = useState<string[]>([])
     const [catalogError, setCatalogError] = useState<string | null>(null)
 
-    // 角色目录（直连上游，失败时降级为手输）
+    // 角色目录直连上游（新角色不用改代码）；拿不到时仍可从「已有方案」里打开
     useEffect(() => {
         let alive = true
         fetchEntityList('character')
             .then((list) => {
                 if (!alive) return
-                const names = [...new Set(list.map((entry) => entry.name?.trim()).filter((value): value is string => !!value))]
-                setCharacters(names.sort((a, b) => a.localeCompare(b, 'zh')))
+                const names = [
+                    ...new Set(list.map((entry) => entry.name?.trim()).filter((value): value is string => !!value))
+                ]
+                setCatalog(names)
             })
             .catch((error) => {
                 if (!alive) return
-                setCatalogError(`角色目录拉取失败（${error instanceof Error ? error.message : '未知错误'}），可直接输入角色名`)
+                setCatalogError(`角色目录拉取失败：${error instanceof Error ? error.message : '未知错误'}`)
             })
         return () => {
             alive = false
         }
     }, [])
 
-    const planCheck = useMemo(() => validateEchoPlan(plan), [plan])
-    const substatTotal = countPlanSubstats(plan)
-    const totalCost = plan.slots.reduce((sum, slot) => sum + slot.cost, 0)
-    const dirty = snapshot(name, note, plan) !== baseline
-    const locked = loaded ? Boolean(substatLocks[loaded]) : false
-    const canWrite = isAdmin || !locked
+    const rowMap = useMemo(() => new Map(rows.map((row) => [row.character_name, row])), [rows])
 
-    function apply(next: EchoPlan, nextName: string, nextNote: string) {
-        setPlan(next)
-        setName(nextName)
-        setNote(nextNote)
-        setPlanVersion((value) => value + 1)
-        setBaseline(snapshot(nextName, nextNote, next))
-    }
+    const characters = useMemo(() => {
+        const names = new Set<string>(catalog)
+        for (const row of rows) names.add(row.character_name)
+        return [...names].sort((a, b) => a.localeCompare(b, 'zh-Hans-CN'))
+    }, [catalog, rows])
 
-    function loadRow(row: StandardSubstatSetRow) {
-        apply(row.plan, row.character_name, row.note ?? '')
-        setLoaded(row.character_name)
-        setPendingRow(null)
-        setConfirm(null)
-    }
+    const filtered = useMemo(() => {
+        const keyword = pickerSearch.trim()
+        if (!keyword) return characters
+        return characters.filter((name) => name.includes(keyword))
+    }, [characters, pickerSearch])
 
-    function onSelect(value: string) {
-        const row = rows.find((item) => item.character_name === value)
-        if (!row) return
-        if (dirty) {
-            setPendingRow(row)
-            setConfirm('load')
-            return
-        }
-        loadRow(row)
-    }
-
-    function doNew() {
-        apply(createEmptyEchoPlan(), '', '')
-        setLoaded(null)
-        setConfirm(null)
-    }
-
-    function doClear() {
-        apply(createEmptyEchoPlan(), name, note)
-        setConfirm(null)
-    }
-
-    function updateSlot(index: number, slot: EchoPlanSlot) {
-        setPlan((prev) => ({ ...prev, slots: prev.slots.map((item, i) => (i === index ? slot : item)) }))
-    }
-
-    function onSave() {
-        const target = name.trim()
-        if (!target) {
-            wkToast('请先填写角色名', 'error')
-            return
-        }
-        if (!isAdmin && substatLocks[target]) {
-            wkToast(`「${target}」已被管理员锁定，仅管理员可修改`, 'error')
-            return
-        }
-        if (!planCheck.ok) {
-            wkToast(planCheck.error, 'error')
-            return
-        }
-        startTransition(async () => {
-            const result = await upsertSubstatSet({ characterName: target, plan, note })
-            if (result.error) {
-                wkToast(result.error, 'error')
+    const openCharacter = useCallback(
+        (name: string) => {
+            if (!isAdmin && substatLocks[name]) {
+                wkToast(`「${name}」已被管理员锁定，仅管理员可编辑`, 'error')
                 return
             }
-            setLoaded(target)
-            setBaseline(snapshot(target, note, plan))
-            wkToast(`已保存「${target}」的标准词条方案`, 'ok')
-            router.refresh()
+            setOpened((prev) => (prev.includes(name) ? prev : [...prev, name]))
+            setActiveKey(name)
+            setPickerOpen(false)
+            setPickerSearch('')
+        },
+        [isAdmin, substatLocks]
+    )
+
+    const close = useCallback((name: string) => {
+        setOpened((prev) => {
+            const index = prev.indexOf(name)
+            const next = prev.filter((item) => item !== name)
+            setActiveKey((current) => {
+                if (current !== name) return current
+                return next[index] ?? next[index - 1] ?? null
+            })
+            return next
         })
-    }
+    }, [])
 
-    function onDelete() {
-        if (!loaded) return
-        const target = loaded
-        startTransition(async () => {
-            const result = await deleteSubstatSet(target)
-            if (result.error) {
-                wkToast(result.error, 'error')
-                return
-            }
-            setConfirm(null)
-            setLoaded(null)
-            apply(createEmptyEchoPlan(), '', '')
-            wkToast(`已删除「${target}」`, 'ok')
-            router.refresh()
-        })
-    }
+    const dirtyCount = Object.values(dirtyMap).filter(Boolean).length
 
-    function onToggleLock() {
-        if (!loaded) return
-        const target = loaded
-        const next = !substatLocks[target]
-        setMenuOpen(false)
-        startTransition(async () => {
-            const result = await setSubstatSetLock(target, next)
-            if (result.error) {
-                wkToast(result.error, 'error')
-                return
-            }
-            wkToast(next ? `已锁定「${target}」` : `已解锁「${target}」`, 'ok')
-            router.refresh()
-        })
-    }
-
-    function onImport() {
-        let parsed: unknown
-        try {
-            parsed = JSON.parse(jsonText)
-        } catch (error) {
-            wkToast(`JSON 解析失败：${error instanceof Error ? error.message : '格式错误'}`, 'error')
-            return
-        }
-        const checked = validateEchoPlan(parsed)
-        if (!checked.ok) {
-            wkToast(checked.error, 'error')
-            return
-        }
-        apply(checked.plan, name, note)
-        setJsonOpen(false)
-        wkToast('已导入到编辑器，确认无误后点「保存」', 'ok')
-    }
-
-    return (
-        <div className="wk-editor">
-            <div className="wk-editor-head">
-                <div className="wk-editor-picker">
-                    <WkDropdown
-                        value={loaded ?? ''}
-                        ariaLabel="选择已保存的角色"
-                        placeholder="选择已保存的角色…"
-                        onChange={(next) => onSelect(next)}
-                        options={rows.map((row) => ({
-                            value: row.character_name,
-                            label: `${row.character_name}${substatLocks[row.character_name] ? '（已锁定）' : ''}`
-                        }))}
-                    />
-                </div>
-                <WkButton size="sm" onClick={() => (dirty ? setConfirm('new') : doNew())}>
-                    新建
+    const picker = (
+        <WkDialog
+            open={pickerOpen}
+            onClose={() => setPickerOpen(false)}
+            title="添加角色"
+            width={520}
+            footer={
+                <WkButton variant="quiet" onClick={() => setPickerOpen(false)}>
+                    关闭
                 </WkButton>
-                <WkBadge tone={dirty ? 'warn' : 'ok'}>{dirty ? '未保存' : '已保存'}</WkBadge>
-                {loaded && locked && <WkBadge tone="accent">仅管理员可改</WkBadge>}
-                <WkSpacer />
-                {/* 条目级编辑锁：和 Buff 编辑台同一个位置语义（谁在看谁的那把锁），不再藏进「更多」 */}
-                {isAdmin && loaded && (
-                    <WkIconButton
-                        size="sm"
-                        variant="quiet"
-                        label={locked ? '解锁该角色（当前仅管理员可改）' : '锁定该角色（仅管理员可改）'}
-                        aria-pressed={locked}
-                        disabled={pending}
-                        onClick={onToggleLock}
-                    >
-                        <Icon
-                            icon={locked ? 'mdi:lock-outline' : 'mdi:lock-open-variant-outline'}
-                            className="size-4"
-                            style={locked ? { color: 'var(--wk-accent-text)' } : undefined}
-                            aria-hidden="true"
-                        />
-                    </WkIconButton>
-                )}
-                <div className="wk-pop">
-                    <WkButton size="sm" variant="quiet" aria-haspopup="menu" onClick={() => setMenuOpen((value) => !value)}>
-                        更多
-                    </WkButton>
-                    {menuOpen && (
-                        <WkMenu
-                            onClose={() => setMenuOpen(false)}
-                            items={[
-                                {
-                                    key: 'export',
-                                    label: '导出当前方案 JSON',
-                                    onSelect: () => {
-                                        setJsonText(JSON.stringify(plan, null, 2))
-                                        setJsonOpen(true)
-                                    }
-                                },
-                                {
-                                    key: 'import',
-                                    label: '从 JSON 导入',
-                                    onSelect: () => {
-                                        setJsonText('')
-                                        setJsonOpen(true)
-                                    }
-                                },
-                                ...(loaded
-                                    ? [{ key: 'delete', label: '删除该角色方案', danger: true, onSelect: () => setConfirm('delete') }]
-                                    : [])
-                            ]}
-                        />
+            }
+        >
+            <div style={{ display: 'grid', gap: 10 }}>
+                <WkInput
+                    value={pickerSearch}
+                    onChange={(event) => setPickerSearch(event.target.value)}
+                    placeholder="搜索角色名"
+                    aria-label="搜索角色"
+                />
+                {catalogError && <p className="wk-meta">{catalogError}</p>}
+                <div className="wk-char-picker-list">
+                    {filtered.length === 0 ? (
+                        <p className="wk-meta" style={{ padding: '12px 6px' }}>
+                            没有匹配的角色
+                        </p>
+                    ) : (
+                        filtered.map((name) => {
+                            const saved = rowMap.has(name)
+                            const locked = !!substatLocks[name]
+                            const icon = characterIcons[name]
+                            const already = opened.includes(name)
+                            return (
+                                <button
+                                    key={name}
+                                    type="button"
+                                    className="wk-char-picker-item"
+                                    data-active={name === activeKey}
+                                    onClick={() => openCharacter(name)}
+                                >
+                                    <span className="wk-pcard-avatar" style={{ width: 24, height: 24, flexShrink: 0 }}>
+                                        {icon ? (
+                                            // eslint-disable-next-line @next/next/no-img-element
+                                            <img src={icon} alt="" loading="lazy" />
+                                        ) : null}
+                                    </span>
+                                    <span className="wk-char-picker-name">{name}</span>
+                                    {saved && (
+                                        <span className="wk-badge wk-badge--ok">{locked ? '已保存 · 已锁定' : '已保存'}</span>
+                                    )}
+                                    {!saved && <span className="wk-meta">未保存</span>}
+                                    {already && <span className="wk-meta">已打开</span>}
+                                </button>
+                            )
+                        })
                     )}
                 </div>
             </div>
+        </WkDialog>
+    )
 
-            <div className="wk-card wk-card-pad" style={{ display: 'grid', gap: 16 }}>
-                <div style={{ display: 'grid', gap: 16, gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))' }}>
-                    <WkField label="角色名" hint={catalogError ?? '可从下拉里选，也可以直接输入'}>
-                        <WkInput
-                            value={name}
-                            onChange={(event) => setName(event.target.value)}
-                            list="wk-character-catalog"
-                            placeholder="例：布兰特"
-                            disabled={Boolean(loaded && !canWrite)}
-                        />
-                        <datalist id="wk-character-catalog">
-                            {characters.map((item) => (
-                                <option key={item} value={item} />
-                            ))}
-                        </datalist>
-                    </WkField>
-                    <WkField label="备注" hint="可选，展示在浏览页的角色条目上">
-                        <WkInput value={note} onChange={(event) => setNote(event.target.value)} placeholder="例：仅计算本体" />
-                    </WkField>
+    if (opened.length === 0) {
+        return (
+            <>
+                <div
+                    className="wk-card wk-card-pad"
+                    style={{ display: 'grid', gap: 10, justifyItems: 'center', padding: '56px 24px', textAlign: 'center' }}
+                >
+                    <p style={{ fontSize: 'var(--wk-t-lead)' }}>还没有打开角色</p>
+                    <p className="wk-meta" style={{ maxWidth: 460 }}>
+                        从角色列表里添加要编辑的对象，一个角色一个标签页；左侧列出五个声骸部位，点哪个改哪个。
+                    </p>
+                    <WkButton
+                        variant="primary"
+                        size="md"
+                        onClick={() => setPickerOpen(true)}
+                        leading={<Icon icon="mdi:account-search-outline" className="wk-nav-icon" aria-hidden="true" />}
+                    >
+                        添加角色
+                    </WkButton>
+                </div>
+                {picker}
+            </>
+        )
+    }
+
+    return (
+        <>
+            <div className="wk-tabs-card">
+                <div className="wk-tabs" role="tablist" aria-label="已打开的角色">
+                    {opened.map((name) => {
+                        const active = name === activeKey
+                        const dirty = !!dirtyMap[name]
+                        const locked = !!substatLocks[name]
+                        return (
+                            <div key={name} className="wk-tab" data-active={active} data-dirty={dirty} data-locked={locked}>
+                                <button
+                                    type="button"
+                                    role="tab"
+                                    aria-selected={active}
+                                    className="wk-tab-name"
+                                    onClick={() => setActiveKey(name)}
+                                    title={locked ? `${name}（已被管理员锁定）` : name}
+                                >
+                                    {name}
+                                </button>
+                                {locked && (
+                                    <Icon
+                                        icon="mdi:lock-outline"
+                                        width={11}
+                                        height={11}
+                                        className="wk-tab-lock"
+                                        aria-label="仅管理员可编辑"
+                                    />
+                                )}
+                                {dirty && <span className="wk-tab-dirty" aria-label="有未保存改动" />}
+                                <button
+                                    type="button"
+                                    className="wk-tab-close"
+                                    aria-label={`关闭 ${name}`}
+                                    title={dirty ? '有未保存改动，关闭前会确认' : '关闭'}
+                                    onClick={() => (dirty ? setClosing(name) : close(name))}
+                                >
+                                    <Icon icon="mdi:close" width={12} height={12} />
+                                </button>
+                            </div>
+                        )
+                    })}
+                    <button
+                        type="button"
+                        className="wk-tab-add"
+                        aria-label="添加角色"
+                        title="添加角色"
+                        onClick={() => setPickerOpen(true)}
+                    >
+                        <Icon icon="mdi:plus" width={14} height={14} />
+                    </button>
+                    {dirtyCount > 0 && <span className="wk-tabs-note">未保存 {dirtyCount}</span>}
                 </div>
 
-                <WkToolbar>
-                    <WkBadge tone={totalCost <= ECHO_MAX_TOTAL_COST ? 'default' : 'danger'}>
-                        cost {totalCost}/{ECHO_MAX_TOTAL_COST}
-                    </WkBadge>
-                    <WkBadge tone={substatTotal === SUBSTAT_TOTAL_COUNT ? 'ok' : 'warn'}>
-                        副词条 {substatTotal}/{SUBSTAT_TOTAL_COUNT}
-                    </WkBadge>
-                    {!planCheck.ok && <span className="wk-meta" style={{ color: 'var(--wk-danger)' }}>{planCheck.error}</span>}
-                    <span className="wk-meta">共 {plan.slots.length} 个部位</span>
-                </WkToolbar>
+                <div className="wk-tabs-body">
+                    {opened.map((name) => (
+                        <div
+                            key={name}
+                            style={{
+                                display: name === activeKey ? 'flex' : 'none',
+                                flexDirection: 'column',
+                                flex: 1,
+                                minWidth: 0,
+                                minHeight: 0
+                            }}
+                            aria-hidden={name !== activeKey}
+                        >
+                            <SubstatCharacterEditor
+                                characterName={name}
+                                initialRow={rowMap.get(name)}
+                                isAdmin={isAdmin}
+                                locked={!!substatLocks[name]}
+                                onDirtyChange={(dirty) =>
+                                    setDirtyMap((prev) => (prev[name] === dirty ? prev : { ...prev, [name]: dirty }))
+                                }
+                                onDeleted={() => {
+                                    close(name)
+                                    router.refresh()
+                                }}
+                            />
+                        </div>
+                    ))}
+                </div>
             </div>
 
-            <div style={{ display: 'grid', gap: 12 }}>
-                {plan.slots.map((slot, index) => (
-                    <SubstatSlotEditor
-                        key={`${planVersion}-${index}`}
-                        index={index}
-                        slot={slot}
-                        onChange={(next) => updateSlot(index, next)}
-                    />
-                ))}
-            </div>
-
-            <div className="wk-actionbar">
-                <span className="wk-meta">
-                    {loaded
-                        ? `已载入「${loaded}」· 更新于 ${timeAgo(rows.find((row) => row.character_name === loaded)?.updated_at ?? '')}`
-                        : '新方案（未保存）'}
-                </span>
-                <WkSpacer />
-                <WkButton size="sm" variant="quiet" onClick={() => setConfirm('clear')} disabled={pending}>
-                    清空
-                </WkButton>
-                <WkButton size="sm" variant="primary" onClick={onSave} disabled={pending || !dirty || !canWrite}>
-                    {pending ? '保存中…' : '保存'}
-                </WkButton>
-            </div>
-
-            <WkDialog
-                open={jsonOpen}
-                onClose={() => setJsonOpen(false)}
-                width={620}
-                title="方案 JSON"
-                footer={
-                    <>
-                        <WkButton variant="quiet" onClick={() => setJsonOpen(false)}>
-                            关闭
-                        </WkButton>
-                        <WkButton variant="primary" onClick={onImport} disabled={!jsonText.trim()}>
-                            导入到编辑器
-                        </WkButton>
-                    </>
-                }
-            >
-                <WkField label="粘贴 JSON" hint="导入后需再点「保存」才会写库；导出会把当前编辑器内容写进这个框">
-                    <WkTextarea
-                        value={jsonText}
-                        onChange={(event) => setJsonText(event.target.value)}
-                        rows={12}
-                        placeholder='{ "slots": [ … ] }'
-                    />
-                </WkField>
-            </WkDialog>
+            {picker}
 
             <WkConfirm
-                open={confirm === 'new'}
-                onClose={() => setConfirm(null)}
-                title="放弃当前改动，新建方案？"
-                description="编辑器里未保存的内容会丢失。"
-                confirmLabel="放弃并新建"
-                busy={pending}
-                onConfirm={doNew}
-            />
-            <WkConfirm
-                open={confirm === 'clear'}
-                onClose={() => setConfirm(null)}
-                title="清空 5 个部位？"
-                description="会把当前方案恢复为空模板（角色名与备注保留）。"
-                confirmLabel="清空"
-                busy={pending}
-                onConfirm={doClear}
-            />
-            <WkConfirm
-                open={confirm === 'load'}
-                onClose={() => {
-                    setConfirm(null)
-                    setPendingRow(null)
+                open={!!closing}
+                onClose={() => setClosing(null)}
+                title={`关闭「${closing ?? ''}」？`}
+                description="这个角色有未保存的改动，关闭后会丢失。"
+                confirmLabel="放弃并关闭"
+                onConfirm={() => {
+                    if (closing) close(closing)
+                    setClosing(null)
                 }}
-                title={`切换到「${pendingRow?.character_name ?? ''}」？`}
-                description="当前未保存的改动会丢失。"
-                confirmLabel="放弃并切换"
-                busy={pending}
-                onConfirm={() => pendingRow && loadRow(pendingRow)}
             />
-            <WkConfirm
-                open={confirm === 'delete'}
-                onClose={() => setConfirm(null)}
-                title={`删除「${loaded ?? ''}」的标准词条方案？`}
-                description="删除后工具箱将不再同步到这个角色的方案，且不可撤销。"
-                confirmLabel="永久删除"
-                busy={pending}
-                onConfirm={onDelete}
-            />
-        </div>
+        </>
     )
 }

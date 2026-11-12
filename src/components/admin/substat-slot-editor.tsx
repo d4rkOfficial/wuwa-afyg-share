@@ -4,10 +4,13 @@
 // 编辑规则：
 // - 主词条：只选类型，**数值固定取满级上限**（不可填写）；
 // - 副主词条：**按 cost 自动推导**（4→攻击150 / 3→攻击100 / 1→生命2280，不可编辑）；
-// - 副词条：类型 + **档位下拉选择**（不可自由填写数值），单位按类型自动；
+// - 副词条：类型 + **档位选择**（不可自由填写数值），单位按类型自动；
 // - cost：不强制 43311，5 个部位合计 ≤ 12 即可。
-
+//
+// 视觉：全部走设计系统（WkField / WkSelect / WkSegmented / WkIconButton），
+// 与 Buff 编辑台的字段同规格，不再用裸 select + 任意值 Tailwind 类。
 import { Icon } from '@iconify/react'
+import { WkField, WkIconButton, WkSegmented, WkSelect } from '@/design'
 import {
     defaultStatUnit,
     ECHO_COSTS,
@@ -21,20 +24,15 @@ import {
 import type { EchoPlanSlot, EchoStatValue } from '@/lib/types/db'
 
 interface Props {
+    /** @desc 部位序号（0 起），仅用于标题 */
     index: number
     slot: EchoPlanSlot
     onChange: (slot: EchoPlanSlot) => void
 }
 
-const SELECT_CLASS =
-    'min-w-0 flex-1 rounded-sm border border-(--wk-line) bg-(--wk-input) px-2 py-1 text-xs outline-none transition-colors focus:border-(--wk-accent)'
-const READONLY_CLASS =
-    'w-24 shrink-0 rounded-sm border border-(--wk-line) bg-(--wk-s2) px-2 py-1 text-right text-xs wk-numeral text-(--wk-fg-3)'
-
 export default function SubstatSlotEditor({ index, slot, onChange }: Props) {
     const pool = MAIN_STAT_POOL[slot.cost] ?? []
     const usedTypes = new Set(slot.substats.map((s) => s.type))
-    const selectedMain = slot.mainStat ? pool.find((p) => p.type === slot.mainStat?.type) : undefined
     const autoSecond = secondMainStatFor(slot.cost)
 
     function updateSubstat(i: number, stat: EchoStatValue) {
@@ -56,118 +54,90 @@ export default function SubstatSlotEditor({ index, slot, onChange }: Props) {
     }
 
     return (
-        <div className="wk-slot">
-            {/* 部位头：序号 + cost 切换（不限组合，合计 ≤ 12 由页面统一校验） */}
-            <div className="wk-slot-head">
-                <span className="wk-title text-sm">
-                    部位 <span className="wk-numeral">{index + 1}</span>
-                    <span className="ml-1 text-[10px] font-normal text-(--wk-fg-3)">
-                        cost <span className="wk-numeral">{slot.cost}</span>
-                    </span>
+        <section className="wk-slot">
+            <header className="wk-slot-head">
+                <span className="wk-title" style={{ fontSize: 'var(--wk-t-body)' }}>
+                    部位 {index + 1}
                 </span>
-                <div className="flex items-center gap-1 rounded-sm border border-(--wk-line) bg-(--wk-s2) p-0.5">
-                    {ECHO_COSTS.map((c) => (
-                        <button
-                            key={c}
-                            onClick={() =>
-                                onChange({
-                                    ...slot,
-                                    cost: c,
-                                    // cost 决定主词条池与副主词条固定值：切换后重置主词条，副主词条自动重算
-                                    mainStat: null,
-                                    secondMainStat: secondMainStatFor(c)
-                                })
-                            }
-                            className={`rounded-sm px-2 py-0.5 text-[11px] font-medium transition-colors ${
-                                slot.cost === c
-                                    ? 'bg-(--wk-accent) text-(--wk-accent-fg)'
-                                    : 'text-(--wk-fg-3) hover:text-(--wk-fg)'
-                            }`}
-                            title={`声骸 cost ${c}（切换会按新 cost 重置主词条并自动推导副主词条）`}
-                        >
-                            cost {c}
-                        </button>
-                    ))}
-                </div>
-            </div>
+                <WkSegmented<string>
+                    value={String(slot.cost)}
+                    ariaLabel="声骸 cost"
+                    onChange={(next) =>
+                        onChange({
+                            ...slot,
+                            cost: Number(next),
+                            // cost 决定主词条池与副主词条固定值：切换后重置主词条，副主词条自动重算
+                            mainStat: null,
+                            secondMainStat: secondMainStatFor(Number(next))
+                        })
+                    }
+                    options={ECHO_COSTS.map((cost) => ({ value: String(cost), label: `${cost}C` }))}
+                />
+            </header>
 
             <div className="wk-slot-body">
-            {/* 主词条：只选类型，数值固定满级 */}
-            <div className="flex flex-col gap-1">
-                <div className="flex items-center justify-between gap-2">
-                    <span className="text-[11px] text-(--wk-fg-3)">主词条</span>
-                    <span className="text-[10px] text-(--wk-fg-3)">
-                        {selectedMain ? '数值固定为满级上限' : `cost ${slot.cost} 可选 ${pool.length} 项`}
-                    </span>
-                </div>
-                <div className="flex items-center gap-1.5">
-                    <select
-                        value={slot.mainStat?.type ?? ''}
-                        onChange={(e) => {
-                            const type = e.target.value
-                            if (!type) {
-                                onChange({ ...slot, mainStat: null })
-                                return
-                            }
-                            const max = pool.find((p) => p.type === type)?.maxValue ?? 0
-                            onChange({ ...slot, mainStat: { type, value: max, unit: '%' } })
-                        }}
-                        className={SELECT_CLASS}
-                    >
-                        <option value="">无主词条</option>
-                        {pool.map((p) => (
-                            <option key={p.type} value={p.type}>
-                                {p.type}（满级 {p.maxValue}%）
-                            </option>
-                        ))}
-                    </select>
-                    <span className={READONLY_CLASS}>{slot.mainStat ? `${slot.mainStat.value}%` : '—'}</span>
-                </div>
-            </div>
+                <div className="wk-slot-grid">
+                    <WkField label="主词条" hint={`cost ${slot.cost} 可选 ${pool.length} 项`}>
+                        <WkSelect
+                            value={slot.mainStat?.type ?? ''}
+                            aria-label="主词条"
+                            onChange={(event) => {
+                                const type = event.target.value
+                                if (!type) {
+                                    onChange({ ...slot, mainStat: null })
+                                    return
+                                }
+                                const max = pool.find((p) => p.type === type)?.maxValue ?? 0
+                                onChange({ ...slot, mainStat: { type, value: max, unit: '%' } })
+                            }}
+                        >
+                            <option value="">无主词条</option>
+                            {pool.map((item) => (
+                                <option key={item.type} value={item.type}>
+                                    {item.type}（满级 {item.maxValue}%）
+                                </option>
+                            ))}
+                        </WkSelect>
+                    </WkField>
 
-            {/* 副主词条：按 cost 自动推导，只读展示 */}
-            <div className="flex flex-col gap-1">
-                <div className="flex items-center justify-between gap-2">
-                    <span className="text-[11px] text-(--wk-fg-3)">副主词条（自动）</span>
-                    <span className="text-[10px] text-(--wk-fg-3)">按 cost 自动推导，无需填写</span>
-                </div>
-                <div className="flex items-center gap-1.5">
-                    <span className="min-w-0 flex-1 truncate rounded-sm border border-(--wk-line) bg-(--wk-s2) px-2 py-1 text-xs text-(--wk-fg-3)">
-                        {autoSecond ? autoSecond.type : '—'}
-                    </span>
-                    <span className={READONLY_CLASS}>{autoSecond ? `+${autoSecond.value}` : '—'}</span>
-                </div>
-            </div>
+                    <WkField label="主词条数值" hint="固定取满级上限，不可编辑">
+                        <div className="wk-readonly">{slot.mainStat ? `${slot.mainStat.value}%` : '—'}</div>
+                    </WkField>
 
-            {/* 副词条：类型 + 档位选择 */}
-            <div className="flex flex-col gap-2 border-t border-(--wk-line) pt-2">
-                <div className="flex items-center justify-between">
-                    <span className="text-[11px] text-(--wk-fg-3)">
-                        副词条 <span className="wk-numeral">{slot.substats.length}</span>/
-                        <span className="wk-numeral">{SUBSTAT_MAX_PER_SLOT}</span>
-                    </span>
-                    <button
-                        onClick={addSubstat}
-                        disabled={slot.substats.length >= SUBSTAT_MAX_PER_SLOT}
-                        className="inline-flex items-center gap-1 rounded-sm border border-(--wk-line) bg-(--wk-s2) px-2 py-0.5 text-[11px] text-(--wk-fg-3) transition-colors hover:text-(--wk-fg) disabled:opacity-40"
-                    >
-                        <Icon icon="mdi:plus" className="size-3" />
-                        添加
-                    </button>
+                    <WkField label="副主词条" hint="按 cost 自动推导，无需填写">
+                        <div className="wk-readonly">
+                            {autoSecond ? `${autoSecond.type} +${autoSecond.value}` : '—'}
+                        </div>
+                    </WkField>
                 </div>
 
-                {slot.substats.length === 0 && (
-                    <p className="text-[11px] leading-relaxed text-(--wk-fg-3) opacity-65">该部位暂无副词条（每部位 1-5 条）</p>
-                )}
+                <div className="wk-slot-subs">
+                    <div className="wk-slot-subs-head">
+                        <span className="wk-label">
+                            副词条 {slot.substats.length}/{SUBSTAT_MAX_PER_SLOT}
+                        </span>
+                        <button
+                            type="button"
+                            className="wk-btn wk-btn--sm"
+                            onClick={addSubstat}
+                            disabled={slot.substats.length >= SUBSTAT_MAX_PER_SLOT}
+                        >
+                            <Icon icon="mdi:plus" width={12} height={12} aria-hidden="true" />
+                            添加副词条
+                        </button>
+                    </div>
 
-                {slot.substats.map((stat, i) => {
-                    const tiers = substatTiers(stat.type)
-                    return (
-                        <div key={`${i}:${stat.type}`} className="flex items-center gap-1.5">
-                            <select
+                    {slot.substats.length === 0 && (
+                        <p className="wk-meta">该部位暂无副词条（每个部位 1–5 条，整份方案共 14 条）</p>
+                    )}
+
+                    {slot.substats.map((stat, i) => (
+                        <div key={`${i}:${stat.type}`} className="wk-slot-sub-row">
+                            <WkSelect
                                 value={stat.type}
-                                onChange={(e) => {
-                                    const type = e.target.value
+                                aria-label={`第 ${i + 1} 条副词条类型`}
+                                onChange={(event) => {
+                                    const type = event.target.value
                                     updateSubstat(i, {
                                         ...stat,
                                         type,
@@ -175,41 +145,40 @@ export default function SubstatSlotEditor({ index, slot, onChange }: Props) {
                                         unit: defaultStatUnit(type)
                                     })
                                 }}
-                                className={SELECT_CLASS}
                             >
                                 {SUBSTAT_ADD_ORDER.filter((t) => t === stat.type || !usedTypes.has(t)).map((t) => (
                                     <option key={t} value={t}>
                                         {t}
                                     </option>
                                 ))}
-                            </select>
-                            <select
+                            </WkSelect>
+
+                            <WkSelect
                                 value={String(stat.value)}
-                                onChange={(e) =>
-                                    updateSubstat(i, { ...stat, value: Number(e.target.value) })
-                                }
-                                className="w-24 shrink-0 rounded-sm border border-(--wk-line) bg-(--wk-input) px-2 py-1 text-right text-xs wk-numeral outline-none transition-colors focus:border-(--wk-accent)"
-                                aria-label={`副词条 ${i + 1} 档位`}
+                                aria-label={`第 ${i + 1} 条副词条档位`}
+                                className="wk-slot-tier"
+                                onChange={(event) => updateSubstat(i, { ...stat, value: Number(event.target.value) })}
                             >
-                                {tiers.map((t) => (
-                                    <option key={t} value={String(t)}>
-                                        {t}
+                                {substatTiers(stat.type).map((tier) => (
+                                    <option key={tier} value={String(tier)}>
+                                        {tier}
                                         {stat.unit === '%' ? '%' : ''}
                                     </option>
                                 ))}
-                            </select>
-                            <button
+                            </WkSelect>
+
+                            <WkIconButton
+                                size="sm"
+                                variant="quiet"
+                                label={`删除第 ${i + 1} 条副词条`}
                                 onClick={() => removeSubstat(i)}
-                                className="shrink-0 p-1 text-(--wk-fg-3) transition-colors hover:text-(--wk-danger)"
-                                aria-label={`删除第 ${i + 1} 条副词条`}
                             >
-                                <Icon icon="mdi:close" className="size-3.5" />
-                            </button>
+                                <Icon icon="mdi:close" width={14} height={14} aria-hidden="true" />
+                            </WkIconButton>
                         </div>
-                    )
-                })}
+                    ))}
+                </div>
             </div>
-            </div>
-        </div>
+        </section>
     )
 }

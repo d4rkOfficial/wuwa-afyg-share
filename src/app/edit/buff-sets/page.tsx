@@ -5,7 +5,7 @@ import { redirect } from 'next/navigation'
 // 旧内部组件（Buff 编辑器本体与弹窗）仍依赖这份样式，只在本路由加载
 import BuffEditor from '@/components/wk/buff-editor'
 import BuffSnapshotPanel from '@/components/admin/buff-snapshot-panel'
-import { WkContainer, WkPageHead, WkRoot } from '@/design'
+import { WkContainer, WkRoot } from '@/design'
 import { createClient, hasEnv } from '@/lib/supabase/server'
 import { getViewerLocks } from '@/lib/edit-locks'
 import { getEntityIcons } from '@/lib/data/avatar-icons'
@@ -40,10 +40,9 @@ export default async function EditBuffSetsPage() {
         return (
             <WkRoot>
                 <WkContainer>
-                    <WkPageHead
-                        title="无权限"
-                        sub="Buff 集编辑当前处于锁定状态（仅管理员可编辑）。需要编辑请联系管理员，或在顶栏的编辑锁里关闭它。"
-                    />
+                    <p className="wk-meta" style={{ padding: '24px 0' }}>
+                        Buff 集编辑当前处于锁定状态（仅管理员可编辑）。需要编辑请联系管理员，或在顶栏的编辑锁里关闭它。
+                    </p>
                 </WkContainer>
             </WkRoot>
         )
@@ -67,14 +66,10 @@ export default async function EditBuffSetsPage() {
     const entityIcons = await getEntityIcons()
 
     return (
-        /* 工作台整页不滚：高度锁在一屏内，只有编辑卡内部滚动（标签栏钉顶、保存条钉底） */
+        /* 工作台整页不滚：高度锁在一屏内，只有编辑卡内部滚动（标签栏钉顶、保存条钉底）。
+           页面不再有标题块：快照入口挂在标签栏右端，编辑区占满顶栏以下。 */
         <WkRoot className="wk-workbench">
             <WkContainer className="wk-workbench-in">
-                <WkPageHead
-                    title={isAdmin ? 'Buff 集管理' : 'Buff 集编辑'}
-                    sub="用「打开实体」搜索并打开条目；标签页之间切换不会丢未保存的改动。"
-                    actions={isAdmin ? <BuffSnapshotPanel /> : undefined}
-                />
                 <div className="wk-workbench-body">
                     <BuffEditor
                         rows={rows}
@@ -82,6 +77,7 @@ export default async function EditBuffSetsPage() {
                         isAdmin={isAdmin}
                         buffLocks={locks.buffLocks}
                         entityIcons={entityIcons}
+                        actions={isAdmin ? <BuffSnapshotPanel /> : undefined}
                     />
                 </div>
             </WkContainer>

@@ -2,10 +2,12 @@
 
 // Buff 集编辑台（新系统）
 // 外壳只有两件东西：① VSCode 风格的工作区标签栏（已打开的实体）② 标签页内容。
-// 打开实体走弹窗（可搜索、按类型分组），不再用下拉；快照是页面头部的一个按钮，没有下拉菜单。
+// 打开实体走弹窗（可搜索、按类型分组），不再用下拉；快照入口是标签栏右端的一个按钮，
+// 页面不再有标题块 —— 编辑区占满顶栏以下的全部面积。
 //
 // 保留的关键行为：**切实体不丢草稿** —— 每个打开过的实体都固定挂载一个编辑器实例，
 // 未激活的只隐藏不卸载，所以切回来时未保存的改动原样都在。
+import type { ReactNode } from 'react'
 import { useCallback, useMemo, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { Icon } from '@iconify/react'
@@ -28,7 +30,8 @@ export default function BuffEditor({
     folders,
     isAdmin,
     buffLocks,
-    entityIcons
+    entityIcons,
+    actions
 }: {
     rows: BuffSetRow[]
     folders: BuffFolderRow[]
@@ -36,6 +39,8 @@ export default function BuffEditor({
     buffLocks: Record<string, boolean>
     /** 实体头像表：打开实体弹窗里每行左侧的图标（拿不到时降级成通用图标） */
     entityIcons?: EntityIconMaps
+    /** 标签栏右端的附加动作（快照面板等）：页面不再单独占一行标题 */
+    actions?: ReactNode
 }) {
     const router = useRouter()
     const [opened, setOpened] = useState<Entity[]>([])
@@ -101,6 +106,7 @@ export default function BuffEditor({
     if (opened.length === 0) {
         return (
             <>
+                {actions && <div className="wk-workbench-actions">{actions}</div>}
                 <div className="wk-card wk-card-pad" style={{ display: 'grid', gap: 10, justifyItems: 'center', padding: '56px 24px', textAlign: 'center' }}>
                     <p style={{ fontSize: 'var(--wk-t-lead)' }}>还没有打开实体</p>
                     <p className="wk-meta" style={{ maxWidth: 420 }}>
@@ -187,6 +193,7 @@ export default function BuffEditor({
                         <Icon icon="mdi:plus" width={14} height={14} />
                     </button>
                     {dirtyCount > 0 && <span className="wk-tabs-note">未保存 {dirtyCount}</span>}
+                    {actions && <div className="wk-tabs-actions">{actions}</div>}
                 </div>
 
                 <div className="wk-tabs-body">

@@ -4,9 +4,10 @@ import type { Metadata } from 'next'
 import { redirect } from 'next/navigation'
 // 旧内部组件（词条部位编辑器）仍依赖这份样式，只在本路由加载
 import SubstatEditor from '@/components/wk/substat-editor'
-import { WkContainer, WkPageHead, WkRoot } from '@/design'
+import { WkContainer, WkRoot } from '@/design'
 import { createClient, hasEnv } from '@/lib/supabase/server'
 import { getViewerLocks } from '@/lib/edit-locks'
+import { getEntityIcons } from '@/lib/data/avatar-icons'
 import type { StandardSubstatSetRow } from '@/lib/types/db'
 
 export const metadata: Metadata = {
@@ -38,10 +39,9 @@ export default async function EditSubstatSetsPage() {
         return (
             <WkRoot>
                 <WkContainer>
-                    <WkPageHead
-                        title="无权限"
-                        sub="标准词条集编辑当前处于锁定状态（仅管理员可编辑）。需要编辑请联系管理员，或在顶栏的编辑锁里关闭它。"
-                    />
+                    <p className="wk-meta" style={{ padding: '24px 0' }}>
+                        标准词条集编辑当前处于锁定状态（仅管理员可编辑）。需要编辑请联系管理员，或在顶栏的编辑锁里关闭它。
+                    </p>
                 </WkContainer>
             </WkRoot>
         )
@@ -52,16 +52,20 @@ export default async function EditSubstatSetsPage() {
         .select('id, character_name, plan, note, updated_at')
         .order('character_name', { ascending: true })
     const rows = (data ?? []) as StandardSubstatSetRow[]
+    // 添加角色弹窗里的头像（上游挂了降级成通用圆点，不影响编辑）
+    const characterIcons = (await getEntityIcons()).character
 
     return (
-        <WkRoot>
-            <WkContainer>
-                <WkPageHead
-                    title={isAdmin ? '标准词条集管理' : '标准词条集编辑'}
-                    sub="顶部下拉切换角色；改完在底部保存条点保存。备注会展示在浏览页。"
-                />
-                <div style={{ marginTop: 20 }}>
-                    <SubstatEditor rows={rows} isAdmin={isAdmin} substatLocks={locks.substatLocks} />
+        /* 工作台整页不滚：高度锁在一屏内，只有编辑区内部滚动（标签栏钉顶、保存条钉底） */
+        <WkRoot className="wk-workbench">
+            <WkContainer className="wk-workbench-in">
+                <div className="wk-workbench-body">
+                    <SubstatEditor
+                        rows={rows}
+                        isAdmin={isAdmin}
+                        substatLocks={locks.substatLocks}
+                        characterIcons={characterIcons}
+                    />
                 </div>
             </WkContainer>
         </WkRoot>

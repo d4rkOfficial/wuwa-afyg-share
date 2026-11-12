@@ -301,6 +301,241 @@ body:has(.wk-workbench) footer {
     box-shadow: var(--wk-elev-1), var(--wk-inset-2);
 }
 
+/* 标签栏右端的附加动作（快照等）：页面不再为它单独留一行标题 */
+.wk-tabs-actions {
+    display: flex;
+    flex-shrink: 0;
+    align-items: center;
+    gap: 6px;
+    margin-left: auto;
+    padding: 0 8px;
+}
+
+/* 空态时同一动作放在内容上方右对齐 */
+.wk-workbench-actions {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 8px;
+    margin-bottom: 8px;
+}
+
+/* ── 标准词条集编辑台：左部位列表 + 右编辑区 + 底部保存条 ───────────────────
+   一个标签页 = 一个角色；左侧固定五个声骸部位，右侧编辑当前部位。 */
+.wk-substat-shell {
+    display: flex;
+    min-width: 0;
+    min-height: 0;
+    flex: 1;
+    overflow: hidden;
+}
+
+.wk-substat-side {
+    display: flex;
+    width: 244px;
+    min-width: 0;
+    flex-shrink: 0;
+    flex-direction: column;
+    gap: 10px;
+    overflow-y: auto;
+    padding: 12px;
+    border-right: 1px solid var(--wk-line);
+    background: var(--wk-s1);
+}
+
+.wk-substat-side-head { display: grid; gap: 8px; }
+
+.wk-substat-char {
+    min-width: 0;
+    overflow: hidden;
+    color: var(--wk-fg);
+    font-size: var(--wk-t-lead);
+    font-weight: 600;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.wk-substat-slots { display: grid; gap: 4px; }
+
+.wk-slot-item {
+    display: grid;
+    grid-template-columns: auto 1fr;
+    grid-template-areas:
+        'index cost'
+        'main main'
+        'sub sub';
+    gap: 2px 8px;
+    min-width: 0;
+    border: 1px solid transparent;
+    border-radius: var(--wk-r-1);
+    background: transparent;
+    padding: 7px 8px;
+    font-family: inherit;
+    text-align: left;
+    cursor: pointer;
+    transition: background-color 120ms ease-out, border-color 120ms ease-out;
+}
+
+.wk-slot-item:hover { background: var(--wk-s2); }
+
+.wk-slot-item[data-active='true'] {
+    border-color: var(--wk-ctrl-line);
+    background: var(--wk-s2);
+    box-shadow: var(--wk-inset-1);
+}
+
+.wk-slot-item-index { grid-area: index; color: var(--wk-fg); font-size: var(--wk-t-meta); font-weight: 600; }
+
+.wk-slot-item-cost {
+    grid-area: cost;
+    justify-self: end;
+    color: var(--wk-fg-3);
+    font-size: var(--wk-t-meta);
+    font-variant-numeric: tabular-nums;
+}
+
+.wk-slot-item-cost[data-cost='4'] { color: var(--wk-accent-text); }
+
+.wk-slot-item-main {
+    grid-area: main;
+    min-width: 0;
+    overflow: hidden;
+    color: var(--wk-fg-2);
+    font-size: var(--wk-t-meta);
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.wk-slot-item-sub { grid-area: sub; color: var(--wk-fg-3); font-size: var(--wk-t-meta); }
+
+.wk-substat-side-foot {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 8px;
+    margin-top: auto;
+    padding-top: 8px;
+    border-top: 1px solid var(--wk-line);
+}
+
+.wk-substat-main {
+    display: flex;
+    min-width: 0;
+    flex: 1;
+    flex-direction: column;
+    gap: 12px;
+    overflow-y: auto;
+    padding: 12px;
+    background: var(--wk-bg);
+}
+
+.wk-substat-main-head {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 8px;
+}
+
+.wk-substat-savebar {
+    display: flex;
+    height: 52px;
+    flex-shrink: 0;
+    align-items: center;
+    gap: 8px;
+    padding: 0 12px;
+    border-top: 1px solid var(--wk-line);
+    background: var(--wk-s1);
+}
+
+/* 部位编辑框里的两列字段 */
+.wk-slot-grid {
+    display: grid;
+    gap: 12px;
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+}
+
+/* 只读字段：与输入框同高，但一眼看出不可编辑 */
+.wk-readonly {
+    display: flex;
+    height: var(--wk-h-md);
+    align-items: center;
+    min-width: 0;
+    overflow: hidden;
+    border: 1px solid var(--wk-line);
+    border-radius: var(--wk-r-1);
+    background: var(--wk-s2);
+    padding: 0 10px;
+    color: var(--wk-fg-2);
+    font-size: var(--wk-t-body);
+    font-variant-numeric: tabular-nums;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.wk-slot-subs { display: grid; gap: 8px; padding-top: 12px; border-top: 1px solid var(--wk-line); }
+
+.wk-slot-subs-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+
+.wk-slot-sub-row {
+    display: grid;
+    gap: 8px;
+    grid-template-columns: minmax(0, 1fr) 96px auto;
+    align-items: center;
+}
+
+.wk-slot-tier { text-align: right; font-variant-numeric: tabular-nums; }
+
+/* 添加角色弹窗里的角色列表 */
+.wk-char-picker-list {
+    display: grid;
+    max-height: min(52vh, 420px);
+    gap: 2px;
+    overflow-y: auto;
+}
+
+.wk-char-picker-item {
+    display: flex;
+    min-width: 0;
+    align-items: center;
+    gap: 8px;
+    border: 1px solid transparent;
+    border-radius: var(--wk-r-1);
+    background: transparent;
+    padding: 6px 8px;
+    color: var(--wk-fg-2);
+    font-family: inherit;
+    font-size: var(--wk-t-body);
+    text-align: left;
+    cursor: pointer;
+}
+
+.wk-char-picker-item:hover { background: var(--wk-s2); color: var(--wk-fg); }
+
+.wk-char-picker-item[data-active='true'] {
+    border-color: var(--wk-ctrl-line);
+    background: var(--wk-s2);
+    color: var(--wk-fg);
+}
+
+.wk-char-picker-name {
+    min-width: 0;
+    flex: 1;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+@media (max-width: 900px) {
+    .wk-substat-shell { flex-direction: column; }
+
+    .wk-substat-side {
+        width: auto;
+        flex-shrink: 0;
+        border-right: 0;
+        border-bottom: 1px solid var(--wk-line);
+    }
+}
+
 .wk-slot-head {
     display: flex;
     align-items: center;
