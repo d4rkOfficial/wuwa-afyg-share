@@ -161,10 +161,10 @@ export default function SubstatEditor({
     if (opened.length === 0) {
         return (
             <>
-                <div className="wk-workbench-head">
-                    <span className="wk-workbench-title">{title}</span>
-                </div>
                 <div className="wk-workbench-empty">
+                    <div className="wk-workbench-empty-head">
+                        <span className="wk-workbench-title">{title}</span>
+                    </div>
                     <div className="wk-workbench-empty-body">
                         <p style={{ fontSize: 'var(--wk-t-lead)' }}>还没有打开角色</p>
                         <p className="wk-meta" style={{ maxWidth: 460 }}>

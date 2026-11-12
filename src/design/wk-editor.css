@@ -337,12 +337,11 @@ body:has(.wk-workbench) footer {
 
 .wk-workbench-empty-head {
     display: flex;
-    height: 44px;
+    height: 50px;
     flex-shrink: 0;
     align-items: center;
-    justify-content: flex-end;
     gap: 8px;
-    padding: 0 12px;
+    padding: 0 16px;
     border-bottom: 1px solid var(--wk-line);
 }
 

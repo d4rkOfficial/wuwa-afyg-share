@@ -109,12 +109,13 @@ export default function BuffEditor({
     if (opened.length === 0) {
         return (
             <>
-                <div className="wk-workbench-head">
-                    <span className="wk-workbench-title">{title}</span>
-                </div>
-                {/* 没打开实体：占位卡片几乎撑满整屏，只留一点边距；快照入口放进这张卡片里 */}
+                {/* 没打开实体：占位卡片几乎撑满整屏，只留一点边距；标题与快照入口都放进这张卡片里 */}
                 <div className="wk-workbench-empty">
-                    {action && <div className="wk-workbench-empty-head">{action}</div>}
+                    <div className="wk-workbench-empty-head">
+                        <span className="wk-workbench-title">{title}</span>
+                        {action && <span className="wk-spacer" />}
+                        {action}
+                    </div>
                     <div className="wk-workbench-empty-body">
                         <p style={{ fontSize: 'var(--wk-t-lead)' }}>还没有打开实体</p>
                         <p className="wk-meta" style={{ maxWidth: 460 }}>
