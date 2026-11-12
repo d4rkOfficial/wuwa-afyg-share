@@ -1045,7 +1045,7 @@ export default function BuffEntityEditor({
                             className={`size-3.5 ${dirty ? 'text-(--wk-accent-text)' : ''}`}
                         />
                         {!canEdit
-                            ? '该条目已被管理员锁定'
+                            ? '该实体已锁定，仅管理员能改。'
                             : dirty
                               ? '有未保存改动'
                               : canSave
@@ -1084,7 +1084,7 @@ export default function BuffEntityEditor({
                             icon={pending ? 'mdi:loading' : 'mdi:check'}
                             className={pending ? 'size-4 animate-spin' : 'mr-1 inline size-4'}
                         />
-                        {pending ? '保存中…' : '保存'}
+                        {pending ? '保存中…' : canEdit ? '保存' : '保存（仅管理员）'}
                     </button>
                 </div>
             </div>

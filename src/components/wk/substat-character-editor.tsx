@@ -24,6 +24,7 @@ export default function SubstatCharacterEditor({
     initialRow,
     isAdmin,
     locked,
+    globalLocked = false,
     onDirtyChange,
     onDeleted
 }: {
@@ -33,6 +34,8 @@ export default function SubstatCharacterEditor({
     isAdmin: boolean
     /** @desc 该角色是否被条目级编辑锁锁住 */
     locked: boolean
+    /** @desc 管理员是否把整张标准词条表（scope 级）锁了 */
+    globalLocked?: boolean
     onDirtyChange?: (dirty: boolean) => void
     onDeleted?: () => void
 }) {
@@ -45,7 +48,7 @@ export default function SubstatCharacterEditor({
     const [activeSlot, setActiveSlot] = useState(0)
     const [confirmDelete, setConfirmDelete] = useState(false)
 
-    const canWrite = isAdmin || !locked
+    const canWrite = isAdmin || (!locked && !globalLocked)
     const dirty = snapshot(note, plan) !== baseline
     const planCheck = useMemo(() => validateEchoPlan(plan), [plan])
     const substatTotal = countPlanSubstats(plan)
@@ -120,15 +123,6 @@ export default function SubstatCharacterEditor({
                         <div className="wk-substat-char" title={characterName}>
                             {characterName}
                         </div>
-                        {locked && <WkBadge tone="accent">仅管理员可改</WkBadge>}
-                        <WkField label="备注" hint="展示在浏览页的角色条目上">
-                            <WkInput
-                                value={note}
-                                onChange={(event) => setNote(event.target.value)}
-                                placeholder="例：仅计算本体"
-                                maxLength={60}
-                            />
-                        </WkField>
                     </div>
 
                     <div className="wk-substat-slots" role="listbox" aria-label="声骸部位">
@@ -179,10 +173,10 @@ export default function SubstatCharacterEditor({
                             <WkButton
                                 size="sm"
                                 variant="danger"
-                                disabled={pending}
+                                disabled={pending || !canWrite}
                                 onClick={() => setConfirmDelete(true)}
                             >
-                                删除方案
+                                {canWrite ? '删除方案' : '删除方案（仅管理员）'}
                             </WkButton>
                         )}
                     </div>
@@ -206,6 +200,16 @@ export default function SubstatCharacterEditor({
                                 ? `更新于 ${timeAgo(initialRow.updated_at)}`
                                 : '新方案（未保存）'}
                         </span>
+                        {/* 备注（展示在浏览页）：放在编辑区头部，不占左侧部位列表 */}
+                        <WkField label="备注" className="wk-substat-note">
+                            <WkInput
+                                value={note}
+                                onChange={(event) => setNote(event.target.value)}
+                                placeholder="可选，展示在浏览页"
+                                maxLength={60}
+                                disabled={!canWrite}
+                            />
+                        </WkField>
                     </div>
 
                     <SubstatSlotEditor
@@ -217,11 +221,19 @@ export default function SubstatCharacterEditor({
             </div>
 
             <div className="wk-substat-savebar">
-                <WkBadge tone={dirty ? 'warn' : 'ok'}>{dirty ? '有未保存改动' : '已保存'}</WkBadge>
+                {canWrite ? (
+                    <WkBadge tone={dirty ? 'warn' : 'ok'}>{dirty ? '有未保存改动' : '已保存'}</WkBadge>
+                ) : (
+                    <span className="wk-meta" style={{ color: 'var(--wk-accent-text)' }}>
+                        {globalLocked
+                            ? '管理员设置了全实体锁定，仅管理员能改。'
+                            : '该实体已锁定，仅管理员能改。'}
+                    </span>
+                )}
                 <span className="wk-meta">{characterName}</span>
                 <WkSpacer />
                 <WkButton variant="primary" onClick={onSave} disabled={pending || !dirty || !canWrite}>
-                    {pending ? '保存中…' : '保存'}
+                    {pending ? '保存中…' : canWrite ? '保存方案' : '保存方案（仅管理员）'}
                 </WkButton>
             </div>
 

@@ -34,18 +34,6 @@ export default async function EditSubstatSetsPage() {
     if (!user) redirect('/login?redirect=/edit/substat-sets')
 
     const { isAdmin, locks } = await getViewerLocks()
-    const canEdit = isAdmin || !locks.substatSetsLocked
-    if (!canEdit) {
-        return (
-            <WkRoot>
-                <WkContainer>
-                    <p className="wk-meta" style={{ padding: '24px 0' }}>
-                        标准词条集编辑当前处于锁定状态（仅管理员可编辑）。需要编辑请联系管理员，或在顶栏的编辑锁里关闭它。
-                    </p>
-                </WkContainer>
-            </WkRoot>
-        )
-    }
 
     const { data } = await supabase
         .from('standard_substat_sets')
@@ -66,6 +54,7 @@ export default async function EditSubstatSetsPage() {
                         substatLocks={locks.substatLocks}
                         characterIcons={characterIcons}
                         title={isAdmin ? '标准词条集管理' : '标准词条集编辑'}
+                        globalLocked={locks.substatSetsLocked}
                     />
                 </div>
             </WkContainer>

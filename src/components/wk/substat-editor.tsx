@@ -7,7 +7,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { Icon } from '@iconify/react'
 import SubstatCharacterEditor from './substat-character-editor'
-import { WkButton, WkConfirm, WkDialog, WkInput, wkToast } from '@/design'
+import { WkButton, WkConfirm, WkDialog, WkInput } from '@/design'
 import { fetchEntityList } from '@/lib/upstream'
 import type { StandardSubstatSetRow } from '@/lib/types/db'
 
@@ -16,7 +16,8 @@ export default function SubstatEditor({
     isAdmin,
     substatLocks,
     characterIcons = {},
-    title
+    title,
+    globalLocked = false
 }: {
     rows: StandardSubstatSetRow[]
     isAdmin: boolean
@@ -25,6 +26,8 @@ export default function SubstatEditor({
     characterIcons?: Record<string, string>
     /** @desc 顶部标题栏文字 */
     title: string
+    /** @desc 管理员是否把整张表都锁了（非管理员此时只读） */
+    globalLocked?: boolean
 }) {
     const router = useRouter()
     const [opened, setOpened] = useState<string[]>([])
@@ -70,18 +73,15 @@ export default function SubstatEditor({
         return characters.filter((name) => name.includes(keyword))
     }, [characters, pickerSearch])
 
+    // 被锁的角色仍然可以打开：只读查看，保存/删除按钮会标成「仅管理员」
     const openCharacter = useCallback(
         (name: string) => {
-            if (!isAdmin && substatLocks[name]) {
-                wkToast(`「${name}」已被管理员锁定，仅管理员可编辑`, 'error')
-                return
-            }
             setOpened((prev) => (prev.includes(name) ? prev : [...prev, name]))
             setActiveKey(name)
             setPickerOpen(false)
             setPickerSearch('')
         },
-        [isAdmin, substatLocks]
+        []
     )
 
     const close = useCallback((name: string) => {
@@ -257,6 +257,7 @@ export default function SubstatEditor({
                                 initialRow={rowMap.get(name)}
                                 isAdmin={isAdmin}
                                 locked={!!substatLocks[name]}
+                                globalLocked={globalLocked}
                                 onDirtyChange={(dirty) =>
                                     setDirtyMap((prev) => (prev[name] === dirty ? prev : { ...prev, [name]: dirty }))
                                 }
