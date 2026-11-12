@@ -144,6 +144,8 @@ function sectionsFor(entity: EntityGroup, buffs: BuffSetRow[]): BuffSection[] {
 /** @desc 一个 Buff 小卡的全部展示事实 */
 function buffFacts(buff: BuffSetRow) {
     const zones = buff.buff_set ?? []
+    // 条件（伤害类型 / 伤害属性）是**乘区级**的：同一张卡里 15% 可能不限类型、25% 只对共解生效，
+    // 所以类型 / 属性必须跟着各自那行数值走，不能汇总到卡片底部的单独一行。
     const values = zones.map((zone) => {
         const def = BUFF_ZONE_MAP.get(zone.zoneId)
         const unit = def?.unit === '%' ? '%' : ''
@@ -152,19 +154,13 @@ function buffFacts(buff: BuffSetRow) {
             label: def?.label ?? zone.zoneId,
             // 引用型乘区常把绝对值写 0（换算在工具箱里做）：别显示假的 0%，直接写「转模」
             value: zone.ref ? (zone.value !== 0 ? plain : '转模') : plain,
-            ref: zone.ref ? describeZoneRef(zone.ref) : ''
+            ref: zone.ref ? describeZoneRef(zone.ref) : '',
+            types: [...new Set((zone.condition?.damageTypes ?? []).map((type) => BUFF_DAMAGE_TYPE_SHORT[type] ?? type))],
+            elements: [...new Set(zone.condition?.elements ?? [])]
         }
     })
     const refs = [...new Set(values.map((item) => item.ref).filter(Boolean))]
-    const types = [
-        ...new Set(
-            zones
-                .flatMap((zone) => zone.condition?.damageTypes ?? [])
-                .map((type) => BUFF_DAMAGE_TYPE_SHORT[type] ?? type)
-        )
-    ]
-    const elements = [...new Set(zones.flatMap((zone) => zone.condition?.elements ?? []))]
-    return { values, refs, types, elements }
+    return { values, refs }
 }
 
 export default function BuffSetsBrowser({
@@ -375,6 +371,28 @@ function BuffCard({ buff, isCharacter }: { buff: BuffSetRow; isCharacter: boolea
                                 {facts.values.map((item, index) => (
                                     <span className="wk-buff-value-line" key={`${item.label}-${index}`}>
                                         <span className="wk-buff-zone">{item.label}</span>
+                                        {/* 属性 / 类型跟着这一行的数值走：同一张卡里不同数值有不同的适用条件 */}
+                                        {(item.elements.length > 0 || item.types.length > 0) && (
+                                            <span className="wk-buff-chips">
+                                                {item.elements.map((element) => (
+                                                    <span
+                                                        className="wk-buff-chip wk-buff-chip--inline"
+                                                        key={`el-${element}`}
+                                                        style={{
+                                                            color: `var(--element-${element})`,
+                                                            borderColor: `color-mix(in srgb, var(--element-${element}) 55%, transparent)`
+                                                        }}
+                                                    >
+                                                        {element}
+                                                    </span>
+                                                ))}
+                                                {item.types.map((type) => (
+                                                    <span className="wk-buff-chip wk-buff-chip--inline" key={`dt-${type}`}>
+                                                        {type}
+                                                    </span>
+                                                ))}
+                                            </span>
+                                        )}
                                         <span className="wk-buff-num">{item.value}</span>
                                     </span>
                                 ))}
@@ -387,39 +405,6 @@ function BuffCard({ buff, isCharacter }: { buff: BuffSetRow; isCharacter: boolea
                     <div className="wk-buff-fact">
                         <dt>转模</dt>
                         <dd>{facts.refs.join('；')}</dd>
-                    </div>
-                )}
-
-                {facts.types.length > 0 && (
-                    <div className="wk-buff-fact">
-                        <dt>类型</dt>
-                        <dd className="wk-buff-chip-row">
-                            {facts.types.map((type) => (
-                                <span className="wk-buff-chip" key={type}>
-                                    {type}
-                                </span>
-                            ))}
-                        </dd>
-                    </div>
-                )}
-
-                {facts.elements.length > 0 && (
-                    <div className="wk-buff-fact">
-                        <dt>属性</dt>
-                        <dd className="wk-buff-chip-row">
-                            {facts.elements.map((element) => (
-                                <span
-                                    className="wk-buff-chip"
-                                    key={element}
-                                    style={{
-                                        color: `var(--element-${element})`,
-                                        borderColor: `color-mix(in srgb, var(--element-${element}) 55%, transparent)`
-                                    }}
-                                >
-                                    {element}
-                                </span>
-                            ))}
-                        </dd>
                     </div>
                 )}
             </dl>

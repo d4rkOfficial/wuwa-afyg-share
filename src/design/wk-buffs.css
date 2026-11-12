@@ -233,11 +233,16 @@
 
 .wk-buff-value-line {
     display: flex;
-    align-items: baseline;
+    align-items: center;
     gap: 8px;
 }
 
-.wk-buff-value-line > .wk-buff-zone { min-width: 0; color: var(--wk-fg-3); }
+.wk-buff-value-line > .wk-buff-zone {
+    min-width: 0;
+    /* 窄卡里宁可折行也不截断：乘区名是判断依据，省掉就看不懂这行是什么了 */
+    color: var(--wk-fg-3);
+    overflow-wrap: anywhere;
+}
 
 .wk-buff-value-line > .wk-buff-num {
     margin-left: auto;
@@ -247,7 +252,14 @@
     font-variant-numeric: tabular-nums;
 }
 
-.wk-buff-chip-row { display: flex; flex-wrap: wrap; align-items: center; gap: 4px; }
+/* 属性 / 类型 chip：贴在这一行数值前面，表示「这条数值」的适用条件 */
+.wk-buff-chips {
+    display: inline-flex;
+    flex-shrink: 0;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 4px;
+}
 
 .wk-buff-chip {
     display: inline-flex;
@@ -261,4 +273,9 @@
     font-size: var(--wk-t-meta);
     line-height: 1;
     white-space: nowrap;
+}
+
+.wk-buff-chip--inline {
+    height: 18px;
+    padding: 0 5px;
 }
