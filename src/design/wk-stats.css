@@ -130,15 +130,18 @@
     padding: 2px 16px 8px;
 }
 
+/* 一个部位一行：左边 cost + 主词条 + 副主词条，副词条靠右对齐；放不下时整行换行 */
 .wk-stat-slot {
-    display: grid;
-    gap: 6px;
+    display: flex;
     min-width: 0;
-    padding: 10px 0;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 4px 10px;
+    padding: 7px 0;
     border-top: 1px solid var(--wk-line);
 }
 
-.wk-stat-slot:first-child { border-top: 0; padding-top: 6px; }
+.wk-stat-slot:first-child { border-top: 0; padding-top: 4px; }
 
 .wk-stat-slot-head {
     display: flex;
@@ -166,7 +169,9 @@
     display: flex;
     min-width: 0;
     flex-wrap: wrap;
+    justify-content: flex-end;
     gap: 4px;
+    margin-left: auto;
 }
 
 .wk-stat-chip {
