@@ -13,7 +13,6 @@
     "check:dead": "node scripts/find-dead-code.mjs",
     "check:shadow": "node scripts/check-shadow.mjs",
     "check:lock": "node scripts/check-lock-ui.mjs",
-    "check:chars": "node scripts/generate-char-elements.mjs --check",
     "check:all": "node scripts/check-ui.mjs && node scripts/check-css-routes.mjs && node scripts/check-shadow.mjs && node scripts/check-lock-ui.mjs && node scripts/acceptance.mjs",
     "preview": "opennextjs-cloudflare build && opennextjs-cloudflare preview",
     "deploy": "opennextjs-cloudflare build && opennextjs-cloudflare deploy",

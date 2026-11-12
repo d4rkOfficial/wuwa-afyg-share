@@ -11,8 +11,8 @@ export const dynamic = 'force-dynamic'
 
 export const metadata = { title: '组件样本' }
 
-export default function DevUiPage() {
+export default async function DevUiPage() {
     if (process.env.NODE_ENV === 'production') notFound()
     // 样张里的作者名也走同一份随机逻辑：服务端取一次，客户端只渲染传下来的字符串
-    return <Specimen sampleAuthor={sampleUsername()} />
+    return <Specimen sampleAuthor={await sampleUsername()} />
 }

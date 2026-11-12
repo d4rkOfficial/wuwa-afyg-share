@@ -56,17 +56,24 @@ export default function SubstatSetsBrowser({
 
     const tabs = useMemo(() => ELEMENT_ORDER.filter((element) => groups.has(element)), [groups])
 
+    /** @desc 上游拿不到属性表时没有可分组的属性：退化成一份按角色名排的全部列表，不假装有分组 */
+    const ungrouped = tabs.length === 0 && rows.length > 0
+
     /** 默认选中第一个有角色的属性；搜索后当前属性空了也回退到第一个有结果的属性 */
     const activeTab = picked && groups.has(picked) ? picked : (tabs[0] ?? '')
 
     const visible = useMemo(() => {
+        if (ungrouped) {
+            const list = [...rows].sort((a, b) => a.character_name.localeCompare(b.character_name, 'zh'))
+            return keyword ? list.filter((row) => row.character_name.includes(keyword)) : list
+        }
         const list = groups.get(activeTab) ?? []
         return keyword ? list.filter((row) => row.character_name.includes(keyword)) : list
-    }, [groups, activeTab, keyword])
+    }, [ungrouped, rows, groups, activeTab, keyword])
 
     /** @desc 搜索命中在别的属性下时，给一条可点的提示 */
     const matchesElsewhere = useMemo(() => {
-        if (!keyword) return []
+        if (!keyword || ungrouped) return []
         return tabs
             .filter((element) => element !== activeTab)
             .map((element) => ({
@@ -74,7 +81,7 @@ export default function SubstatSetsBrowser({
                 count: (groups.get(element) ?? []).filter((row) => row.character_name.includes(keyword)).length
             }))
             .filter((item) => item.count > 0)
-    }, [keyword, tabs, groups, activeTab])
+    }, [keyword, ungrouped, tabs, groups, activeTab])
 
     return (
         <div style={{ display: 'grid', gap: 12 }}>
@@ -93,36 +100,44 @@ export default function SubstatSetsBrowser({
                 )}
             </div>
 
-            <div className="wk-stat-groove">
-                <div className="wk-stat-tabs" role="tablist" aria-label="属性">
-                    {ELEMENT_ORDER.map((element) => {
-                        const list = groups.get(element) ?? []
-                        const empty = list.length === 0
-                        return (
-                            <button
-                                key={element}
-                                type="button"
-                                role="tab"
-                                aria-selected={element === activeTab}
-                                disabled={empty}
-                                className="wk-stat-tab"
-                                data-element={element}
-                                data-active={element === activeTab}
-                                onClick={() => setPicked(element)}
-                            >
-                                {element}
-                                {!empty && <span className="wk-stat-tab-count">{list.length}</span>}
-                            </button>
-                        )
-                    })}
+            {ungrouped ? (
+                <p className="wk-meta">属性数据暂不可用（上游未响应），下面按角色名列出全部方案。</p>
+            ) : (
+                <div className="wk-stat-groove">
+                    <div className="wk-stat-tabs" role="tablist" aria-label="属性">
+                        {ELEMENT_ORDER.map((element) => {
+                            const list = groups.get(element) ?? []
+                            const empty = list.length === 0
+                            return (
+                                <button
+                                    key={element}
+                                    type="button"
+                                    role="tab"
+                                    aria-selected={element === activeTab}
+                                    disabled={empty}
+                                    className="wk-stat-tab"
+                                    data-element={element}
+                                    data-active={element === activeTab}
+                                    onClick={() => setPicked(element)}
+                                >
+                                    {element}
+                                    {!empty && <span className="wk-stat-tab-count">{list.length}</span>}
+                                </button>
+                            )
+                        })}
+                    </div>
                 </div>
-            </div>
+            )}
 
             {visible.length === 0 ? (
                 <p className="wk-meta" style={{ padding: '16px 0' }}>
-                    {keyword
-                        ? `「${activeTab}」下没有匹配「${keyword}」的角色`
-                        : `「${activeTab}」下还没有收录角色`}
+                    {ungrouped
+                        ? keyword
+                            ? `没有匹配「${keyword}」的角色`
+                            : '还没有收录任何角色'
+                        : keyword
+                          ? `「${activeTab}」下没有匹配「${keyword}」的角色`
+                          : `「${activeTab}」下还没有收录角色`}
                     {matchesElsewhere.length > 0 && (
                         <>
                             ，另有：
@@ -201,7 +216,7 @@ export default function SubstatSetsBrowser({
                 </div>
             )}
 
-            {unclassified.length > 0 && (
+            {!ungrouped && unclassified.length > 0 && (
                 <p className="wk-meta">
                     有 {unclassified.length} 个角色查不到属性，暂不显示：
                     {unclassified.map((row) => row.character_name).join('、')}

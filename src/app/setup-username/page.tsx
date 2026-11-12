@@ -48,7 +48,7 @@ export default async function SetupUsernamePage({
                         </p>
                     </header>
                     <div className="wk-card wk-card-pad">
-                        <SetupUsernameForm redirectTo={redirectTo} exampleUsername={sampleUsername()} />
+                        <SetupUsernameForm redirectTo={redirectTo} exampleUsername={await sampleUsername()} />
                     </div>
                 </div>
             </WkContainer>

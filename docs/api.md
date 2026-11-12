@@ -176,7 +176,7 @@ GET /api/substat-sets?character_name=布兰特&q=布
 | ---- | ---- | ---- |
 | `/api/public/projects` | `POST` | 匿名上传工程（返回 `{ code, url }`，短有效期） |
 | `/api/buff-sets/export` | `GET` | Buff 集全量 SQL 导出（优先导出最新快照状态） |
-| `/api/char-elements` | `GET` | 角色 → 元素速查表（含数据版本，`no-store`） |
+| `/api/char-elements` | `GET` | 角色 → 元素速查表（`{ version, elements }`，实时取自上游并缓存 6 小时；上游不可用时返回 `502`，不含任何写死数据） |
 | `/api/ai/stream` | `POST` | AI 流式对话代理（供站点内 AI 协作使用） |
 
 以上接口与工具箱无耦合，可按需实现或省略。

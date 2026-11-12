@@ -12,7 +12,7 @@ import { WkBadge, WkContainer, WkEmpty, WkRoot, WkSpacer } from '@/design'
 import { markdownToPlainText } from '@/lib/markdown'
 import { createClient, hasEnv } from '@/lib/supabase/server'
 import { getAvatarIcons } from '@/lib/data/avatar-icons'
-import { CHAR_ELEMENTS } from '@/lib/data/char-elements.generated'
+import { getCharElements } from '@/lib/data/char-elements-latest'
 import { DETAIL_COLUMNS } from '@/lib/project/query'
 import { teamDisplayNames } from '@/lib/project/extract'
 import { formatDate, formatCount } from '@/lib/utils/format'
@@ -66,8 +66,8 @@ export default async function SharePage({ params }: { params: Promise<{ code: st
     const grace = isGracePeriod(project.expires_at, project.author_name)
     const isOwner = user && user.id === project.author_id
     const charIcons = await getAvatarIcons()
-    // 属性色只是装饰：用静态生成表，不为它多打两次第三方 CDN
-    const elements = CHAR_ELEMENTS as Record<string, string>
+    // 属性色：与其余页面共用同一份带缓存的上游数据（6 小时一刷），不再读任何写死的表
+    const elements = await getCharElements()
 
     if (expired) {
         return (
