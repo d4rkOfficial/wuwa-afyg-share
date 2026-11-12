@@ -38,12 +38,25 @@
 
 .wk-stat-tab:hover:not(:disabled) { color: var(--wk-fg); }
 
+/* 选中态取属性色（复用 --element-* 那套色板）：边框是一种属性的色，底色是它的淡化版 */
+.wk-stat-tab[data-element='冷凝'] { --stat-tab-color: var(--element-冷凝); }
+.wk-stat-tab[data-element='热熔'] { --stat-tab-color: var(--element-热熔); }
+.wk-stat-tab[data-element='导电'] { --stat-tab-color: var(--element-导电); }
+.wk-stat-tab[data-element='气动'] { --stat-tab-color: var(--element-气动); }
+.wk-stat-tab[data-element='衍射'] { --stat-tab-color: var(--element-衍射); }
+.wk-stat-tab[data-element='湮灭'] { --stat-tab-color: var(--element-湮灭); }
+
 .wk-stat-tab[data-active='true'] {
-    border-color: var(--wk-ctrl-line);
-    background: var(--wk-s1);
-    color: var(--wk-fg);
+    border-color: color-mix(in srgb, var(--stat-tab-color, var(--wk-accent)) 62%, var(--wk-ctrl-line));
+    background: color-mix(in srgb, var(--stat-tab-color, var(--wk-accent)) 13%, var(--wk-s1));
+    color: var(--stat-tab-color, var(--wk-accent));
     font-weight: 600;
     box-shadow: var(--wk-elev-1), var(--wk-inset-2);
+}
+
+.wk-stat-tab[data-active='true'] .wk-stat-tab-count {
+    color: inherit;
+    opacity: 0.8;
 }
 
 .wk-stat-tab:disabled {

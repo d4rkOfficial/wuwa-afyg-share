@@ -9,9 +9,8 @@ import { WkInput } from '@/design'
 import { mainStatShort, substatShort } from '@/lib/consts/echo-stats'
 import type { EchoStatValue, StandardSubstatSetRow } from '@/lib/types/db'
 
-/** @desc 六个元素属性（游戏内没有「物理伤害加成」主词条，物伤角色 / 上游查不到的角色归到「未分类」） */
+/** @desc 六个元素属性（游戏内没有「物理伤害加成」主词条；查不到属性的角色不进 tab，只在下方提示） */
 const ELEMENT_ORDER = ['冷凝', '热熔', '导电', '气动', '衍射', '湮灭'] as const
-const OTHER = '未分类'
 
 function statText(stat: EchoStatValue | null | undefined): string {
     if (!stat) return '—'
@@ -29,7 +28,7 @@ export default function SubstatSetsBrowser({
 }: {
     rows: StandardSubstatSetRow[]
     icons?: Record<string, string>
-    /** @desc 角色名 → 属性（服务端传入的静态表） */
+    /** @desc 角色名 → 属性（服务端传入的实时表） */
     elements?: Record<string, string>
 }) {
     const [search, setSearch] = useState('')
@@ -37,24 +36,28 @@ export default function SubstatSetsBrowser({
 
     const keyword = search.trim()
 
-    /** @desc 先按属性分组（顺序固定为六元素，其它排最后），再按角色名排序 */
-    const groups = useMemo(() => {
+    /** @desc 按六属性分组；属性查不到的角色单独收起来，只在底部提示，不占 tab */
+    const { groups, unclassified } = useMemo(() => {
         const map = new Map<string, StandardSubstatSetRow[]>()
+        const missing: StandardSubstatSetRow[] = []
         for (const row of rows) {
             const element = elements[row.character_name]
-            const key = element && (ELEMENT_ORDER as readonly string[]).includes(element) ? element : OTHER
-            const list = map.get(key) ?? []
+            if (!element || !(ELEMENT_ORDER as readonly string[]).includes(element)) {
+                missing.push(row)
+                continue
+            }
+            const list = map.get(element) ?? []
             list.push(row)
-            map.set(key, list)
+            map.set(element, list)
         }
         for (const list of map.values()) list.sort((a, b) => a.character_name.localeCompare(b.character_name, 'zh'))
-        return map
+        return { groups: map, unclassified: missing }
     }, [rows, elements])
 
-    const tabs = useMemo(() => [...ELEMENT_ORDER, OTHER].filter((element) => groups.has(element)), [groups])
+    const tabs = useMemo(() => ELEMENT_ORDER.filter((element) => groups.has(element)), [groups])
 
     /** 默认选中第一个有角色的属性；搜索后当前属性空了也回退到第一个有结果的属性 */
-    const activeTab = picked && groups.has(picked) ? picked : (tabs[0] ?? OTHER)
+    const activeTab = picked && groups.has(picked) ? picked : (tabs[0] ?? '')
 
     const visible = useMemo(() => {
         const list = groups.get(activeTab) ?? []
@@ -92,7 +95,7 @@ export default function SubstatSetsBrowser({
 
             <div className="wk-stat-groove">
                 <div className="wk-stat-tabs" role="tablist" aria-label="属性">
-                    {[...ELEMENT_ORDER, OTHER].map((element) => {
+                    {ELEMENT_ORDER.map((element) => {
                         const list = groups.get(element) ?? []
                         const empty = list.length === 0
                         return (
@@ -103,6 +106,7 @@ export default function SubstatSetsBrowser({
                                 aria-selected={element === activeTab}
                                 disabled={empty}
                                 className="wk-stat-tab"
+                                data-element={element}
                                 data-active={element === activeTab}
                                 onClick={() => setPicked(element)}
                             >
@@ -195,6 +199,13 @@ export default function SubstatSetsBrowser({
                         </details>
                     ))}
                 </div>
+            )}
+
+            {unclassified.length > 0 && (
+                <p className="wk-meta">
+                    有 {unclassified.length} 个角色查不到属性，暂不显示：
+                    {unclassified.map((row) => row.character_name).join('、')}
+                </p>
             )}
         </div>
     )
