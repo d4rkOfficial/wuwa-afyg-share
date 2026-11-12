@@ -7,10 +7,10 @@
 // - 副词条：类型 + **档位选择**（不可自由填写数值），单位按类型自动；
 // - cost：不强制 43311，5 个部位合计 ≤ 12 即可。
 //
-// 视觉：全部走设计系统（WkField / WkSelect / WkSegmented / WkIconButton），
+// 视觉：全部走设计系统（WkField / WkDropdown / WkSegmented / WkIconButton），
 // 与 Buff 编辑台的字段同规格，不再用裸 select + 任意值 Tailwind 类。
 import { Icon } from '@iconify/react'
-import { WkField, WkIconButton, WkSegmented, WkSelect } from '@/design'
+import { WkDropdown, WkField, WkIconButton, WkSegmented } from '@/design'
 import {
     defaultStatUnit,
     ECHO_COSTS,
@@ -78,11 +78,11 @@ export default function SubstatSlotEditor({ index, slot, onChange }: Props) {
             <div className="wk-slot-body">
                 <div className="wk-slot-grid">
                     <WkField label="主词条" hint={`cost ${slot.cost} 可选 ${pool.length} 项`}>
-                        <WkSelect
+                        <WkDropdown
                             value={slot.mainStat?.type ?? ''}
-                            aria-label="主词条"
-                            onChange={(event) => {
-                                const type = event.target.value
+                            ariaLabel="主词条"
+                            placeholder="无主词条"
+                            onChange={(type) => {
                                 if (!type) {
                                     onChange({ ...slot, mainStat: null })
                                     return
@@ -90,14 +90,14 @@ export default function SubstatSlotEditor({ index, slot, onChange }: Props) {
                                 const max = pool.find((p) => p.type === type)?.maxValue ?? 0
                                 onChange({ ...slot, mainStat: { type, value: max, unit: '%' } })
                             }}
-                        >
-                            <option value="">无主词条</option>
-                            {pool.map((item) => (
-                                <option key={item.type} value={item.type}>
-                                    {item.type}（满级 {item.maxValue}%）
-                                </option>
-                            ))}
-                        </WkSelect>
+                            options={[
+                                { value: '', label: '无主词条' },
+                                ...pool.map((item) => ({
+                                    value: item.type,
+                                    label: `${item.type}（满级 ${item.maxValue}%）`
+                                }))
+                            ]}
+                        />
                     </WkField>
 
                     <WkField label="主词条数值" hint="固定取满级上限，不可编辑">
@@ -133,42 +133,34 @@ export default function SubstatSlotEditor({ index, slot, onChange }: Props) {
 
                     {slot.substats.map((stat, i) => (
                         <div key={`${i}:${stat.type}`} className="wk-slot-sub-row">
-                            <WkSelect
+                            <WkDropdown
                                 value={stat.type}
-                                aria-label={`第 ${i + 1} 条副词条类型`}
-                                onChange={(event) => {
-                                    const type = event.target.value
+                                ariaLabel={`第 ${i + 1} 条副词条类型`}
+                                onChange={(type) =>
                                     updateSubstat(i, {
                                         ...stat,
                                         type,
                                         value: midSubstatValue(type),
                                         unit: defaultStatUnit(type)
                                     })
-                                }}
-                            >
-                                {SUBSTAT_ADD_ORDER.filter((t) => t === stat.type || !usedTypes.has(t)).map((t) => (
-                                    <option key={t} value={t}>
-                                        {t}
-                                    </option>
-                                ))}
-                            </WkSelect>
+                                }
+                                options={SUBSTAT_ADD_ORDER.filter(
+                                    (t) => t === stat.type || !usedTypes.has(t)
+                                ).map((t) => ({ value: t, label: t }))}
+                            />
 
-                            <WkSelect
+                            <WkDropdown
                                 value={String(stat.value)}
-                                aria-label={`第 ${i + 1} 条副词条档位`}
-                                className="wk-slot-tier"
-                                onChange={(event) => updateSubstat(i, { ...stat, value: Number(event.target.value) })}
-                            >
-                                {substatTiers(stat.type).map((tier) => (
-                                    <option key={tier} value={String(tier)}>
-                                        {tier}
-                                        {stat.unit === '%' ? '%' : ''}
-                                    </option>
-                                ))}
-                            </WkSelect>
+                                ariaLabel={`第 ${i + 1} 条副词条档位`}
+                                onChange={(next) => updateSubstat(i, { ...stat, value: Number(next) })}
+                                options={substatTiers(stat.type).map((tier) => ({
+                                    value: String(tier),
+                                    label: `${tier}${stat.unit === '%' ? '%' : ''}`
+                                }))}
+                            />
 
                             <WkIconButton
-                                size="sm"
+                                size="md"
                                 variant="quiet"
                                 label={`删除第 ${i + 1} 条副词条`}
                                 onClick={() => removeSubstat(i)}

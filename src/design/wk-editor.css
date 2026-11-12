@@ -547,8 +547,6 @@ body:has(.wk-workbench) footer {
     align-items: center;
 }
 
-.wk-slot-tier { text-align: right; font-variant-numeric: tabular-nums; }
-
 /* 添加角色弹窗里的角色列表 */
 .wk-char-picker-list {
     display: grid;
