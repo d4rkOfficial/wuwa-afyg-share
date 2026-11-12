@@ -96,6 +96,51 @@ function groupByFolder(buffs: BuffSetRow[]): FolderGroup[] {
     return [...map.values()]
 }
 
+/** @desc 右侧的一段：普通实体一段；套装按件数各成一段（各自一个标题栏 + 各自的文件夹） */
+interface BuffSection {
+    type: BuffEntityType
+    label: string
+    buffs: BuffSetRow[]
+    folders: FolderGroup[]
+    /** @desc 这套「自己的」文件夹名（套装名 + N件）。同名时不再重复画文件夹标题卡 */
+    bareName: string | null
+}
+
+function pieceCount(type: BuffEntityType): number {
+    return isSetType(type) ? Number(type[0]) : 0
+}
+
+function sectionsFor(entity: EntityGroup, buffs: BuffSetRow[]): BuffSection[] {
+    if (!isSetType(entity.type)) {
+        return [
+            {
+                type: entity.type,
+                label: BUFF_ENTITY_LABELS[entity.type],
+                buffs,
+                folders: groupByFolder(buffs),
+                bareName: null
+            }
+        ]
+    }
+
+    // 套装：2 件套 / 5 件套… 各管各的，不混在一个标题栏下
+    const byPiece = new Map<BuffEntityType, BuffSetRow[]>()
+    for (const buff of buffs) {
+        const list = byPiece.get(buff.entity_type) ?? []
+        list.push(buff)
+        byPiece.set(buff.entity_type, list)
+    }
+    return [...byPiece.entries()]
+        .sort((a, b) => pieceCount(a[0]) - pieceCount(b[0]))
+        .map(([type, list]) => ({
+            type,
+            label: BUFF_ENTITY_LABELS[type],
+            buffs: list,
+            folders: groupByFolder(list),
+            bareName: `${entity.name}${pieceCount(type)}件`
+        }))
+}
+
 /** @desc 一个 Buff 小卡的全部展示事实 */
 function buffFacts(buff: BuffSetRow) {
     const zones = buff.buff_set ?? []
@@ -172,7 +217,7 @@ export default function BuffSetsBrowser({
         return active.buffs.filter((buff) => buff.buff_name.toLowerCase().includes(keyword))
     }, [active, keyword])
 
-    const folders = useMemo(() => groupByFolder(activeBuffs), [activeBuffs])
+    const sections = useMemo<BuffSection[]>(() => (active ? sectionsFor(active, activeBuffs) : []), [active, activeBuffs])
     const activeIsCharacter = active ? active.type === 'character' : true
 
     return (
@@ -232,52 +277,69 @@ export default function BuffSetsBrowser({
             </aside>
 
             <section className="wk-buffs-main">
-                {active ? (
-                    <>
-                        <div className="wk-buffs-main-head">
-                            <span className="wk-pcard-avatar" style={{ width: 36, height: 36, flexShrink: 0 }}>
-                                {iconFor(active.type, active.name, entityIcons) ? (
-                                    // eslint-disable-next-line @next/next/no-img-element
-                                    <img src={iconFor(active.type, active.name, entityIcons)} alt="" loading="lazy" />
-                                ) : null}
-                            </span>
-                            <span className="wk-buffs-main-title">{active.name}</span>
-                            <WkBadge>{BUFF_ENTITY_LABELS[active.type]}</WkBadge>
-                            <span className="wk-meta">
-                                {activeBuffs.length} 条 Buff · {folders.length} 个文件夹
-                            </span>
-                        </div>
-
-                        <div className="wk-buffs-groove">
-                            {folders.length === 0 ? (
-                                <p className="wk-meta">这个实体还没有收录 Buff</p>
-                            ) : (
-                                folders.map((folder) => (
-                                    <article key={folder.name || '__root'} className="wk-folder-card">
-                                        <header className="wk-folder-head">
-                                            <span className="wk-folder-name" title={folder.name || undefined}>
-                                                {folder.name || '未分组'}
-                                            </span>
-                                            <span className="wk-folder-count">{folder.buffs.length} 条</span>
-                                        </header>
-                                        <div className="wk-buff-grid">
-                                            {folder.buffs.map((buff) => (
-                                                <BuffCard
-                                                    key={buff.id ?? buff.buff_name}
-                                                    buff={buff}
-                                                    isCharacter={activeIsCharacter}
-                                                />
-                                            ))}
-                                        </div>
-                                    </article>
-                                ))
-                            )}
-                        </div>
-                    </>
-                ) : (
+                {sections.length === 0 ? (
                     <p className="wk-meta" style={{ padding: '24px 0' }}>
                         {keyword ? `没有匹配「${search.trim()}」的实体或 Buff` : '这个类型下还没有收录任何 Buff'}
                     </p>
+                ) : (
+                    sections.map((section) => (
+                        <div className="wk-buffs-piece" key={section.type}>
+                            <div className="wk-buffs-main-head">
+                                <span className="wk-pcard-avatar" style={{ width: 36, height: 36, flexShrink: 0 }}>
+                                    {iconFor(active?.type ?? section.type, active?.name ?? '', entityIcons) ? (
+                                        // eslint-disable-next-line @next/next/no-img-element
+                                        <img
+                                            src={iconFor(active?.type ?? section.type, active?.name ?? '', entityIcons)}
+                                            alt=""
+                                            loading="lazy"
+                                        />
+                                    ) : null}
+                                </span>
+                                <span className="wk-buffs-main-title">{active?.name}</span>
+                                <WkBadge>{section.label}</WkBadge>
+                                <span className="wk-meta">
+                                    {section.buffs.length} 条 Buff · {section.folders.length} 个文件夹
+                                </span>
+                            </div>
+
+                            <div className="wk-buffs-groove">
+                                {section.folders.length === 0 ? (
+                                    <p className="wk-meta">这个件套还没有收录 Buff</p>
+                                ) : section.folders.length === 1 && section.folders[0].name === section.bareName ? (
+                                    // 文件夹名就是「套装名 + N件」时不再重复画一张标题卡，直接把 Buff 铺在凹槽里
+                                    <div className="wk-buff-grid">
+                                        {section.folders[0].buffs.map((buff) => (
+                                            <BuffCard
+                                                key={buff.id ?? buff.buff_name}
+                                                buff={buff}
+                                                isCharacter={activeIsCharacter}
+                                            />
+                                        ))}
+                                    </div>
+                                ) : (
+                                    section.folders.map((folder) => (
+                                        <article key={folder.name || '__root'} className="wk-folder-card">
+                                            <header className="wk-folder-head">
+                                                <span className="wk-folder-name" title={folder.name || undefined}>
+                                                    {folder.name || '未分组'}
+                                                </span>
+                                                <span className="wk-folder-count">{folder.buffs.length} 条</span>
+                                            </header>
+                                            <div className="wk-buff-grid">
+                                                {folder.buffs.map((buff) => (
+                                                    <BuffCard
+                                                        key={buff.id ?? buff.buff_name}
+                                                        buff={buff}
+                                                        isCharacter={activeIsCharacter}
+                                                    />
+                                                ))}
+                                            </div>
+                                        </article>
+                                    ))
+                                )}
+                            </div>
+                        </div>
+                    ))
                 )}
             </section>
         </div>

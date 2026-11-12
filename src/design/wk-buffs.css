@@ -97,7 +97,10 @@
 }
 
 /* ── 右侧明细 ───────────────────────────────────────────────────────────── */
-.wk-buffs-main { display: grid; min-width: 0; gap: 12px; align-content: start; }
+.wk-buffs-main { display: grid; min-width: 0; gap: 20px; align-content: start; }
+
+/* 一段 = 一个标题栏 + 一片凹槽。套装按件数各成一段，互不干扰 */
+.wk-buffs-piece { display: grid; min-width: 0; gap: 10px; align-content: start; }
 
 .wk-buffs-main-head {
     display: flex;
