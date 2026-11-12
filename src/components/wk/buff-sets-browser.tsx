@@ -306,16 +306,19 @@ export default function BuffSetsBrowser({
                                 {section.folders.length === 0 ? (
                                     <p className="wk-meta">这个件套还没有收录 Buff</p>
                                 ) : section.folders.length === 1 && section.folders[0].name === section.bareName ? (
-                                    // 文件夹名就是「套装名 + N件」时不再重复画一张标题卡，直接把 Buff 铺在凹槽里
-                                    <div className="wk-buff-grid">
-                                        {section.folders[0].buffs.map((buff) => (
-                                            <BuffCard
-                                                key={buff.id ?? buff.buff_name}
-                                                buff={buff}
-                                                isCharacter={activeIsCharacter}
-                                            />
-                                        ))}
-                                    </div>
+                                    // 文件夹名就是「套装名 + N件」时不再重复画标题（段标题栏已经写明），
+                                    // 但这一层卡片保留：Buff 仍然装在一张卡里，不是一个浮在凹槽上的网格
+                                    <article className="wk-folder-card">
+                                        <div className="wk-buff-grid">
+                                            {section.folders[0].buffs.map((buff) => (
+                                                <BuffCard
+                                                    key={buff.id ?? buff.buff_name}
+                                                    buff={buff}
+                                                    isCharacter={activeIsCharacter}
+                                                />
+                                            ))}
+                                        </div>
+                                    </article>
                                 ) : (
                                     section.folders.map((folder) => (
                                         <article key={folder.name || '__root'} className="wk-folder-card">
