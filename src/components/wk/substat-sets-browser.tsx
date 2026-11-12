@@ -175,7 +175,6 @@ export default function SubstatSetsBrowser({
                                         </span>
                                     ))}
                                 </span>
-                                {row.note && <span className="wk-meta wk-stat-note">{row.note}</span>}
                             </summary>
 
                             <div className="wk-acc-body">

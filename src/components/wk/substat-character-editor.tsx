@@ -7,7 +7,7 @@ import { useEffect, useMemo, useRef, useState, useTransition } from 'react'
 import { useRouter } from 'next/navigation'
 import { Icon } from '@iconify/react'
 import SubstatSlotEditor from '@/components/admin/substat-slot-editor'
-import { WkBadge, WkButton, WkConfirm, WkField, WkIconButton, WkInput, WkSpacer, wkToast } from '@/design'
+import { WkBadge, WkButton, WkConfirm, WkIconButton, WkSpacer, wkToast } from '@/design'
 import { deleteSubstatSet, upsertSubstatSet } from '@/lib/actions/substat-sets'
 import { setSubstatSetLock } from '@/lib/actions/edit-locks'
 import { ECHO_MAX_TOTAL_COST, SUBSTAT_TOTAL_COUNT, mainStatShort } from '@/lib/consts/echo-stats'
@@ -15,8 +15,8 @@ import { countPlanSubstats, createEmptyEchoPlan, validateEchoPlan } from '@/lib/
 import { timeAgo } from '@/lib/utils/format'
 import type { EchoPlan, EchoPlanSlot, StandardSubstatSetRow } from '@/lib/types/db'
 
-function snapshot(note: string, plan: EchoPlan): string {
-    return JSON.stringify({ note: note.trim(), plan })
+function snapshot(plan: EchoPlan): string {
+    return JSON.stringify(plan)
 }
 
 export default function SubstatCharacterEditor({
@@ -42,14 +42,13 @@ export default function SubstatCharacterEditor({
     const router = useRouter()
     const [pending, startTransition] = useTransition()
 
-    const [note, setNote] = useState(initialRow?.note ?? '')
     const [plan, setPlan] = useState<EchoPlan>(() => initialRow?.plan ?? createEmptyEchoPlan())
-    const [baseline, setBaseline] = useState(() => snapshot(initialRow?.note ?? '', initialRow?.plan ?? createEmptyEchoPlan()))
+    const [baseline, setBaseline] = useState(() => snapshot(initialRow?.plan ?? createEmptyEchoPlan()))
     const [activeSlot, setActiveSlot] = useState(0)
     const [confirmDelete, setConfirmDelete] = useState(false)
 
     const canWrite = isAdmin || (!locked && !globalLocked)
-    const dirty = snapshot(note, plan) !== baseline
+    const dirty = snapshot(plan) !== baseline
     const planCheck = useMemo(() => validateEchoPlan(plan), [plan])
     const substatTotal = countPlanSubstats(plan)
     const totalCost = plan.slots.reduce((sum, slot) => sum + slot.cost, 0)
@@ -76,12 +75,13 @@ export default function SubstatCharacterEditor({
             return
         }
         startTransition(async () => {
-            const result = await upsertSubstatSet({ characterName, plan, note })
+            // 备注字段已下线：保存时沿用库里已有的值，不覆盖既有数据
+            const result = await upsertSubstatSet({ characterName, plan, note: initialRow?.note ?? '' })
             if (result.error) {
                 wkToast(result.error, 'error')
                 return
             }
-            setBaseline(snapshot(note, plan))
+            setBaseline(snapshot(plan))
             onDirtyChange?.(false)
             wkToast(`已保存「${characterName}」的标准词条方案`, 'ok')
             router.refresh()
@@ -200,16 +200,6 @@ export default function SubstatCharacterEditor({
                                 ? `更新于 ${timeAgo(initialRow.updated_at)}`
                                 : '新方案（未保存）'}
                         </span>
-                        {/* 备注（展示在浏览页）：放在编辑区头部，不占左侧部位列表 */}
-                        <WkField label="备注" className="wk-substat-note">
-                            <WkInput
-                                value={note}
-                                onChange={(event) => setNote(event.target.value)}
-                                placeholder="可选，展示在浏览页"
-                                maxLength={60}
-                                disabled={!canWrite}
-                            />
-                        </WkField>
                     </div>
 
                     <SubstatSlotEditor

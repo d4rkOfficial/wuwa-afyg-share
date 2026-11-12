@@ -492,13 +492,6 @@ body:has(.wk-workbench) footer {
     gap: 8px;
 }
 
-/* 备注：放在编辑区头部右侧，不占左侧部位列表 */
-.wk-substat-note {
-    display: grid;
-    width: 260px;
-    max-width: 42vw;
-    margin-left: auto;
-}
 
 .wk-substat-savebar {
     display: flex;

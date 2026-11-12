@@ -128,12 +128,6 @@
     color: var(--wk-accent-text);
 }
 
-.wk-stat-note {
-    min-width: 0;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-}
 
 /* ── 展开后的部位明细 ───────────────────────────────────────────────────── */
 .wk-stat-slots {
