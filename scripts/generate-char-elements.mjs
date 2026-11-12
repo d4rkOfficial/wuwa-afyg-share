@@ -1,18 +1,23 @@
 // 生成 src/lib/data/char-elements.generated.ts（角色名 → 属性，**仅服务端使用**）
-// 用法：node scripts/generate-char-elements.mjs
+//
+// 用法：
+//   node scripts/generate-char-elements.mjs          重新生成快照（游戏版本更新后跑一次）
+//   node scripts/generate-char-elements.mjs --check  只比对快照是否落后于上游（不写文件，落后退出码 1）
+//
 // 数据源：https://static.nanoka.cc/ww/{version}/character.json
 //
-// 注意：本脚本只生成「静态数据集」，绝不生成/覆盖客户端取数模块（src/lib/data/char-elements.ts）。
-// 客户端模块只负责 fetch /api/char-elements + localStorage 缓存，不含任何静态数据，
-// 以免同一份数据既进 bundle 又进缓存（两份冗余）。
-
-import { writeFileSync } from 'node:fs'
+// 说明：
+// - 页面实际用的是 `src/lib/data/char-elements-latest.ts`（6 小时缓存直连上游，失败才退回本快照），
+//   所以快照落后**不会**让新角色缺失，只影响上游挂掉时的兜底质量；
+// - 出问题排查时先跑 `--check`：能立刻看出快照是哪个版本、上游是哪个版本。
+import { existsSync, readFileSync, writeFileSync } from 'node:fs'
 import { dirname, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
 const MANIFEST = 'https://static.nanoka.cc/manifest.json'
 const ELEMENT_BY_ID = ['', '冷凝', '热熔', '导电', '气动', '衍射', '湮灭']
 const OUT = resolve(dirname(fileURLToPath(import.meta.url)), '../src/lib/data/char-elements.generated.ts')
+const CHECK_ONLY = process.argv.includes('--check')
 
 const manifest = await fetch(MANIFEST).then((r) => r.json())
 const version = manifest.ww?.latest ?? '3.6.1'
@@ -36,6 +41,21 @@ const lines = [
     '}',
     ''
 ]
+const next = lines.join('\n')
 
-writeFileSync(OUT, lines.join('\n'))
+if (CHECK_ONLY) {
+    const current = existsSync(OUT) ? readFileSync(OUT, 'utf8') : ''
+    if (current.trim() === next.trim()) {
+        console.log(`[ok] 静态快照与上游一致（${version}，${Object.keys(map).length} 个角色）`)
+        process.exit(0)
+    }
+    const localVersion = /数据版本：(\S+)/.exec(current)?.[1] ?? '未知'
+    console.error(
+        `[stale] 静态快照是 ${localVersion}，上游已是 ${version}。` +
+            '请运行 node scripts/generate-char-elements.mjs 重新生成（不影响线上，仅兜底数据落后）。'
+    )
+    process.exit(1)
+}
+
+writeFileSync(OUT, next)
 console.log(`written ${Object.keys(map).length} entries -> ${OUT} (${version})`)

@@ -9,7 +9,7 @@ import { WkContainer, WkPageHead, WkRoot } from '@/design'
 import { createClient, hasEnv } from '@/lib/supabase/server'
 import { getViewerLocks } from '@/lib/edit-locks'
 import { getEntityIcons } from '@/lib/data/avatar-icons'
-import { CHAR_ELEMENTS } from '@/lib/data/char-elements.generated'
+import { getCharElements } from '@/lib/data/char-elements-latest'
 import type { StandardSubstatSetRow } from '@/lib/types/db'
 
 export const metadata: Metadata = {
@@ -34,7 +34,7 @@ export default async function SubstatSetsPage() {
     const viewer = await getViewerLocks()
     const editable = !viewer.locks.substatSetsLocked
     const canEdit = editable || viewer.isAdmin
-    const icons = (await getEntityIcons()).character
+    const [icons, charElements] = await Promise.all([getEntityIcons().then((map) => map.character), getCharElements()])
 
     return (
         <WkRoot>
@@ -70,7 +70,7 @@ export default async function SubstatSetsPage() {
                         <SubstatSetsBrowser
                             rows={rows}
                             icons={icons}
-                            elements={CHAR_ELEMENTS as Record<string, string>}
+                            elements={charElements}
                         />
                     )}
                 </div>

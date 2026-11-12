@@ -1,6 +1,7 @@
-// 仅服务端使用（server-only 包未安装，故以注释约束）：本文件含静态角色属性表，客户端组件请勿 import，否则会把整张表打进客户端 bundle
 // 角色名 → 属性（由 scripts/generate-char-elements.mjs 生成，勿手改）
-// 数据版本：3.7.1
+// ⚠️ 仅服务端使用：客户端组件请勿 import 本文件（会把整张表打进客户端 bundle）。
+//    前端请改用 src/lib/data/char-elements.ts 的 charElement()/loadCharElements()。
+// 数据版本：3.8
 export const CHAR_ELEMENTS: Record<string, string> = {
     "爱弥斯": "热熔",
     "安可": "热熔",
@@ -27,6 +28,7 @@ export const CHAR_ELEMENTS: Record<string, string> = {
     "坎特蕾拉": "湮灭",
     "珂莱塔": "冷凝",
     "丽贝卡": "导电",
+    "莉莉": "衍射",
     "琳奈": "衍射",
     "凌阳": "冷凝",
     "陆·赫斯": "衍射",

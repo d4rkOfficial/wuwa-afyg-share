@@ -3,7 +3,7 @@ import { redirect } from 'next/navigation'
 import UploadForm from '@/components/wk/upload-form'
 import { WkContainer, WkPageHead, WkRoot } from '@/design'
 import { createClient, hasEnv } from '@/lib/supabase/server'
-import { CHAR_ELEMENTS } from '@/lib/data/char-elements.generated'
+import { getCharElements } from '@/lib/data/char-elements-latest'
 
 export const metadata: Metadata = {
     title: '上传工程'
@@ -27,7 +27,7 @@ export default async function UploadPage() {
             <WkContainer className="wk-upload-page">
                 <WkPageHead title="上传工程" sub="选择工具箱导出的 .json，填好分享信息后发布。" />
                 <div className="wk-upload-body">
-                    <UploadForm elements={CHAR_ELEMENTS as Record<string, string>} />
+                    <UploadForm elements={await getCharElements()} />
                 </div>
             </WkContainer>
         </WkRoot>

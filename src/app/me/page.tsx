@@ -8,7 +8,7 @@ import AccountPanel from '@/components/wk/account-panel'
 import { WkContainer, WkPageHead, WkRoot } from '@/design'
 import { createClient, hasEnv } from '@/lib/supabase/server'
 import { getAvatarIcons } from '@/lib/data/avatar-icons'
-import { CHAR_ELEMENTS } from '@/lib/data/char-elements.generated'
+import { getCharElements } from '@/lib/data/char-elements-latest'
 import { LIST_COLUMNS } from '@/lib/project/query'
 import { isExpiredProject, isGracePeriod } from '@/lib/utils/expiry'
 import { avatarPool } from '@/lib/utils/avatar'
@@ -51,7 +51,7 @@ export default async function MePage() {
     const { data: profile } = await supabase.from('profiles').select('username').eq('id', user.id).maybeSingle()
     if (!profile?.username) redirect('/setup-username?redirect=/me')
 
-    const icons = await getAvatarIcons()
+    const [icons, charElements] = await Promise.all([getAvatarIcons(), getCharElements()])
     const avatarPoolUrls = avatarPool(icons)
 
     return (
@@ -81,7 +81,7 @@ export default async function MePage() {
                                 共 {projects.length} 个{expiredCount > 0 ? ` · ${expiredCount} 个已过期` : ''}
                             </span>
                         </div>
-                        <MeProjects projects={projects} elements={CHAR_ELEMENTS as Record<string, string>} />
+                        <MeProjects projects={projects} elements={charElements} />
                     </div>
                 </div>
             </WkContainer>

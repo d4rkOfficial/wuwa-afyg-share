@@ -9,9 +9,9 @@ import { WkInput } from '@/design'
 import { mainStatShort, substatShort } from '@/lib/consts/echo-stats'
 import type { EchoStatValue, StandardSubstatSetRow } from '@/lib/types/db'
 
-/** @desc 六个元素属性（游戏内没有「物理伤害加成」主词条，物伤角色归到「其它」） */
+/** @desc 六个元素属性（游戏内没有「物理伤害加成」主词条，物伤角色 / 上游查不到的角色归到「未分类」） */
 const ELEMENT_ORDER = ['冷凝', '热熔', '导电', '气动', '衍射', '湮灭'] as const
-const OTHER = '其它'
+const OTHER = '未分类'
 
 function statText(stat: EchoStatValue | null | undefined): string {
     if (!stat) return '—'
