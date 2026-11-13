@@ -32,7 +32,20 @@ export function WkDialog({
     const dialogRef = useRef<HTMLDivElement>(null)
     const titleId = useId()
 
-    // 焦点陷阱 + Esc + 关闭归还焦点 + 锁 body 滚动
+    /**
+     * @desc onClose 放进 ref，供 effect 内的 keydown 读最新值。
+     *  调用点几乎都是内联箭头（`onClose={() => setX(false)}`），每次父组件重渲染都是新函数；
+     *  如果把它写进 effect 依赖，弹窗内**每敲一个字**都会 teardown 一次 effect：
+     *  清理会先把焦点还给「打开弹窗前那个元素」，再把焦点设回弹窗第一个可聚焦项 ——
+     *  表现为「在第二个输入框里打字，焦点跳回第一个输入框」。
+     *  所以 effect 只依赖 open，回调一律走 ref。
+     */
+    const onCloseRef = useRef(onClose)
+    useEffect(() => {
+        onCloseRef.current = onClose
+    })
+
+    // 焦点陷阱 + Esc + 关闭归还焦点 + 锁 body 滚动（只在开关时跑一次）
     useEffect(() => {
         if (!open) return
         const previouslyFocused = document.activeElement instanceof HTMLElement ? document.activeElement : null
@@ -40,8 +53,12 @@ export function WkDialog({
         document.body.style.overflow = 'hidden'
 
         const frame = requestAnimationFrame(() => {
-            const first = dialogRef.current?.querySelector<HTMLElement>(FOCUSABLE)
-            ;(first ?? dialogRef.current)?.focus({ preventScroll: true })
+            const node = dialogRef.current
+            if (!node) return
+            // 里面已经有焦点了（autoFocus / 用户已经点进来）就别抢
+            if (node.contains(document.activeElement)) return
+            const first = node.querySelector<HTMLElement>(FOCUSABLE)
+            ;(first ?? node).focus({ preventScroll: true })
         })
 
         function onKeyDown(event: KeyboardEvent) {
@@ -49,7 +66,7 @@ export function WkDialog({
             if (isImeComposing(event)) return
             if (event.key === 'Escape') {
                 event.stopPropagation()
-                onClose()
+                onCloseRef.current()
                 return
             }
             if (event.key !== 'Tab') return
@@ -75,7 +92,8 @@ export function WkDialog({
             document.removeEventListener('keydown', onKeyDown)
             if (previouslyFocused?.isConnected) previouslyFocused.focus({ preventScroll: true })
         }
-    }, [open, onClose])
+        // 只跟开关走：onClose 走 ref，否则弹窗内每次输入都会重跑这段（抢焦点）
+    }, [open])
 
     // 只在浏览器端挂 Portal；弹窗默认关闭，不会造成 hydration 不一致
     if (!open || typeof document === 'undefined') return null
