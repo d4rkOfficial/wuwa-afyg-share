@@ -31,13 +31,14 @@ export interface BuffSetMigrateResult {
 const asRecord = (v: unknown): Record<string, unknown> =>
     v && typeof v === 'object' && !Array.isArray(v) ? (v as Record<string, unknown>) : {}
 
-/** @desc 实例级条件里的属性/类型被下放后，清理成空对象 */
+/** @desc 实例级条件里的属性/类型被下放后，清理成空对象（rules 原样保留） */
 const compactCondition = (cond: BuffCondition): BuffCondition | null => {
     const out: BuffCondition = {}
     if (cond.chains?.length) out.chains = cond.chains
-    if (!cond.chains?.length && cond.refinements?.length) out.refinements = cond.refinements
+    if (cond.refinements?.length) out.refinements = cond.refinements
     if (cond.elements?.length) out.elements = cond.elements
     if (cond.damageTypes?.length) out.damageTypes = cond.damageTypes
+    if (cond.rules?.length) out.rules = cond.rules
     return Object.keys(out).length > 0 ? out : null
 }
 
@@ -69,7 +70,7 @@ function sanitizeRefV2(raw: unknown, zoneId: string): BuffZoneRef | undefined {
     if (r.discrete === true) out.discrete = true
     if (typeof r.divisor === 'number' && Number.isFinite(r.divisor)) out.divisor = r.divisor
     if (typeof r.multiplier === 'number' && Number.isFinite(r.multiplier)) out.multiplier = r.multiplier
-    if (r.refOwner === 'self' || r.refOwner === 'owner') out.refOwner = r.refOwner
+    if (r.refOwner === 'self' || r.refOwner === 'owner' || r.refOwner === 'active') out.refOwner = r.refOwner
     return out
 }
 

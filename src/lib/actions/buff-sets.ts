@@ -88,7 +88,7 @@ function sanitizeRef(ref: unknown): ZoneRefInput | undefined {
     if (r.discrete) out.discrete = true
     if (typeof r.divisor === 'number' && Number.isFinite(r.divisor)) out.divisor = r.divisor
     if (typeof r.multiplier === 'number' && Number.isFinite(r.multiplier)) out.multiplier = r.multiplier
-    if (r.refOwner === 'self' || r.refOwner === 'owner') out.refOwner = r.refOwner
+    if (r.refOwner === 'self' || r.refOwner === 'owner' || r.refOwner === 'active') out.refOwner = r.refOwner
     return out
 }
 

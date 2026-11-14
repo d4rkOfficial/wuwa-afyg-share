@@ -39,8 +39,9 @@ export type BuffEntityType = 'character' | 'weapon' | 'echo' | '1set' | '2set' |
 // 受影响者：自己 / 自己除外 / 全队 / 效应专属
 export type BuffScope = 'self' | 'self_except' | 'team' | 'effect_only'
 
-// 引用归属：self = 引自己（角色自身面板）；owner = 引主人（武器/声骸/套装的装备者面板）
-export type BuffRefOwner = 'self' | 'owner'
+// 引用归属：self / owner = 引「本角色」面板（角色自身 / 武器·声骸·套装的装备者）；
+// active = 引「出伤者」面板（本次伤害所属角色）
+export type BuffRefOwner = 'self' | 'owner' | 'active'
 
 // 链条件 / 阶条件子句：charIdx 为受益角色槽位（0-2），min 为门槛（链 0-6，0=角色本体；阶 1-5）
 export interface BuffGateClause {
@@ -48,14 +49,41 @@ export interface BuffGateClause {
     min: number
 }
 
+// ── Buff 级规则（与 wuwa-afyg-tool 的 BuffRule 逐字对齐；规则之间全部 AND）──
+
+// 敌人类型档位（与工具箱工程敌人配置的字面量一致）
+export type BuffEnemyTypeKind = 'BOSS' | '精英怪' | '小怪'
+// 面板数值比较的运算符
+export type BuffZoneCompareOp = 'gt' | 'ge' | 'lt' | 'le' | 'eq'
+
+// 「面板数值」条件可比较的属性（工具箱的聚合面板键，不是乘区 id）
+export type BuffZoneCompareId =
+    | 'atk'
+    | 'hp'
+    | 'def'
+    | 'recharge'
+    | 'offTuneBuildupRate'
+    | 'tuneBreakBoost'
+    | 'unisonBoonLayer'
+    | 'critRate'
+    | 'critDmg'
+
+export type BuffRule =
+    | { kind: 'chain'; charIdx: number; min: number }
+    | { kind: 'refinement'; charIdx: number; min: number }
+    | { kind: 'damageNameRegex'; pattern: string }
+    | { kind: 'zoneCompare'; charIdx: number; zone: BuffZoneCompareId; op: BuffZoneCompareOp; value: number }
+    | { kind: 'enemyType'; types: BuffEnemyTypeKind[] }
+    | { kind: 'buffActive'; mode: 'all' | 'any'; buffIds: string[] }
+
 // 生效条件：按挂载位置分两层（与 wuwa-afyg-tool 一致）
-// - Buff 实例级（buff_sets.condition）：chains / refinements 为硬性门槛且**互斥**（同时存在只判定链）；
-//   elements / damageTypes 为旧数据的兼容读取（工具箱读取时会下放到乘区）
+// - Buff 实例级（buff_sets.condition）：chains / refinements（硬性门槛，可并存）+ rules（规则列表，全部 AND）；
+//   elements / damageTypes 为兼容读取（工具箱读取时会下放到乘区）
 // - 乘区级（buff_set[].condition）：只允许 elements / damageTypes
 export interface BuffCondition {
     /** @desc 链条件：角色共鸣链 ≥ min（硬性门槛，仅实例级） */
     chains?: BuffGateClause[]
-    /** @desc 阶条件：武器精炼 ≥ min（硬性门槛，仅实例级；与 chains 互斥） */
+    /** @desc 阶条件：武器精炼 ≥ min（硬性门槛，仅实例级；与 chains 可并存） */
     refinements?: BuffGateClause[]
     /** @desc 兼容旧结构：等价于 chains=[{ charIdx: 0, min: chain }] */
     chain?: number
@@ -63,6 +91,8 @@ export interface BuffCondition {
     refinement?: number
     elements?: string[]
     damageTypes?: string[]
+    /** @desc Buff 级规则（仅实例级；`buffActive` 需要有工程内 buff id 才能表达，工坊不入库） */
+    rules?: BuffRule[]
 }
 
 export interface BuffZoneRef {

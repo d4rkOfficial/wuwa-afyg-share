@@ -1,4 +1,12 @@
-import type { BuffEntityType, BuffCondition, BuffScope } from '@/lib/types/db'
+import type {
+    BuffCondition,
+    BuffEntityType,
+    BuffEnemyTypeKind,
+    BuffRule,
+    BuffScope,
+    BuffZoneCompareId,
+    BuffZoneCompareOp
+} from '@/lib/types/db'
 
 export interface BuffZoneDef {
     id: string
@@ -135,10 +143,186 @@ export const BUFF_SCOPE_LABELS: Record<BuffScope, string> = {
 
 // ── 生效条件（condition）──
 // 按「挂载位置」分两层（与工具箱口径一致）：
-// - Buff 实例级：chains[] / refinements[]（硬性门槛，二者互斥，只判定链）+ elements[] / damageTypes[]（兼容旧数据）
-// - 乘区级：只允许 elements[] / damageTypes[]（链/阶由实例级统一把关）
+// - Buff 实例级：chains[] / refinements[]（硬性门槛，可并存）+ rules[]（规则列表，全部 AND，
+//   见 BUFF_RULE_KINDS）+ elements[] / damageTypes[]（兼容读取）
+// - 乘区级：只允许 elements[] / damageTypes[]（链阶与 rules 由实例级统一把关）
 export const CHAIN_MAX = 6
 export const REFINE_MAX = 5
+
+// ── Buff 级规则（condition.rules）──
+// 与 wuwa-afyg-tool 的 `calc/buff-library-condition` 同一套口径：
+// - 只入库 5 种 kind（buffActive 引用工程内 buff id，工坊没有该 id 空间）；
+// - 归属只有两档：0 = 本角色、-1 = 出伤者；
+// - zoneCompare 的属性白名单排除「由 Buff 产出的面板值」（自封顶靠跨 Buff 聚合，模板里表达不出）。
+
+/** @desc 工坊入库允许的规则种类（顺序即编辑器菜单顺序） */
+export const BUFF_RULE_KINDS: BuffRule['kind'][] = [
+    'chain',
+    'refinement',
+    'damageNameRegex',
+    'zoneCompare',
+    'enemyType'
+]
+
+export const BUFF_RULE_KIND_LABELS: Record<BuffRule['kind'], string> = {
+    chain: '角色共鸣链',
+    refinement: '武器精炼阶数',
+    damageNameRegex: '伤害名包含正则',
+    zoneCompare: '角色面板数值',
+    enemyType: '敌人类型',
+    buffActive: '其它 BUFF 生效'
+}
+
+/** @desc 「面板数值」可比较的属性：`label` 给下拉用全名，`short` 给卡片文案用短名 */
+export const BUFF_ZONE_COMPARE_OPTIONS: {
+    value: BuffZoneCompareId
+    label: string
+    short: string
+    unit: '%' | 'flat'
+}[] = [
+    { value: 'atk', label: '攻击', short: '攻击', unit: 'flat' },
+    { value: 'hp', label: '生命', short: '生命', unit: 'flat' },
+    { value: 'def', label: '防御', short: '防御', unit: 'flat' },
+    { value: 'recharge', label: '共鸣效率', short: '共鸣效率', unit: '%' },
+    { value: 'offTuneBuildupRate', label: '偏谐值累积效率', short: '偏谐效率', unit: '%' },
+    { value: 'critRate', label: '暴击率', short: '暴击', unit: '%' },
+    { value: 'critDmg', label: '暴击伤害', short: '暴伤', unit: '%' }
+]
+
+/** @desc 入库允许的面板属性（与工具箱库口径一致） */
+export const BUFF_ZONE_COMPARE_IDS: BuffZoneCompareId[] = BUFF_ZONE_COMPARE_OPTIONS.map((option) => option.value)
+
+export const BUFF_ZONE_COMPARE_OPS: { value: BuffZoneCompareOp; label: string }[] = [
+    { value: 'ge', label: '≥' },
+    { value: 'gt', label: '>' },
+    { value: 'eq', label: '=' },
+    { value: 'le', label: '≤' },
+    { value: 'lt', label: '<' }
+]
+
+export const BUFF_ENEMY_TYPES: { value: BuffEnemyTypeKind; label: string }[] = [
+    { value: 'BOSS', label: 'BOSS' },
+    { value: '精英怪', label: '精英怪' },
+    { value: '小怪', label: '小怪' }
+]
+
+/** @desc 伤害名正则的长度上限（社区共享数据，粗暴兜底） */
+export const BUFF_REGEX_MAX = 120
+
+/** @desc 引用归属的两选一：本角色（self/owner）/ 出伤者（active） */
+export const BUFF_REF_OWNER_OPTIONS: { value: 'owner' | 'active'; label: string; hint: string }[] = [
+    { value: 'owner', label: '本角色', hint: '引用该增益所属角色的面板（武器 / 声骸 / 套装 = 装备者）' },
+    { value: 'active', label: '出伤者', hint: '引用本次伤害所属角色的面板' }
+]
+
+const ruleInt = (v: unknown, fallback: number): number =>
+    typeof v === 'number' && Number.isFinite(v) ? Math.trunc(v) : fallback
+
+const ruleStr = (v: unknown): string => (typeof v === 'string' ? v : '')
+
+/** @desc 单条规则的归一化（不合法返回 null） */
+export function sanitizeRule(raw: unknown): BuffRule | null {
+    if (!raw || typeof raw !== 'object') return null
+    const r = raw as Record<string, unknown>
+    switch (ruleStr(r.kind)) {
+        case 'chain': {
+            const min = ruleInt(r.min, 0)
+            if (min < 0 || min > CHAIN_MAX) return null
+            return { kind: 'chain', charIdx: 0, min }
+        }
+        case 'refinement': {
+            const min = ruleInt(r.min, 1)
+            if (min < 1 || min > REFINE_MAX) return null
+            return { kind: 'refinement', charIdx: 0, min }
+        }
+        case 'damageNameRegex': {
+            const pattern = ruleStr(r.pattern)
+            if (pattern.length > BUFF_REGEX_MAX) return null
+            return { kind: 'damageNameRegex', pattern }
+        }
+        case 'zoneCompare': {
+            const zone = ruleStr(r.zone) as BuffZoneCompareId
+            if (!BUFF_ZONE_COMPARE_IDS.includes(zone)) return null
+            const op = ruleStr(r.op) as BuffZoneCompareOp
+            if (!BUFF_ZONE_COMPARE_OPS.some((item) => item.value === op)) return null
+            const value = typeof r.value === 'number' && Number.isFinite(r.value) ? r.value : 0
+            return { kind: 'zoneCompare', charIdx: ruleInt(r.charIdx, 0) < 0 ? -1 : 0, zone, op, value }
+        }
+        case 'enemyType': {
+            // 多选存 `types`；单值 `type` 是旧数据的形状，归一化时并入
+            const rawList = Array.isArray(r.types) ? r.types : typeof r.type === 'string' ? [r.type] : []
+            const types = [
+                ...new Set(
+                    rawList.filter((item): item is BuffEnemyTypeKind =>
+                        BUFF_ENEMY_TYPES.some((option) => option.value === item)
+                    )
+                )
+            ]
+            if (types.length === 0) return null
+            return { kind: 'enemyType', types }
+        }
+        default:
+            // buffActive：引用工程内 buff id，工坊不入库
+            return null
+    }
+}
+
+/** @desc 规则列表归一化（种类白名单 + 归属轴收敛 + **同类只保留一条**；空结果返回 undefined） */
+export function sanitizeRules(raw: unknown): BuffRule[] | undefined {
+    if (!Array.isArray(raw)) return undefined
+    const out: BuffRule[] = []
+    const seenKind = new Set<BuffRule['kind']>()
+    for (const item of raw) {
+        const rule = sanitizeRule(item)
+        if (!rule) continue
+        if (seenKind.has(rule.kind)) continue
+        seenKind.add(rule.kind)
+        out.push(rule)
+    }
+    return out.length > 0 ? out : undefined
+}
+
+/** @desc 空正则视为「未填写」草稿（导入工具箱后恒不满足，与工程侧口径一致） */
+export function isRuleDraft(rule: BuffRule): boolean {
+    return rule.kind === 'damageNameRegex' && !rule.pattern.trim()
+}
+
+export interface DescribeRuleOptions {
+    /**
+     * @desc 面板条件的「本人」称呼：角色实体传角色名，武器 / 声骸 / 套装传「装备者」。
+     * 出伤者档恒为「出伤者」。
+     */
+    selfLabel?: string
+}
+
+/** @desc 单条规则文案（编辑器条件卡与公开页摘要共用；一行就是一条条件） */
+export function describeRule(rule: BuffRule, options: DescribeRuleOptions = {}): string {
+    const selfLabel = options.selfLabel ?? '本角色'
+    switch (rule.kind) {
+        case 'chain':
+            return rule.min > 0 ? `${selfLabel} 共鸣链 ≥ ${rule.min}` : `${selfLabel} 本体（0 链）`
+        case 'refinement':
+            return `${selfLabel} 武器精炼 ≥ ${rule.min} 阶`
+        case 'damageNameRegex':
+            return `伤害名包含「${rule.pattern}」`
+        case 'zoneCompare': {
+            const option = BUFF_ZONE_COMPARE_OPTIONS.find((item) => item.value === rule.zone)
+            const op = BUFF_ZONE_COMPARE_OPS.find((item) => item.value === rule.op)?.label ?? rule.op
+            const who = rule.charIdx < 0 ? '出伤者' : selfLabel
+            const unit = option?.unit === '%' ? '%' : ''
+            return `${who} ${option?.short ?? rule.zone} ${op} ${rule.value}${unit}`
+        }
+        case 'enemyType':
+            return `敌人 ${rule.types.join(' / ')}`
+        default:
+            return ''
+    }
+}
+
+/** @desc 规则列表的紧凑摘要（空列表返回空串） */
+export function describeRules(rules: BuffRule[] | null | undefined, options: DescribeRuleOptions = {}): string {
+    return (rules ?? []).map((rule) => describeRule(rule, options)).join(' 且 ')
+}
 
 /** @desc 条件挂载层级：buff=实例级（可含链/阶硬性门槛）；zone=乘区级 */
 export type BuffConditionScope = 'buff' | 'zone'
@@ -205,11 +389,12 @@ export function isConditionEmpty(cond: BuffCondition | null | undefined): boolea
         cond.chain === undefined &&
         cond.refinement === undefined &&
         (cond.elements?.length ?? 0) === 0 &&
-        (cond.damageTypes?.length ?? 0) === 0
+        (cond.damageTypes?.length ?? 0) === 0 &&
+        (cond.rules?.length ?? 0) === 0
     )
 }
 
-/** @desc 按层级裁剪条件：乘区级强制剥离链/阶子句（它们只作为整条 Buff 的硬性门槛） */
+/** @desc 按层级裁剪条件：乘区级强制剥离链/阶子句与 rules（它们只作为整条 Buff 的门槛） */
 export function normalizeConditionForScope(cond: BuffCondition, scope: BuffConditionScope): BuffCondition {
     if (scopeAllowsChainRefinement(scope)) return cond
     const next: BuffCondition = { ...cond }
@@ -217,14 +402,15 @@ export function normalizeConditionForScope(cond: BuffCondition, scope: BuffCondi
     delete next.refinements
     delete next.chain
     delete next.refinement
+    delete next.rules
     return next
 }
 
 /**
  * @desc 清洗生效条件：白名单校验 + 数值/数组归一化。
  * - 兼容旧格式 `{ type:'chain'|'refinement', min }` → 升级为 chains / refinements 数组形式
- * - 链与阶**互斥**：同时出现时只保留链（与工具箱运行时护栏一致，阶条件整体丢弃）
- * - 按层级裁剪；全空返回 undefined
+ * - **链与阶可以并存**（与工具箱 v7 口径一致，两者都保留，规则之间 AND）
+ * - `rules` 只在实例级保留（乘区级由 `normalizeConditionForScope` 剥离）；全空返回 undefined
  */
 export function sanitizeCondition(cond: unknown, scope: BuffConditionScope = 'buff'): BuffCondition | undefined {
     if (!cond || typeof cond !== 'object') return undefined
@@ -257,9 +443,6 @@ export function sanitizeCondition(cond: unknown, scope: BuffConditionScope = 'bu
         if (min >= 1 && min <= REFINE_MAX) out.refinements = [{ charIdx: 0, min }]
     }
 
-    // 链 / 阶互斥：只判定链条件
-    if (out.chains?.length) delete out.refinements
-
     if (Array.isArray(c.elements)) {
         const elements = c.elements.filter(
             (e): e is string => typeof e === 'string' && (BUFF_ELEMENTS as readonly string[]).includes(e)
@@ -272,6 +455,9 @@ export function sanitizeCondition(cond: unknown, scope: BuffConditionScope = 'bu
         )
         if (damageTypes.length > 0) out.damageTypes = [...new Set(damageTypes)]
     }
+
+    const rules = sanitizeRules(c.rules)
+    if (rules) out.rules = rules
 
     const scoped = normalizeConditionForScope(out, scope)
     return isConditionEmpty(scoped) ? undefined : scoped
@@ -304,6 +490,8 @@ export function describeCondition(
     if (gate.length) groups.push(gate.join(' 且 '))
     if (cond.elements?.length) groups.push(cond.elements.join(' 或 '))
     if (cond.damageTypes?.length) groups.push(cond.damageTypes.join(' 或 '))
+    const rules = describeRules(cond.rules)
+    if (rules) groups.push(rules)
     return groups.length ? groups.join(' 且 ') : '无条件'
 }
 
@@ -373,4 +561,132 @@ export function describeZoneConditionBadge(cond: BuffCondition | null | undefine
     const types = (cond.damageTypes ?? []).map((dt) => BUFF_DAMAGE_TYPE_SHORT[dt] ?? dt)
     const elements = cond.elements ?? []
     return [types.join('/'), elements.join('/')].filter((part) => part.length > 0).join('·')
+}
+
+// ══════════════════════════════════════════════════════════════════════════
+// Buff 集小卡的文案（公开页 / 只读浏览用）：乘区名、数值单位、转模整句
+// 目标是给不熟悉这套系统的用户看：不缩写、百分比与平值分开写、条件一条一行
+// ══════════════════════════════════════════════════════════════════════════
+
+/**
+ * @desc 乘区在卡片上的显示名。
+ *
+ * 口径：
+ * - 单位就是乘区名本身（`攻击` / `生命` / `防御`），**百分号只跟在数字后面**：
+ *   `攻击 +1560` 是平值、`攻击 +12%` 是百分比 —— 名称不承担单位差异，避免 `攻击％` 这种怪写法；
+ * - 层数类说「集谐 / 同奏」，单位是「层」；
+ * - 元素 / 伤害类型**不进**名字，统一以括号跟在名字后面（`加成(热熔)(共解)`）。
+ */
+export const BUFF_ZONE_CARD_LABELS: Record<string, string> = {
+    atkFlat: '攻击',
+    atkPct: '攻击',
+    hpFlat: '生命',
+    hpPct: '生命',
+    defFlat: '防御',
+    defPct: '防御',
+    tuneBreakBoost: '谐度增幅',
+    recharge: '共鸣效率',
+    offTuneBuildupRate: '偏谐效率',
+    critRate: '暴击',
+    critDmg: '暴伤',
+    bonusDmg: '加成',
+    deepenDmg: '加深',
+    dmgTakenInc: '易伤',
+    finalDmg: '终伤',
+    specialFinal1: '特殊终伤1',
+    specialFinal2: '特殊终伤2',
+    extraRatio: '额外倍率',
+    defDown: '减防',
+    resDown: '减抗',
+    resPen: '穿抗',
+    defPen: '穿防',
+    dmgRedPen: '穿免',
+    tuneStrainLayer: '集谐',
+    unisonBoonLayer: '同奏'
+}
+
+/** @desc 层数类乘区：单位是「层」，不是百分比也不是平值 */
+const LAYER_ZONES = new Set(['tuneStrainLayer', 'unisonBoonLayer'])
+
+/** @desc 乘区的显示名（元素 / 伤害类型由调用方以括号追加） */
+export function zoneCardLabel(zoneId: string): string {
+    return BUFF_ZONE_CARD_LABELS[zoneId] ?? BUFF_ZONE_MAP.get(zoneId)?.label ?? zoneId
+}
+
+/** @desc 数值行的右侧文案：百分比带 %，平值只带符号，层数带「层」；带引用的条目由转模行负责 */
+export function formatZoneValue(zone: {
+    zoneId: string
+    value: number
+    ref?: unknown
+    condition?: BuffCondition | null
+}): string {
+    if (zone.ref) return ''
+    const value = zone.value
+    const sign = value >= 0 ? '+' : ''
+    if (LAYER_ZONES.has(zone.zoneId)) return `${sign}${value}层`
+    const def = BUFF_ZONE_MAP.get(zone.zoneId)
+    if (def?.unit === '%') return `${sign}${value}%`
+    return `${sign}${value}`
+}
+
+/**
+ * @desc 转模的**每档增益**（未做上下限裁剪）：与工具箱 `compute.ts` 的 `resolveRefValue` 同一套公式。
+ *
+ * - 离散（`discrete` 且 `divisor > 0`）：每 `divisor` 点换 `multiplier`；
+ * - 线性：超出部分 × `pct`%，所以每 1 点换 `pct / 100`。
+ *
+ * 卡片文案用它的返回值，保证「显示的每档数值」就是引擎真正加上去的数值。
+ */
+export function refStepGain(ref: {
+    pct?: number
+    discrete?: boolean
+    divisor?: number
+    multiplier?: number
+}): { step: number; gain: number } {
+    const divisor = Number(ref.divisor ?? 0)
+    const multiplier = Number(ref.multiplier ?? 0)
+    if (ref.discrete && divisor > 0) return { step: divisor, gain: multiplier }
+    return { step: 1, gain: Number(ref.pct ?? 0) / 100 }
+}
+
+/** @desc 去掉浮点噪声后打印（60/100 不写成 0.6000000000000001，也不四舍五入丢有效数字） */
+const trimNumber = (value: number): string => String(Number(value.toPrecision(12)))
+
+/** @desc 转模行的一句话：`源 超过 N，每 X，目标 +Y，下限 …，上限 …` */
+export function describeRefLine(
+    ref:
+        | {
+              targetZoneId?: string
+              pct?: number
+              threshold?: number
+              lower?: number
+              upper?: number
+              discrete?: boolean
+              divisor?: number
+              multiplier?: number
+          }
+        | null
+        | undefined,
+    targetZoneId: string
+): string {
+    if (!ref) return ''
+    const source = BUFF_REF_ZONE_MAP.get(String(ref.targetZoneId ?? ''))
+    const sourceLabel = source?.label ?? String(ref.targetZoneId ?? '')
+    // 平值来源的「每 1」要说「每 1 点」，否则「每 1，暴伤 +0.5%」读不通
+    const sourceUnit = source?.unit === '%' ? '%' : ' 点'
+    const targetDef = BUFF_ZONE_MAP.get(targetZoneId)
+    const targetLabel = BUFF_ZONE_CARD_LABELS[targetZoneId] ?? targetDef?.label ?? targetZoneId
+    const targetUnit = LAYER_ZONES.has(targetZoneId) ? '层' : targetDef?.unit === '%' ? '%' : ''
+
+    const threshold = Number(ref.threshold ?? 0)
+    const head =
+        threshold > 0
+            ? `${sourceLabel}超过 ${trimNumber(threshold)}${sourceUnit}，`
+            : threshold < 0
+              ? `${sourceLabel}按 ${trimNumber(threshold)}${sourceUnit} 起算，`
+              : ''
+    const { step, gain } = refStepGain(ref)
+    const lower = ref.lower !== undefined ? `，下限 ${trimNumber(ref.lower)}${targetUnit}` : ''
+    const upper = ref.upper !== undefined ? `，上限 ${trimNumber(ref.upper)}${targetUnit}` : ''
+    return `${head}每 ${trimNumber(step)}${sourceUnit}，${targetLabel} +${trimNumber(gain)}${targetUnit}${lower}${upper}`
 }
