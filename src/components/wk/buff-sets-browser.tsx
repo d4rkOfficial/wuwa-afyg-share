@@ -12,8 +12,10 @@ import {
     BUFF_DAMAGE_TYPE_SHORT,
     BUFF_ENTITY_LABELS,
     BUFF_SCOPE_LABELS,
-    BUFF_ZONE_MAP,
-    describeZoneRef
+    describeRefLine,
+    describeRule,
+    formatZoneValue,
+    zoneCardLabel
 } from '@/lib/consts/buff-zones'
 import { buffFolderName, buffLeafName } from '@/lib/buff-names'
 import type { BuffCondition, BuffEntityType, BuffScope, BuffSetRow } from '@/lib/types/db'
@@ -36,7 +38,7 @@ function scopeLabel(scope: BuffScope, isCharacter: boolean): string {
 }
 
 /**
- * @desc 门槛徽标：链条件取最大 min → 「≥6链」；阶条件 → 「≥5阶」。
+ * @desc 门槛徽标：链条件 `3链`、阶条件 `2阶`（两者可并存，用 `·` 连接）。
  * 0 链（角色本体）不算门槛，返回 null。
  */
 function gateLabel(condition: BuffCondition | null | undefined): string | null {
@@ -49,9 +51,10 @@ function gateLabel(condition: BuffCondition | null | undefined): string | null {
         ...(condition.refinements ?? []).map((clause) => clause.min),
         typeof condition.refinement === 'number' ? condition.refinement : 0
     )
-    if (chainMin > 0) return `≥${chainMin}链`
-    if (refineMin > 0) return `≥${refineMin}阶`
-    return null
+    const parts: string[] = []
+    if (chainMin > 0) parts.push(`${chainMin}链`)
+    if (refineMin > 0) parts.push(`${refineMin}阶`)
+    return parts.length > 0 ? parts.join('·') : null
 }
 
 function isSetType(type: BuffEntityType): boolean {
@@ -142,26 +145,6 @@ function sectionsFor(entity: EntityGroup, buffs: BuffSetRow[]): BuffSection[] {
 }
 
 /** @desc 一个 Buff 小卡的全部展示事实 */
-function buffFacts(buff: BuffSetRow) {
-    const zones = buff.buff_set ?? []
-    // 条件（伤害类型 / 伤害属性）是**乘区级**的：同一张卡里 15% 可能不限类型、25% 只对共解生效，
-    // 所以类型 / 属性必须跟着各自那行数值走，不能汇总到卡片底部的单独一行。
-    const values = zones.map((zone) => {
-        const def = BUFF_ZONE_MAP.get(zone.zoneId)
-        const unit = def?.unit === '%' ? '%' : ''
-        const plain = `${zone.value}${unit}`
-        return {
-            label: def?.label ?? zone.zoneId,
-            // 引用型乘区常把绝对值写 0（换算在工具箱里做）：别显示假的 0%，直接写「转模」
-            value: zone.ref ? (zone.value !== 0 ? plain : '转模') : plain,
-            ref: zone.ref ? describeZoneRef(zone.ref) : '',
-            types: [...new Set((zone.condition?.damageTypes ?? []).map((type) => BUFF_DAMAGE_TYPE_SHORT[type] ?? type))],
-            elements: [...new Set(zone.condition?.elements ?? [])]
-        }
-    })
-    const refs = [...new Set(values.map((item) => item.ref).filter(Boolean))]
-    return { values, refs }
-}
 
 export default function BuffSetsBrowser({
     rows,
@@ -311,6 +294,7 @@ export default function BuffSetsBrowser({
                                                     key={buff.id ?? buff.buff_name}
                                                     buff={buff}
                                                     isCharacter={activeIsCharacter}
+                                                    entityName={active?.name ?? ''}
                                                 />
                                             ))}
                                         </div>
@@ -330,6 +314,7 @@ export default function BuffSetsBrowser({
                                                         key={buff.id ?? buff.buff_name}
                                                         buff={buff}
                                                         isCharacter={activeIsCharacter}
+                                                        entityName={active?.name ?? ''}
                                                     />
                                                 ))}
                                             </div>
@@ -345,69 +330,101 @@ export default function BuffSetsBrowser({
     )
 }
 
-function BuffCard({ buff, isCharacter }: { buff: BuffSetRow; isCharacter: boolean }) {
-    const gate = gateLabel(buff.condition)
-    const facts = buffFacts(buff)
+/**
+ * @desc Buff 小卡：四段信息各占一行。
+ * - 标识：名称在左，范围 / 链阶徽标右对齐；
+ * - 乘区：`乘区名(适用条件) …… +数值`，百分号与平值分开写；
+ * - 转模：圆形图标 + 一整句（源 超过 N，每 X，目标 +Y，下限/上限）；
+ * - 条件：非链/阶条件一条一行。
+ */
+export function BuffCard({
+    buff,
+    isCharacter,
+    entityName
+}: {
+    buff: BuffSetRow
+    isCharacter: boolean
+    entityName: string
+}) {
+    const condition = buff.condition
+    const gate = gateLabel(condition)
+    /** @desc 面板条件的「本人」称呼：角色实体用角色名，其余说「装备者」 */
+    const selfLabel = isCharacter ? entityName : '装备者'
+    const zones = buff.buff_set ?? []
+    const valueZones = zones.filter((zone) => !zone.ref)
+    const refZones = zones.filter((zone) => zone.ref)
+    const rules = condition?.rules ?? []
 
     return (
         <article className="wk-buff-card">
             <div className="wk-buff-head">
-                {gate && <span className="wk-buff-gate">{gate}</span>}
-                <WkBadge>{scopeLabel(buff.scope, isCharacter)}</WkBadge>
-                {buff.exclusive && <WkBadge tone="warn">独占</WkBadge>}
                 <span className="wk-buff-name" title={buffLeafName(buff.buff_name)}>
                     {buffLeafName(buff.buff_name)}
                 </span>
+                <span className="wk-buff-tags">
+                    <WkBadge>{scopeLabel(buff.scope, isCharacter)}</WkBadge>
+                    {buff.exclusive && <WkBadge tone="warn">独占</WkBadge>}
+                    {gate && <span className="wk-buff-gate">{gate}</span>}
+                </span>
             </div>
 
-            <dl className="wk-buff-facts">
-                <div className="wk-buff-fact">
-                    <dt>数值</dt>
-                    <dd>
-                        {facts.values.length === 0 ? (
-                            '—'
-                        ) : (
-                            <span className="wk-buff-values">
-                                {facts.values.map((item, index) => (
-                                    <span className="wk-buff-value-line" key={`${item.label}-${index}`}>
-                                        <span className="wk-buff-zone">{item.label}</span>
-                                        {/* 属性 / 类型跟着这一行的数值走：同一张卡里不同数值有不同的适用条件 */}
-                                        {(item.elements.length > 0 || item.types.length > 0) && (
-                                            <span className="wk-buff-chips">
-                                                {item.elements.map((element) => (
-                                                    <span
-                                                        className="wk-buff-chip wk-buff-chip--inline"
-                                                        key={`el-${element}`}
-                                                        style={{
-                                                            color: `var(--element-${element})`,
-                                                            borderColor: `color-mix(in srgb, var(--element-${element}) 55%, transparent)`
-                                                        }}
-                                                    >
-                                                        {element}
-                                                    </span>
-                                                ))}
-                                                {item.types.map((type) => (
-                                                    <span className="wk-buff-chip wk-buff-chip--inline" key={`dt-${type}`}>
-                                                        {type}
-                                                    </span>
-                                                ))}
-                                            </span>
-                                        )}
-                                        <span className="wk-buff-num">{item.value}</span>
-                                    </span>
-                                ))}
-                            </span>
-                        )}
-                    </dd>
+            {valueZones.length > 0 && (
+                <div className="wk-buff-values">
+                    {valueZones.map((zone, index) => {
+                        const elements = zone.condition?.elements ?? []
+                        const types = [
+                            ...new Set((zone.condition?.damageTypes ?? []).map((type) => BUFF_DAMAGE_TYPE_SHORT[type] ?? type))
+                        ]
+                        return (
+                            <div className="wk-buff-value-line" key={`${zone.zoneId}-${index}`}>
+                                <span className="wk-buff-zone">
+                                    {zoneCardLabel(zone.zoneId)}
+                                    {/* 先属性（带元素色，多个走渐变）后伤害类型，都写成括号 */}
+                                    {elements.length > 0 && (
+                                        <span
+                                            className="wk-buff-cond wk-buff-cond--element"
+                                            style={
+                                                elements.length > 1
+                                                    ? {
+                                                          backgroundImage: `linear-gradient(90deg, ${elements
+                                                              .map((element) => `var(--element-${element})`)
+                                                              .join(', ')})`,
+                                                          WebkitBackgroundClip: 'text',
+                                                          backgroundClip: 'text',
+                                                          color: 'transparent'
+                                                      }
+                                                    : { color: `var(--element-${elements[0]})` }
+                                            }
+                                        >
+                                            ({elements.join('·')})
+                                        </span>
+                                    )}
+                                    {types.length > 0 && <span className="wk-buff-cond">({types.join('·')})</span>}
+                                </span>
+                                <span className="wk-buff-num">{formatZoneValue(zone)}</span>
+                            </div>
+                        )
+                    })}
                 </div>
+            )}
 
-                {facts.refs.length > 0 && (
-                    <div className="wk-buff-fact">
-                        <dt>转模</dt>
-                        <dd>{facts.refs.join('；')}</dd>
-                    </div>
-                )}
-            </dl>
+            {refZones.length > 0 && (
+                <div className="wk-buff-refs">
+                    {refZones.map((zone, index) => (
+                        <p className="wk-buff-ref" key={`ref-${zone.zoneId}-${index}`}>
+                            {describeRefLine(zone.ref, zone.zoneId)}
+                        </p>
+                    ))}
+                </div>
+            )}
+
+            {rules.length > 0 && (
+                <ul className="wk-buff-rules">
+                    {rules.map((rule, index) => (
+                        <li key={`${rule.kind}-${index}`}>{describeRule(rule, { selfLabel })}</li>
+                    ))}
+                </ul>
+            )}
         </article>
     )
 }

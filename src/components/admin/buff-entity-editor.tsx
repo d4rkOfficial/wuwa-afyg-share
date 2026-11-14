@@ -17,18 +17,34 @@ import {
     BUFF_ELEMENTS,
     BUFF_DAMAGE_TYPES,
     BUFF_DAMAGE_TYPE_SHORT,
+    BUFF_RULE_KIND_LABELS,
+    BUFF_ZONE_COMPARE_OPTIONS,
+    BUFF_ZONE_COMPARE_OPS,
+    BUFF_ENEMY_TYPES,
     CHAIN_MAX,
     REFINE_MAX,
     sanitizeCondition,
     sanitizeZoneCondition,
     isConditionEmpty,
+    isRuleDraft,
     describeCondition,
     describeZoneConditionBadge,
     slotNameFor
 } from '@/lib/consts/buff-zones'
-import type { BuffEntityType, BuffFolderRow, BuffScope, BuffSetRow, BuffCondition } from '@/lib/types/db'
+import type {
+    BuffCondition,
+    BuffEntityType,
+    BuffEnemyTypeKind,
+    BuffFolderRow,
+    BuffRefOwner,
+    BuffRule,
+    BuffScope,
+    BuffSetRow,
+    BuffZoneCompareId,
+    BuffZoneCompareOp
+} from '@/lib/types/db'
 import { buffFolderName, buffLeafName, joinBuffPath } from '@/lib/buff-names'
-import { Button, Input, Segmented } from '@/ui'
+import { Button, Input, Segmented, Select, type SegmentedOption } from '@/ui'
 import BuffRefModal from '@/components/admin/buff-ref-modal'
 
 function gcd(a: number, b: number): number {
@@ -52,6 +68,15 @@ function simplifyPct(pct: number): { divisor: number; multiplier: number } {
 
 /** @desc 实例级条件的参考角色槽位（工坊没有配队上下文，统一按 0 号位描述） */
 const LIBRARY_CHAR_IDX = 0
+
+/** @desc 规则区可添加的种类：链/阶走上方快捷按钮，这里只放需要参数的三类 */
+const RULE_ADD_KINDS: BuffRule['kind'][] = ['damageNameRegex', 'zoneCompare', 'enemyType']
+
+/** @desc 规则归属两选一：本角色（0）/ 出伤者（-1） */
+const RULE_OWNER_OPTIONS: ReadonlyArray<SegmentedOption<'0' | '-1'>> = [
+    { value: '0', label: '本角色' },
+    { value: '-1', label: '出伤者' }
+]
 
 const chainMinOf = (cond: BuffCondition | null | undefined): number | undefined =>
     cond?.chains?.[0]?.min ?? cond?.chain
@@ -85,7 +110,8 @@ interface ZoneRefRow {
     discrete?: boolean
     divisor?: string
     multiplier?: string
-    refOwner?: 'self' | 'owner'
+    /** @desc 引用归属：本角色（self/owner）/ 出伤者（active） */
+    refOwner?: BuffRefOwner
 }
 
 interface ZoneRow {
@@ -101,7 +127,7 @@ interface BuffRow {
     buffName: string
     scope: BuffScope
     exclusive: boolean
-    /** @desc 实例级生效条件（链 / 阶硬门槛，互斥） */
+    /** @desc 实例级生效条件（链/阶门槛可并存 + rules 规则列表） */
     condition?: BuffCondition | null
     zones: ZoneRow[]
 }
@@ -250,19 +276,14 @@ export default function BuffEntityEditor({
         return map
     })()
 
-    /** @desc 各实体类型可配置的实例级硬门槛：角色 = 共鸣链、武器 = 精炼（与工具箱一致） */
+    /** @desc 各实体类型可配置的快捷门槛：角色 = 共鸣链、武器 = 精炼（与工具箱一致；两者可并存） */
     const canChain = entityType === 'character'
     const canRefinement = entityType === 'weapon'
 
     const conditionSummary = (() => {
         const cond = activeBuff?.condition
-        if (!cond) return ''
-        const parts: string[] = []
-        const chain = chainMinOf(cond)
-        if (chain !== undefined && canChain) parts.push(chain > 0 ? `≥${chain}链` : '本体')
-        const refine = cond.refinements?.[0]?.min ?? cond.refinement
-        if (refine !== undefined && canRefinement) parts.push(`武器 ≥${refine}阶`)
-        return parts.join('，')
+        if (!cond || isConditionEmpty(cond)) return ''
+        return describeCondition(cond, slotNameFor(entityType))
     })()
 
     const SCOPE_TABS: Array<{ value: BuffScope; label: string }> = [
@@ -303,36 +324,79 @@ export default function BuffEntityEditor({
 
     /**
      * @desc 设置实例级链门槛（再次点击取消）。
-     * 链与阶**互斥**：设置链会清空全部阶条件（与工具箱一致）。
+     * 链与阶**可以并存**：设置链只改动 chains，不动 refinements。
      */
     function setBuffChain(min: number) {
         const cond = { ...(activeBuff?.condition ?? {}) }
         const clearing = chainMinOf(cond) === min
         const next: BuffCondition = { ...cond }
         delete next.chain
-        delete next.refinement
-        delete next.refinements
         if (clearing) delete next.chains
         else next.chains = [{ charIdx: LIBRARY_CHAR_IDX, min }]
-        updateActiveBuff({ condition: next })
+        updateActiveBuff({ condition: isConditionEmpty(next) ? null : next })
     }
 
-    /** @desc 设置实例级阶门槛（再次点击取消）；设置阶会清空全部链条件 */
+    /** @desc 设置实例级阶门槛（再次点击取消）；不动 chains（链阶可并存） */
     function setBuffRefinement(min: number) {
         const cond = { ...(activeBuff?.condition ?? {}) }
         const current = cond.refinements?.[0]?.min ?? cond.refinement
         const clearing = current === min
         const next: BuffCondition = { ...cond }
-        delete next.chains
-        delete next.chain
         delete next.refinement
         if (clearing) delete next.refinements
         else next.refinements = [{ charIdx: LIBRARY_CHAR_IDX, min }]
-        updateActiveBuff({ condition: next })
+        updateActiveBuff({ condition: isConditionEmpty(next) ? null : next })
     }
 
     function clearBuffCondition() {
         updateActiveBuff({ condition: null })
+    }
+
+    // ── Buff 级规则（rules）：伤害名 / 面板数值 / 敌人类型（同类只能有一条）──
+    const activeRules = activeBuff?.condition?.rules ?? []
+
+    /** @desc 「添加规则」只给出还没用过的种类 */
+    const availableRuleKinds = RULE_ADD_KINDS.filter((kind) => !activeRules.some((rule) => rule.kind === kind))
+
+    function setBuffRules(rules: BuffRule[]) {
+        const next: BuffCondition = { ...(activeBuff?.condition ?? {}) }
+        if (rules.length > 0) next.rules = rules
+        else delete next.rules
+        updateActiveBuff({ condition: isConditionEmpty(next) ? null : next })
+    }
+
+    function addRule(kind: BuffRule['kind']) {
+        if (activeRules.some((rule) => rule.kind === kind)) return
+        const rule: BuffRule = (() => {
+            switch (kind) {
+                case 'damageNameRegex':
+                    return { kind, pattern: '' }
+                case 'zoneCompare':
+                    return { kind, charIdx: -1, zone: 'critRate', op: 'ge', value: 60 }
+                case 'enemyType':
+                    return { kind, types: ['BOSS'] }
+                default:
+                    return { kind: 'chain', charIdx: LIBRARY_CHAR_IDX, min: 0 }
+            }
+        })()
+        setBuffRules([...activeRules, rule])
+    }
+
+    function patchRuleAt(index: number, patch: Partial<BuffRule>) {
+        setBuffRules(activeRules.map((rule, i) => (i === index ? ({ ...rule, ...patch } as BuffRule) : rule)))
+    }
+
+    /** @desc 敌人类型多选：最后一类取消时保持不变（至少留一项） */
+    function toggleEnemyTypeAt(index: number, kind: BuffEnemyTypeKind) {
+        const rule = activeRules[index]
+        if (!rule || rule.kind !== 'enemyType') return
+        const types = rule.types.includes(kind) ? rule.types.filter((item) => item !== kind) : [...rule.types, kind]
+        if (types.length === 0) return
+        patchRuleAt(index, { types })
+    }
+
+    function removeRuleAt(index: number) {
+        setBuffRules(activeRules.filter((_, i) => i !== index))
     }
 
     /** @desc 添加一条乘区贡献条目（同一乘区可添加多次，各自独立配置） */
@@ -691,7 +755,7 @@ export default function BuffEntityEditor({
                                             title: BUFF_SCOPE_LABELS[t.value]
                                         }))}
                                     />
-                                    {/* 链 / 阶条件：不再折叠，直接排在作用范围右侧（链阶互斥） */}
+                                    {/* 链 / 阶门槛：不折叠，直接排在作用范围右侧（两者可并存） */}
                                     {canChain ? (
                                         <div className="flex items-center gap-2 rounded-sm border border-(--wk-line) bg-(--wk-input) px-2 py-1">
                                             <span className="text-[11px] text-(--wk-fg)">共鸣链</span>
@@ -741,7 +805,7 @@ export default function BuffEntityEditor({
                                     )}
                                     <button
                                         onClick={clearBuffCondition}
-                                        title={conditionSummary ? `当前条件：${conditionSummary}` : '清除链/阶条件'}
+                                        title={conditionSummary ? `当前条件：${conditionSummary}` : '清除全部条件（含规则）'}
                                         className="flex h-6 items-center gap-1 rounded-sm border border-(--wk-line) px-2 text-[10px] text-(--wk-fg-3) transition-colors hover:border-(--wk-danger) hover:text-(--wk-danger)"
                                     >
                                         <Icon icon="mdi:close-circle-outline" className="size-3" />
@@ -754,6 +818,162 @@ export default function BuffEntityEditor({
                                     >
                                         删除该条
                                     </Button>
+                                </div>
+
+                                {/* Buff 级规则：伤害名 / 面板数值 / 敌人类型（一条一行，同类只能有一条） */}
+                                <div className="mt-2 rounded-sm border border-(--wk-line) bg-(--wk-input) px-2 py-1.5">
+                                    <div className="flex flex-wrap items-center gap-1.5">
+                                        <span className="text-[11px] text-(--wk-fg)">规则</span>
+                                        {availableRuleKinds.map((kind) => (
+                                            <button
+                                                key={kind}
+                                                onClick={() => addRule(kind)}
+                                                title={`添加${BUFF_RULE_KIND_LABELS[kind]}规则`}
+                                                className="flex h-6 items-center gap-1 rounded-sm border border-(--wk-line) px-2 text-[10px] text-(--wk-fg-3) transition-colors hover:border-(--wk-accent) hover:text-(--wk-accent-text)"
+                                            >
+                                                <Icon icon="mdi:plus" className="size-3" />
+                                                {BUFF_RULE_KIND_LABELS[kind]}
+                                            </button>
+                                        ))}
+                                        {activeRules.length === 0 && (
+                                            <span className="text-[10px] text-(--wk-fg-3)">
+                                                无（链/阶用上面的快捷按钮，其余三类在这里加）
+                                            </span>
+                                        )}
+                                        {activeRules.length > 0 && activeRules.length !== RULE_ADD_KINDS.length && (
+                                            <span className="text-[10px] text-(--wk-fg-3)">同类只能有一条</span>
+                                        )}
+                                    </div>
+
+                                    {activeRules.length > 0 && (
+                                        <div className="mt-1.5 flex flex-col gap-1.5">
+                                            {activeRules.map((rule, index) => (
+                                                <div
+                                                    key={`${rule.kind}-${index}`}
+                                                    className="flex flex-wrap items-center gap-1.5"
+                                                >
+                                                    <span className="shrink-0 text-[11px] text-(--wk-fg-3)">
+                                                        {BUFF_RULE_KIND_LABELS[rule.kind]}
+                                                    </span>
+                                                    {rule.kind === 'damageNameRegex' && (
+                                                        <>
+                                                            <Input
+                                                                value={rule.pattern}
+                                                                placeholder="正则，包含匹配；全等用 ^…$"
+                                                                onChange={(e) =>
+                                                                    patchRuleAt(index, { pattern: e.target.value })
+                                                                }
+                                                                className="min-w-0 flex-1"
+                                                            />
+                                                            {isRuleDraft(rule) && (
+                                                                <span className="text-[10px] text-(--wk-warn-text, var(--wk-fg-3))">
+                                                                    未填写
+                                                                </span>
+                                                            )}
+                                                        </>
+                                                    )}
+                                                    {rule.kind === 'zoneCompare' && (
+                                                        <>
+                                                            <Segmented
+                                                                options={RULE_OWNER_OPTIONS}
+                                                                value={rule.charIdx < 0 ? '-1' : '0'}
+                                                                onChange={(next) =>
+                                                                    patchRuleAt(index, {
+                                                                        charIdx: next === '-1' ? -1 : 0
+                                                                    })
+                                                                }
+                                                                ariaLabel="规则归属"
+                                                            />
+                                                            <Select
+                                                                value={rule.zone}
+                                                                onChange={(e) =>
+                                                                    patchRuleAt(index, {
+                                                                        zone: e.target.value as BuffZoneCompareId
+                                                                    })
+                                                                }
+                                                                className="w-32"
+                                                                aria-label="面板属性"
+                                                            >
+                                                                {BUFF_ZONE_COMPARE_OPTIONS.map((option) => (
+                                                                    <option key={option.value} value={option.value}>
+                                                                        {option.label}
+                                                                    </option>
+                                                                ))}
+                                                            </Select>
+                                                            <Select
+                                                                value={rule.op}
+                                                                onChange={(e) =>
+                                                                    patchRuleAt(index, {
+                                                                        op: e.target.value as BuffZoneCompareOp
+                                                                    })
+                                                                }
+                                                                className="w-16"
+                                                                aria-label="比较运算符"
+                                                            >
+                                                                {BUFF_ZONE_COMPARE_OPS.map((option) => (
+                                                                    <option key={option.value} value={option.value}>
+                                                                        {option.label}
+                                                                    </option>
+                                                                ))}
+                                                            </Select>
+                                                            <Input
+                                                                type="number"
+                                                                value={rule.value}
+                                                                onChange={(e) =>
+                                                                    patchRuleAt(index, {
+                                                                        value: Number(e.target.value) || 0
+                                                                    })
+                                                                }
+                                                                className="w-20"
+                                                                aria-label="比较数值"
+                                                            />
+                                                            <span className="text-[10px] text-(--wk-fg-3)">
+                                                                {BUFF_ZONE_COMPARE_OPTIONS.find(
+                                                                    (option) => option.value === rule.zone
+                                                                )?.unit === '%'
+                                                                    ? '%'
+                                                                    : ''}
+                                                            </span>
+                                                        </>
+                                                    )}
+                                                    {rule.kind === 'enemyType' && (
+                                                        <>
+                                                            {BUFF_ENEMY_TYPES.map((option) => {
+                                                                const on = rule.types.includes(option.value)
+                                                                return (
+                                                                    <button
+                                                                        key={option.value}
+                                                                        onClick={() =>
+                                                                            toggleEnemyTypeAt(index, option.value)
+                                                                        }
+                                                                        aria-pressed={on}
+                                                                        disabled={on && rule.types.length <= 1}
+                                                                        className={`h-6 rounded-sm border px-2 text-[11px] transition-colors ${
+                                                                            on
+                                                                                ? 'border-(--wk-accent) text-(--wk-accent-text)'
+                                                                                : 'border-(--wk-line) text-(--wk-fg-3)'
+                                                                        }`}
+                                                                    >
+                                                                        {option.label}
+                                                                    </button>
+                                                                )
+                                                            })}
+                                                            <span className="text-[10px] text-(--wk-fg-3)">
+                                                                可多选，命中任意一项即满足
+                                                            </span>
+                                                        </>
+                                                    )}
+                                                    <button
+                                                        onClick={() => removeRuleAt(index)}
+                                                        title="删除该规则"
+                                                        className="rounded-sm p-1 text-(--wk-fg-3) transition-colors hover:text-(--wk-danger)"
+                                                    >
+                                                        <Icon icon="mdi:close" className="size-3.5" />
+                                                    </button>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    )}
                                 </div>
                             </section>
 

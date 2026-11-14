@@ -2,9 +2,9 @@
 
 import { useState } from 'react'
 import { Icon } from '@iconify/react'
-import { BUFF_REF_ZONES, BUFF_ZONE_MAP } from '@/lib/consts/buff-zones'
+import { BUFF_REF_OWNER_OPTIONS, BUFF_REF_ZONES, BUFF_ZONE_MAP } from '@/lib/consts/buff-zones'
 import SelectMenu from '@/components/ui/select-menu'
-import type { BuffEntityType } from '@/lib/types/db'
+import type { BuffEntityType, BuffRefOwner } from '@/lib/types/db'
 
 // 引用草稿（字符串字段，与编辑器 ZoneRefRow 一致）
 export interface RefDraft {
@@ -16,7 +16,7 @@ export interface RefDraft {
     discrete?: boolean
     divisor?: string
     multiplier?: string
-    refOwner?: 'self' | 'owner'
+    refOwner?: BuffRefOwner
 }
 
 interface Props {
@@ -71,6 +71,12 @@ export default function BuffRefModal({ open, entityType, zoneId, initialRef, onS
 
     if (!open) return null
 
+    /** @desc 归属两档：本角色（self/owner）/ 出伤者（active） */
+    const ownerChoice: 'owner' | 'active' = draft.refOwner === 'active' ? 'active' : 'owner'
+    const ownerHint = BUFF_REF_OWNER_OPTIONS.find((option) => option.value === ownerChoice)?.hint ?? ''
+    const setOwner = (choice: 'owner' | 'active') =>
+        set({ refOwner: choice === 'active' ? 'active' : entityType === 'character' ? 'self' : 'owner' })
+
     const s = simplifyPct(parseFloat(draft.pct) || 0)
     const divisor = draft.divisor ?? String(s.divisor)
     const multiplier = draft.multiplier ?? String(s.multiplier)
@@ -89,7 +95,7 @@ export default function BuffRefModal({ open, entityType, zoneId, initialRef, onS
         const out: RefDraft = {
             targetZoneId: draft.targetZoneId,
             pct: String(pct),
-            refOwner: entityType === 'character' ? 'self' : 'owner'
+            refOwner: ownerChoice === 'active' ? 'active' : entityType === 'character' ? 'self' : 'owner'
         }
         if (hasThreshold && draft.threshold !== undefined && draft.threshold !== '') out.threshold = draft.threshold
         if (hasLower && draft.lower !== undefined && draft.lower !== '') out.lower = draft.lower
@@ -128,12 +134,27 @@ export default function BuffRefModal({ open, entityType, zoneId, initialRef, onS
                 </div>
 
                 <div className="min-h-0 flex-1 space-y-4 overflow-y-auto px-4 py-3">
-                    {/* refOwner 说明（由实体类型决定） */}
-                    <div className="rounded-sm border border-(--wk-line) bg-(--wk-input) px-3 py-2 wk-note">
-                        <Icon icon="mdi:information-outline" className="mr-1 inline size-3.5 text-(--wk-fg-3)" />
-                        {entityType === 'character'
-                            ? '角色只能引用自身面板属性'
-                            : '武器 / 声骸 / 套装引用其装备者（主人）面板属性'}
+                    {/* 引用归属：本角色 / 出伤者（导入工具箱后分别落到实体归属槽位 / -1） */}
+                    <div>
+                        <div className="mb-1 text-[10px] text-(--wk-fg-3)">引用谁的属性</div>
+                        <div className="flex overflow-hidden rounded-sm border border-(--wk-line)">
+                            {BUFF_REF_OWNER_OPTIONS.map((option, index) => (
+                                <div key={option.value} className="flex flex-1">
+                                    {index > 0 && <div className="w-px bg-(--wk-line)" />}
+                                    <button
+                                        onClick={() => setOwner(option.value)}
+                                        className={`flex-1 px-2 py-1.5 text-[11px] font-medium transition-colors ${
+                                            ownerChoice === option.value
+                                                ? 'bg-(--wk-accent)/12 text-(--wk-accent-text)'
+                                                : 'text-(--wk-fg-3)'
+                                        }`}
+                                    >
+                                        {option.label}
+                                    </button>
+                                </div>
+                            ))}
+                        </div>
+                        <div className="mt-1 text-[10px] text-(--wk-fg-3)">{ownerHint}</div>
                     </div>
 
                     {/* 引用属性 */}

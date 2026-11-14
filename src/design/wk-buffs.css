@@ -173,7 +173,7 @@
     display: grid;
     min-width: 0;
     align-content: start;
-    gap: 8px;
+    gap: 6px;
     border: 1px solid var(--wk-line);
     border-radius: var(--wk-r-1);
     background: var(--wk-s2);
@@ -190,6 +190,7 @@
 
 .wk-buff-name {
     min-width: 0;
+    flex: 1 1 auto;
     color: var(--wk-fg);
     font-size: var(--wk-t-body);
     font-weight: 600;
@@ -197,7 +198,16 @@
     overflow-wrap: anywhere;
 }
 
-/* 门槛：实心，最先看到；适用范围：描边 */
+/* 范围 / 门槛徽标：靠右，名称永远不会被顶下去 */
+.wk-buff-tags {
+    display: flex;
+    flex-shrink: 0;
+    align-items: center;
+    gap: 5px;
+    margin-left: auto;
+}
+
+/* 链 / 阶门槛：实心徽标（3链 / 2阶） */
 .wk-buff-gate {
     display: inline-flex;
     height: 20px;
@@ -215,36 +225,42 @@
     box-shadow: var(--wk-btn-shadow);
 }
 
-/* ── 小卡里的「数值 / 转模 / 类型 / 属性」 ──────────────────────────────── */
-.wk-buff-facts { display: grid; gap: 5px; }
-
-.wk-buff-fact {
+/* ── 乘区行：乘区名（适用条件）……… 数值 ────────────────────────────────── */
+.wk-buff-values {
     display: grid;
-    grid-template-columns: 34px minmax(0, 1fr);
-    gap: 8px;
-    align-items: baseline;
+    border-top: 1px solid var(--wk-line);
 }
-
-.wk-buff-fact > dt { color: var(--wk-fg-3); font-size: var(--wk-t-meta); }
-
-.wk-buff-fact > dd { margin: 0; min-width: 0; color: var(--wk-fg-2); font-size: var(--wk-t-body); line-height: 1.5; }
-
-.wk-buff-values { display: grid; gap: 2px; }
 
 .wk-buff-value-line {
     display: flex;
-    align-items: center;
-    gap: 8px;
+    align-items: baseline;
+    gap: 6px;
+    min-width: 0;
+    padding: 5px 0;
 }
 
-.wk-buff-value-line > .wk-buff-zone {
+.wk-buff-value-line + .wk-buff-value-line {
+    border-top: 1px solid var(--wk-line);
+}
+
+.wk-buff-zone {
     min-width: 0;
-    /* 窄卡里宁可折行也不截断：乘区名是判断依据，省掉就看不懂这行是什么了 */
-    color: var(--wk-fg-3);
+    color: var(--wk-fg-2);
     overflow-wrap: anywhere;
 }
 
-.wk-buff-value-line > .wk-buff-num {
+/* 乘区级适用条件：括号形式跟在乘区名后（元素带元素色，多个元素用渐变） */
+.wk-buff-cond {
+    margin-left: 1px;
+    color: var(--wk-fg-3);
+    font-size: var(--wk-t-meta);
+}
+
+.wk-buff-cond--element {
+    font-weight: 500;
+}
+
+.wk-buff-num {
     margin-left: auto;
     flex-shrink: 0;
     color: var(--wk-fg);
@@ -252,30 +268,36 @@
     font-variant-numeric: tabular-nums;
 }
 
-/* 属性 / 类型 chip：贴在这一行数值前面，表示「这条数值」的适用条件 */
-.wk-buff-chips {
-    display: inline-flex;
-    flex-shrink: 0;
-    flex-wrap: wrap;
-    align-items: center;
-    gap: 4px;
+/* ── 转模行：一句话（没有图标，直接从左边起） ───────────────────────────── */
+.wk-buff-refs {
+    display: grid;
+    gap: 3px;
+    border-top: 1px solid var(--wk-line);
+    padding-top: 6px;
 }
 
-.wk-buff-chip {
-    display: inline-flex;
-    height: 20px;
-    align-items: center;
-    border: 1px solid var(--wk-ctrl-line);
-    border-radius: var(--wk-r-1);
-    background: var(--wk-s1);
-    padding: 0 6px;
+.wk-buff-ref {
+    margin: 0;
     color: var(--wk-fg-2);
-    font-size: var(--wk-t-meta);
-    line-height: 1;
-    white-space: nowrap;
+    font-size: var(--wk-t-body);
+    line-height: 1.5;
+    overflow-wrap: anywhere;
 }
 
-.wk-buff-chip--inline {
-    height: 18px;
-    padding: 0 5px;
+/* ── 条件（非链/阶）：一条一行 ─────────────────────────────────────────── */
+.wk-buff-rules {
+    display: grid;
+    gap: 2px;
+    margin: 0;
+    border-top: 1px solid var(--wk-line);
+    padding: 6px 0 0;
+    list-style: none;
+    color: var(--wk-fg-3);
+    font-size: var(--wk-t-meta);
+    line-height: 1.55;
+}
+
+.wk-buff-rules > li {
+    min-width: 0;
+    overflow-wrap: anywhere;
 }
