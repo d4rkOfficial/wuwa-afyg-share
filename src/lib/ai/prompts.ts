@@ -6,7 +6,8 @@ import {
     BUFF_NAME_LEAF_RULE_TEXT,
     CONDITION_CHAIN_RULES_TEXT,
     CONDITION_REFINE_RULES_TEXT,
-    CONDITION_COMMON_RULES_TEXT
+    CONDITION_COMMON_RULES_TEXT,
+    CONDITION_BUFF_RULES_TEXT
 } from '@/lib/ai/prompts.config'
 
 // 乘区白名单表（保留在 system，作为 zoneId 校验边界）
@@ -19,12 +20,13 @@ export const REF_ZONE_LIST_TEXT = BUFF_REF_ZONES.map(
     (z) => `- ${z.id}（${z.label}，单位：${z.unit === '%' ? '百分数' : '固定值'}）`
 ).join('\n')
 
-// 生效条件规则按实体类型裁剪：角色才讲 chain，武器才讲 refinement，其他只讲属性/类型
+// 生效条件规则按实体类型裁剪：角色才讲 chain，武器才讲 refinement；通用规则与规则段始终附上
 export function renderConditionRules(entityType?: string): string {
     const parts: string[] = []
     if (entityType === 'character') parts.push(CONDITION_CHAIN_RULES_TEXT)
     if (entityType === 'weapon') parts.push(CONDITION_REFINE_RULES_TEXT)
     parts.push(CONDITION_COMMON_RULES_TEXT)
+    parts.push(CONDITION_BUFF_RULES_TEXT)
     return parts.join('\n')
 }
 

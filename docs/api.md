@@ -94,8 +94,27 @@ GET /api/buff-sets?entity_type=character&entity_name=散华&q=攻击
       "buff_name": "锁 同奏\\1阶",
       "scope": "self",
       "exclusive": false,
-      "condition": { "chain": 6 },
-      "buff_set": [{ "zoneId": "critRate", "value": 15 }],
+      "condition": {
+        "chains": [{ "charIdx": 0, "min": 3 }],
+        "refinements": [{ "charIdx": 0, "min": 2 }],
+        "rules": [
+          { "kind": "damageNameRegex", "pattern": "共鸣解放|处决" },
+          { "kind": "zoneCompare", "charIdx": -1, "zone": "critRate", "op": "ge", "value": 60 },
+          { "kind": "enemyType", "type": "BOSS" }
+        ]
+      },
+      "buff_set": [
+        {
+          "zoneId": "critRate",
+          "value": 15,
+          "condition": { "damageTypes": ["共鸣解放伤害"] }
+        },
+        {
+          "zoneId": "extraRatio",
+          "value": 0,
+          "ref": { "targetZoneId": "totalAtk", "pct": 50, "refOwner": "active" }
+        }
+      ],
       "sort_order": 0
     }
   ],
@@ -113,6 +132,20 @@ GET /api/buff-sets?entity_type=character&entity_name=散华&q=攻击
 ```
 
 > 文件夹成员按 `buff_name` 的 `文件夹A\` 前缀归属；`folders` 只负责空文件夹与排序。短名/文件夹名允许 `/`，禁止 `\`。
+
+**条件口径**（与工具箱 `BuffInstance.rules` 同一套判据）：
+
+- `scope`：`self`=自己 / `self_except`=自己除外 / `team`=对全队 / `effect_only`=效应专属。
+- `condition`（实例级）：`chains` / `refinements`（硬性门槛，**可并存**）、`rules`（规则列表，规则之间全部 AND）、
+  以及兼容读取的 `elements` / `damageTypes`。
+- `condition.rules` 的 kind：`chain` / `refinement` / `damageNameRegex`（伤害名正则包含匹配）/
+  `zoneCompare`（面板数值比较：`charIdx` 只有 `0`=本角色、`-1`=出伤者；`zone` 取
+  `atk` / `hp` / `def` / `recharge` / `offTuneBuildupRate` / `critRate` / `critDmg`；`op` 取 `ge` / `gt` / `eq` / `le` / `lt`）/
+  `enemyType`（`BOSS` / `精英怪` / `小怪`）。
+  `buffActive`（依赖其它 BUFF 生效）不入库 —— 它引用工具箱工程内的 BUFF id，Buff 集里没有该 id 空间。
+- 乘区级 `buff_set[].condition` 只允许 `elements` / `damageTypes`。
+- `buff_set[].ref.refOwner`：`self` / `owner` = 引用**本角色**面板（角色自身 / 装备者），
+  `active` = 引用**出伤者**面板（本次伤害所属角色）。
 
 工具箱用法：「主页 → Buff 集 → 从工坊同步」。同步语义为**按实体整份覆盖**——工坊侧存在的实体会覆盖工具箱内同实体的「工坊来源」数据，工具箱本地自定义的实体不受影响；工坊已下线的实体在工具箱内一并移除。
 

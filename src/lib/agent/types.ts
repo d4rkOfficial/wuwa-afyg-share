@@ -105,7 +105,8 @@ export interface AgentBuffZone {
         discrete?: boolean
         divisor?: number
         multiplier?: number
-        refOwner?: 'self' | 'owner'
+        /** @desc 引用归属：本角色（self/owner）/ 出伤者（active） */
+        refOwner?: 'self' | 'owner' | 'active'
     } | null
 }
 

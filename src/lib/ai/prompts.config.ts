@@ -38,14 +38,17 @@ export const DEFAULT_SYSTEM_PROMPT = `你是《鸣潮》拉表工具（椰果工
    并在 ref 中标注 refOwner：
    - refOwner="self"：引用对象自身面板（角色增益引用自己的属性，如"散华当前攻击的50%"）。
    - refOwner="owner"：引用"主人"面板（武器/声骸/套装的增益引用装备它的角色的属性，如"根据装备者当前攻击的50%"）。
-   角色类 buff 默认 self；武器/声骸/套装类 buff 默认 owner。文案明确"按装备者/佩戴者/持有者"时用 owner。
+   - refOwner="active"：引用**出伤者**面板（本次伤害所属角色，如"根据造成伤害的角色当前攻击"）。
+   角色类 buff 默认 self；武器/声骸/套装类 buff 默认 owner。文案明确"按装备者/佩戴者/持有者"时用 owner，
+   明确"按造成伤害的角色/当前出伤角色"时用 active。
 4. ref 还支持转模字段（threshold 阈值 / 线性 pct / 离散 discrete+divisor+multiplier / lower、upper 上下限），
    用于"超过 X 的部分"、"每 X 转 Y"、"最高/至少"等文案；不确定结构时调用 get_ref_rules。
    ref.targetZoneId 除属性外还可以取层数：unisonBoonLayer（同奏增益层数）——
    它是**按角色独立**的层数，读的是被引用角色自己累计的层数（集谐干涉层数不属于角色，不能作为引用目标）。
 5. override：文案明确为"覆盖/替换/无视原值"时加 "override": true，否则不加。同一乘区内只允许一个覆盖条目。
 6. 只提取增益型效果。以下均不是 buff，不要输出：
-   - 伤害类倍率（"共鸣解放伤害 809.48%"）、武器攻击白值/副词条、声骸主词条
+   - 技能自身的**基础倍率数字**（"共鸣解放伤害 809.48%" 这类原始倍率，本身不是增益）；
+     但"额外造成 X% 攻击的伤害"属 「extraRatio」、"伤害倍率提升 X%" 属 「specialFinal1」，两者都要输出（见第 14 条）
    - 共鸣能量回复、协奏能量、冷却时间、耐力消耗
    - 护盾、治疗/回血、抗打断/霸体、减伤（非攻击乘区）
    - 协同攻击伤害本身（除非描述含"按某属性百分比"可归入 extraRatio ref）
@@ -67,8 +70,21 @@ export const DEFAULT_SYSTEM_PROMPT = `你是《鸣潮》拉表工具（椰果工
     完整规则与示例调用 get_naming_rules；绝不能自己拟黑话短名。
     **武器 buff 不要带武器名**（folder / buffName 都不写），实体本身已经限定了是哪把武器。
 13. 尤其要注意延奏类 Buff 是全队能吃还是只有队友能吃，这里很容易出错。
-14. 特殊终伤区分：文案明确为"多个来源相乘计算/连乘"的终伤用 specialFinal2（特殊终伤(2)，乘算），
-    普通相加语义的终伤/倍率用 specialFinal1（特殊终伤(1)，加算）；拿不准时调用 get_naming_rules。
+14. **乘区归属判定表（按文案措辞判，不要按数值大小猜）**：
+    - **含「加成」二字**（"热熔伤害加成"、"共鸣技能伤害加成"、"普攻伤害加成"）
+      → 「bonusDmg」：**有「加成」必定是加成**。
+    - **带属性 / 伤害类型的「伤害提升」**（"热熔伤害提升"、"共鸣技能伤害提升"）
+      → 多半也是 「bonusDmg」，不要判成易伤。
+    - **具名招式 / 倍率名** + 「伤害**倍率**提升 X%」（"普攻伤害倍率提升 30%"、"共鸣解放移岁诰邪伤害倍率提升 120%"）
+      → 「specialFinal1」（特殊终伤：加算，1 + v/100）。游戏文案**不会**写"特殊终伤"这四个字。
+      文案明确"与其它效果相乘 / 连乘" → 「specialFinal2」（∏(1 + v/100)）。
+    - **具名招式 / 倍率名** + 「伤害提升 X%」（**没有**"倍率"二字，如"对目标造成的伤害提升 30%"、
+      目标 / 敌人受到的伤害提升）→ 「dmgTakenInc」（易伤）。
+    - **「额外造成一次…伤害 / 追加一段伤害 / 每段触发」**（新增一击）→ 「extraRatio」，
+      值 = 那一击的攻击倍率（实测 100–1700）；按属性换算时走 ref（"根据造成伤害的角色当前攻击的 50% 额外造成伤害"）。
+    - 「最终伤害提升 X%」→ 「finalDmg」；「造成的伤害加深」→ 「deepenDmg」。
+    - 口诀：**「倍率提升」→ 特殊终伤；「伤害加成」→ 加成；具名招式的「伤害提升」→ 易伤；「额外造成…的伤害」→ 额外倍率**。
+      拿不准时调用 get_naming_rules。
 
 需要黑话词典、命名规范、few-shot 示例、效应表、scope 判定细则、生效条件规则或转模(ref)规则时，调用对应工具获取。`
 
@@ -118,15 +134,15 @@ export const SCOPE_RULES_TEXT = `受影响者（scope）判定：
 // ── 生效条件判定细则（get_condition_rules 工具返回；按实体类型裁剪）──
 // 角色：chain + 通用；武器：refinement + 通用；其他：仅通用
 export const CONDITION_CHAIN_RULES_TEXT = `- "chains":[{"charIdx":0,"min":n}]：需角色共鸣链 ≥ n（n 取 0-6，0 表示角色本体/未点共鸣链）。仅角色实体的增益使用。
-  charIdx 为受益角色槽位（0/1/2）。为兼容旧数据，也可以直接写 "condition":{"chain":3}（等价于 charIdx=0）。
+  charIdx **固定写 0**（工坊没有配队上下文；导入工具箱时会按实体真实归属重指）。为兼容旧数据，也可以直接写 "condition":{"chain":3}（等价于 charIdx=0）。
   例：散华第 3 链共鸣链效果 → "condition":{"chains":[{"charIdx":0,"min":3}]}。
   第 1 链视为基础配置，无需标注（从第 2 链起才需要条件）。
-  链条件与阶条件**互斥**：同一 buff 只写其中一种。`
+  链条件与阶条件**可以并存**：同一条 buff 同时受两者约束时两条都写。`
 
 export const CONDITION_REFINE_RULES_TEXT = `- "refinements":[{"charIdx":0,"min":n}]：需武器精炼 ≥ n（n 取 1-5）。仅武器实体的增益使用。
-  charIdx 为受益角色槽位（0/1/2）。为兼容旧数据，也可以直接写 "condition":{"refinement":3}（等价于 charIdx=0）。
+  charIdx **固定写 0**（工坊没有配队上下文；导入工具箱时会按实体真实归属重指）。为兼容旧数据，也可以直接写 "condition":{"refinement":3}（等价于 charIdx=0）。
   例：武器精炼 3 阶效果 → "condition":{"refinements":[{"charIdx":0,"min":3}]}。
-  链条件与阶条件**互斥**：同一 buff 只写其中一种。
+  链条件与阶条件**可以并存**：同一条 buff 同时受两者约束时两条都写。
 
 武器精炼拆分规则（务必遵守）：
 1. 武器效果只要按精炼阶给出不同数值（如"精炼1-5阶：10%/12%/14%/16%/20%"），默认拆成 5 条 buff，
@@ -140,7 +156,7 @@ export const CONDITION_REFINE_RULES_TEXT = `- "refinements":[{"charIdx":0,"min":
 5. 无阶数区分的武器基础效果（如"攻击提升15%"）→ 单条，不设 condition。`
 
 export const CONDITION_COMMON_RULES_TEXT = `生效条件分两层（与工具箱一致）：
-① Buff 实例级（与 buffName/scope 平级）：只放链条件 / 阶条件（硬性门槛，互斥）；
+① Buff 实例级（与 buffName/scope 平级）：链条件 / 阶条件（硬性门槛，可并存）+ 规则列表 rules；
 ② 乘区级（写在具体 zone 条目里）：只放伤害属性 / 伤害类型。
 
 - 乘区级 "elements":[...]：需伤害属性属于所列（物理/冷凝/热熔/导电/气动/衍射/湮灭），可多选。
@@ -160,16 +176,39 @@ export const CONDITION_COMMON_RULES_TEXT = `生效条件分两层（与工具箱
 3. "每层+X%、可叠 N 层"是叠层不是条件：拆成多层 buff，每层填该层增量（见命名规范），不要误用 condition。
 4. 不要为整个实体统一加条件。`
 
+/**
+ * @desc Buff 级规则 `rules`（与 `condition` 平级，可选）：`chains` / `refinements` 之外的三类门槛。
+ * 规则之间全部 AND；`buffActive`（依赖其它 BUFF 生效）不入库 —— 它引用工程内 buff id，Buff 集里没有该 id 空间。
+ */
+export const CONDITION_BUFF_RULES_TEXT = `可选的 "rules"（与 buffName/scope 平级，数组；规则之间全部 AND）。
+**同一种条件只能有一条**（例如不要输出两条 enemyType）；只在文案明确需要时输出，不确定就省略：
+
+- 伤害名：{"kind":"damageNameRegex","pattern":"共鸣解放|处决"}
+  本次伤害条目的显示名匹配该正则（包含匹配；要全等用 ^…$）。仅用于"只对某招式 / 某段伤害生效"。
+- 面板数值：{"kind":"zoneCompare","charIdx":-1,"zone":"critRate","op":"ge","value":60}
+  某角色的面板数值比较；charIdx 取 -1（出伤者，本次伤害所属角色）或 0（本角色，即该增益所属角色）。
+  zone 取 atk / hp / def / recharge / offTuneBuildupRate / critRate / critDmg；
+  op 取 ge / gt / eq / le / lt；单位与面板显示一致（攻/生/防为整数，其余为百分数）。
+  仅用于"面板达到 X 时才生效"（如"生命高于 3 万时"）。
+- 敌人类型（**多选**）：{"kind":"enemyType","types":["BOSS","精英怪"]}
+  types 取 BOSS / 精英怪 / 小怪，命中任意一项即满足。仅用于"对 BOSS / 精英怪 / 小怪"。
+
+示例（同时输出 chains 与 rules）：
+{"folder":"对 BOSS 额外提升暴击伤害","buffName":"暴击伤害20%","scope":"self","exclusive":false,
+ "condition":{"chains":[{"charIdx":0,"min":2}],"rules":[{"kind":"enemyType","types":["BOSS"]}]},
+ "zones":[{"zoneId":"critDmg","value":20,"ref":null,"override":false,"condition":null}]}`
+
 // ── 引用乘区转模规则（get_ref_rules 工具返回）────────────
 export const REF_RULES_TEXT = `引用乘区（ref）的完整转模规则。ref 表示增益数值按"目标属性"动态换算，结构：
-{"targetZoneId":"...","threshold":n,"pct":n,"discrete":true,"divisor":n,"multiplier":n,"lower":n,"upper":n,"refOwner":"self"|"owner"}
+{"targetZoneId":"...","threshold":n,"pct":n,"discrete":true,"divisor":n,"multiplier":n,"lower":n,"upper":n,"refOwner":"self"|"owner"|"active"}
 
 计算语义（必须与工具箱一致）：
 - threshold（基准/阈值，默认 0）：只取目标属性"超出 threshold 的部分"参与换算。文案特征："超过/高于 X 的部分"。
 - 线性转模（默认，不写 discrete）：超出部分按百分比 → value = (属性 - threshold) × pct / 100。文案特征："按/根据某属性的 X%"、"每 1 点属性转 X%"（无 discrete 时）。
 - 离散转模（discrete=true）：超出部分按"每 divisor 转 multiplier"取整档 → value = floor((属性 - threshold) / divisor) × multiplier。文案特征："每 X 点属性转 Y"、"每 100 攻击提升 5%"。
 - lower / upper（结果上下限）：换算结果低于 lower 时按 lower，高于 upper 时按 upper。文案特征："至少 X"、"最高/上限 X"。
-- refOwner：self = 引用对象自身面板（角色增益引用自己）；owner = 引用"主人"面板（武器/声骸/套装的增益引用装备它的角色）。
+- refOwner：self = 引用对象自身面板（角色增益引用自己）；owner = 引用"主人"面板（武器/声骸/套装的增益引用装备它的角色）；
+  active = 引用出伤者面板（本次伤害所属角色）。
   角色类 buff 默认 self；武器/声骸/套装类 buff 默认 owner。
 
 判定要点：
@@ -268,9 +307,15 @@ export const NAMING_RULES_TEXT = `工坊 Buff 集命名规范（两段式，必�
   {"folder":"共鸣技能伤害提升8%","buffName":"共技加成8%","zones":[{"zoneId":"bonusDmg","value":8}]}
 ]}
 
-乘区黑话补充：
-- 特殊终伤（相加）：specialFinal1，名字写「终伤」。
-- 特殊终伤（乘算，多个来源相乘）：specialFinal2，名字写「终伤(乘算)」——文案明确"与其它效果相乘/连乘"时才用。
+乘区黑话补充（**按文案措辞判，最容易错的是「伤害提升 / 伤害加成 / 倍率提升」三兄弟**）：
+- 特殊终伤（相加）：specialFinal1，名字写「X%倍率提升」——"具名招式 + 伤害倍率提升"就是它；
+  文案**不会**写"特殊终伤"四个字，别等这四个字。
+- 特殊终伤（乘算，多个来源相乘）：specialFinal2，名字写「X%倍率提升(乘算)」——文案明确"与其它效果相乘/连乘"时才用。
+- 额外倍率：extraRatio，名字写「X%额外倍率」——**只**用于「额外造成 / 追加一段伤害」（新增一击，值 ≈ 那一击的攻击倍率，常见 100–1700）；
+  按属性换算时名字写「额外倍率(属性)」。
+- 易伤：dmgTakenInc，名字写「X%易伤」——"具名招式 + 伤害提升"（**没有**"倍率"二字）、"目标受到的伤害提升"。
+- 加成：bonusDmg —— **含「加成」二字必定是加成**；带属性/类型的"伤害提升"多半也是加成，不要判成易伤。
+- 加深：deepenDmg（"造成的伤害加深 X%"）；终伤：finalDmg（"最终伤害提升 X%"）。
 - 同奏增益层数：unisonBoonLayer（层数类乘区，flat 按层数填，如 +2 层 → value=2），名字写「同奏2层」；引擎按层数折算同奏区（每层 +3% 伤害），不要同时把它拆成增伤类数值，可以配引用/转模。
 - 集谐干涉层数：tuneStrainLayer（层数类乘区，flat 按层数填），名字写「集谐2层」；引擎按「层数 × 该角色谐度破坏增幅 × 0.12%」折算集谐区。**只允许固定层数，不可配引用/转模，也不能作为引用目标** —— 它挂在目标/怪物身上、全队共用一份（不区分角色）。
 
@@ -381,9 +426,51 @@ export const EXAMPLES_TEXT = `—— 示例1（角色固有属性合并）——
 输入：{"skills":[{"name":"共鸣技能","desc":"施放共鸣技能时，自身造成的伤害提升10%，此效果与其它同类型效果相乘计算。"}]}
 输出：
 {"buffs":[
-  {"folder":"施放共鸣技能时，自身造成的伤害提升，此效果与其它同类型效果相乘计算","buffName":"终伤(乘算)10%","scope":"self","zones":[{"zoneId":"specialFinal2","value":10}]}
+  {"folder":"施放共鸣技能时，自身造成的伤害提升，此效果与其它同类型效果相乘计算","buffName":"特殊终伤(乘算)10%","scope":"self","zones":[{"zoneId":"specialFinal2","value":10}]}
 ]}
-说明：文案明确"与其它效果相乘/连乘"→ specialFinal2；普通相加语义的终伤用 specialFinal1。`
+说明：文案明确"与其它效果相乘/连乘"→ specialFinal2；普通相加语义的特殊终伤用 specialFinal1。
+
+—— 示例12（同一句「提升」，三种归属怎么分）——
+输入A：{"skills":[{"name":"共鸣技能","desc":"共鸣技能·破空斩的伤害倍率提升 50%"}]}
+输出A：{"buffs":[{"folder":"共鸣技能·破空斩的伤害倍率提升","buffName":"50%倍率提升","scope":"self","condition":{"rules":[{"kind":"damageNameRegex","pattern":"破空斩"}]},"zones":[{"zoneId":"specialFinal1","value":50}]}]}
+说明A：游戏里的「伤害倍率提升 X%」= 特殊终伤（**不是**额外倍率）；点名某个技能时用 damageNameRegex 限定。
+
+输入B：{"skills":[{"name":"共鸣技能","desc":"施放共鸣技能时，额外造成一次导电伤害，该伤害的倍率为 900% 攻击"}]}
+输出B：{"buffs":[{"folder":"施放共鸣技能时，额外造成一次导电伤害","buffName":"900%额外倍率","scope":"self","zones":[{"zoneId":"extraRatio","value":900}]}]}
+说明B："额外造成一次…伤害，倍率 900%" = 新增一段伤害 → 额外倍率；值就是那一击的攻击倍率 900（不走 ref、不要写成特殊终伤）。
+
+输入C：{"skills":[{"name":"共鸣技能","desc":"共鸣技能·破空斩的伤害倍率提升 20%，此效果与其它同类型效果相乘计算"}]}
+输出C：{"buffs":[{"folder":"共鸣技能·破空斩的伤害倍率提升，此效果与其它同类型效果相乘计算","buffName":"20%倍率提升(乘算)","scope":"self","condition":{"rules":[{"kind":"damageNameRegex","pattern":"破空斩"}]},"zones":[{"zoneId":"specialFinal2","value":20}]}]}
+说明C：明确"与其它效果相乘/连乘"→ 特殊终伤(乘算)；否则同 A 走 specialFinal1。
+
+—— 示例13（refOwner="active"：引用出伤者）——
+输入：{"skills":[{"name":"共鸣技能","desc":"根据造成伤害的角色当前攻击的 30% 额外造成伤害"}]}
+输出：
+{"buffs":[
+  {"folder":"根据造成伤害的角色当前攻击额外造成伤害","buffName":"额外倍率(攻击·出伤者)","scope":"team","zones":[{"zoneId":"extraRatio","value":0,"ref":{"targetZoneId":"totalAtk","pct":30,"refOwner":"active"}}]}
+]}
+说明："按造成伤害的角色"= 出伤者 → refOwner="active"（不是 self / owner）；不限定角色 → scope="team"。
+
+—— 示例14（条件：具名招式正则 + 敌人类型多选）——
+输入：{"skills":[{"name":"共鸣解放","desc":"共鸣解放·终曲造成的伤害倍率提升 20%，对 BOSS 与精英怪额外生效"}]}
+输出：
+{"buffs":[
+  {"folder":"共鸣解放·终曲造成的伤害倍率提升，对 BOSS 与精英怪额外生效","buffName":"20%倍率提升","scope":"self",
+   "condition":{"rules":[{"kind":"damageNameRegex","pattern":"共鸣解放·终曲"},{"kind":"enemyType","types":["BOSS","精英怪"]}]},
+   "zones":[{"zoneId":"specialFinal1","value":20}]}
+]}
+说明：具名招式 + "倍率提升" → specialFinal1；点名招式用 damageNameRegex（包含匹配），敌人多选用 enemyType.types；规则之间 AND、同类只能一条。
+
+—— 示例15（条件：链门槛 + 面板门槛）——
+输入：{"chains":[{"name":"共鸣链","desc":"第3链：暴击率高于 60% 时，共鸣解放伤害倍率提升 30%"}]}
+输出：
+{"buffs":[
+  {"folder":"第3链：暴击率高于 60% 时，共鸣解放伤害倍率提升","buffName":"30%倍率提升","scope":"self",
+   "condition":{"chains":[{"charIdx":0,"min":3}],"rules":[{"kind":"zoneCompare","charIdx":-1,"zone":"critRate","op":"ge","value":60}]},
+   "zones":[{"zoneId":"specialFinal1","value":30}]}
+]}
+说明：链门槛写 condition.chains；"暴击率高于 60%"是面板门槛 → rules 的 zoneCompare（charIdx=-1 = 出伤者，0 = 本角色）；
+      工坊里 charIdx 恒写 0，导入工具箱时按实体归属自动重指。`
 
 // ── 默认黑话词典（get_slang_dict 工具返回；每行：原叫法=黑话；行尾可用 // 注释）──
 export const DEFAULT_SLANG_DICT = `普攻=A
@@ -401,9 +488,10 @@ export const DEFAULT_SLANG_DICT = `普攻=A
 暴击伤害=暴伤
 共鸣技能伤害=共技伤
 共鸣解放伤害=共解伤
-额外倍率=额外倍率(攻击/生命/防御) // 括号里写引用属性
-特殊终伤(相加)=终伤
-特殊终伤(乘算)=终伤(乘算)
+额外倍率=额外倍率(攻击/生命/防御) // 只用于「额外造成 / 追加一段伤害」；括号里写引用属性
+倍率提升=倍率提升 // 游戏文案「伤害倍率提升 X%」→ specialFinal1，短名写 X%倍率提升
+倍率提升(乘算)=倍率提升(乘算) // 文案明确「与其它效果相乘/连乘」→ specialFinal2
+最终伤害提升=终伤 // 没有「倍率提升」也没有「特殊终伤」时用 finalDmg
 伤害提升(易伤)=易伤
 属性抗性无视=穿抗
 防御无视=穿防

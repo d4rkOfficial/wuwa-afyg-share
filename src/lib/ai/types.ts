@@ -35,7 +35,7 @@ export interface GeneratedBuff {
     folder?: string
     scope?: BuffScope
     exclusive?: boolean
-    /** @desc 实例级生效条件（链/阶硬门槛，链阶互斥） */
+    /** @desc 实例级生效条件（链/阶门槛 + rules 规则列表，规则之间全部 AND） */
     condition?: BuffCondition | null
     zones: GeneratedZone[]
 }

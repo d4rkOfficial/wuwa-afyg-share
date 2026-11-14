@@ -378,6 +378,8 @@ function sanitizeRef(ref: GeneratedZoneRef | undefined): GeneratedZoneRef | unde
     if (ref.discrete) clean.discrete = true
     if (Number.isFinite(ref.divisor)) clean.divisor = ref.divisor
     if (Number.isFinite(ref.multiplier)) clean.multiplier = ref.multiplier
-    if (ref.refOwner === 'self' || ref.refOwner === 'owner') clean.refOwner = ref.refOwner
+    if (ref.refOwner === 'self' || ref.refOwner === 'owner' || ref.refOwner === 'active') {
+        clean.refOwner = ref.refOwner
+    }
     return clean
 }

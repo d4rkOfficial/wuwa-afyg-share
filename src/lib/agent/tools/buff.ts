@@ -134,7 +134,7 @@ const ZONE_SCHEMA = {
                 discrete: { type: 'boolean' },
                 divisor: { type: 'number' },
                 multiplier: { type: 'number' },
-                refOwner: { type: 'string', enum: ['self', 'owner'] }
+                refOwner: { type: 'string', enum: ['self', 'owner', 'active'] }
             }
         }
     }
@@ -148,7 +148,11 @@ const BUFF_SCHEMA = {
         buffName: { type: 'string', description: '效果短名，如 `暴击率15%` / `暴击伤害(1阶)`' },
         scope: { type: 'string', enum: ['self', 'self_except', 'team', 'effect_only'] },
         exclusive: { type: 'boolean' },
-        condition: { type: 'object', description: '实例级条件（链/阶）：{"chains":[{"charIdx":0,"min":3}]}' },
+        condition: {
+            type: 'object',
+            description:
+                '实例级条件：链/阶 {"chains":[{"charIdx":0,"min":3}]}；规则列表 {"rules":[{"kind":"enemyType","types":["BOSS"]}]}（kind 取 chain/refinement/damageNameRegex/zoneCompare/enemyType，规则之间全部 AND、同一 kind 只能有一条；zoneCompare 的 charIdx 只有 0=本角色 / -1=出伤者）'
+        },
         zones: { type: 'array', items: ZONE_SCHEMA }
     }
 } as const

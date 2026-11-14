@@ -76,7 +76,7 @@ const ZONE_ITEM_SCHEMA = {
                 discrete: { type: 'boolean' },
                 divisor: { type: 'number' },
                 multiplier: { type: 'number' },
-                refOwner: { type: 'string', enum: ['self', 'owner'] }
+                refOwner: { type: 'string', enum: ['self', 'owner', 'active'] }
             }
         }
     }
@@ -216,12 +216,13 @@ const BASE_TOOLS: ToolDefinition[] = [
                                 condition: {
                                     type: 'object',
                                     description:
-                                        '实例级生效条件（可选）：{"chains":[{"charIdx":0,"min":3}]} 需该槽位角色共鸣链 ≥ min（min 取 0-6，0=本体）；{"refinements":[{"charIdx":0,"min":3}]} 需武器精炼 ≥ min（1-5）。链与阶互斥，只写其一。兼容旧写法 {"chain":3} / {"refinement":3}（等价 charIdx=0）',
+                                        '实例级生效条件（可选）：{"chains":[{"charIdx":0,"min":3}]} 需该槽位角色共鸣链 ≥ min（min 取 0-6，0=本体）；{"refinements":[{"charIdx":0,"min":3}]} 需武器精炼 ≥ min（1-5），链与阶可并存；{"rules":[...]} 规则列表（kind 取 chain/refinement/damageNameRegex/zoneCompare/enemyType，规则之间全部 AND、同一 kind 只能有一条；zoneCompare 的 charIdx 只有 0=本角色 / -1=出伤者）。兼容旧写法 {"chain":3} / {"refinement":3}（等价 charIdx=0）',
                                     properties: {
                                         chains: { type: 'array', items: { type: 'object' } },
                                         refinements: { type: 'array', items: { type: 'object' } },
                                         chain: { type: 'number', minimum: 0, maximum: 6 },
-                                        refinement: { type: 'number', minimum: 1, maximum: 5 }
+                                        refinement: { type: 'number', minimum: 1, maximum: 5 },
+                                        rules: { type: 'array', items: { type: 'object' } }
                                     }
                                 },
                                 zones: {
@@ -273,7 +274,7 @@ const BASE_TOOLS: ToolDefinition[] = [
         function: {
             name: 'get_condition_rules',
             description:
-                '获取 Buff 生效条件（condition）的取值与判定细则。条件分两层：Buff 实例级放链/阶硬门槛（chains/refinements，链阶互斥，元素为 [{charIdx,min}]）；乘区级（写在具体 zone 条目里）放伤害属性 elements / 伤害类型 damageTypes，且同一乘区可在不同条件下出现多条。当某增益确实存在共鸣链/精炼门槛或属性/类型限定时调用，确认字段结构后再写条件。',
+                '获取 Buff 生效条件（condition）的取值与判定细则。条件分两层：Buff 实例级放链/阶门槛（chains/refinements，可并存，元素为 [{charIdx,min}]）与规则列表 rules（kind 取 chain/refinement/damageNameRegex/zoneCompare/enemyType，规则之间全部 AND、同一 kind 只能有一条；zoneCompare 的 charIdx 只有 0=本角色 / -1=出伤者）；乘区级（写在具体 zone 条目里）放伤害属性 elements / 伤害类型 damageTypes，且同一乘区可在不同条件下出现多条。当某增益确实存在共鸣链/精炼门槛、面板门槛、敌人类型限定或属性/类型限定时调用，确认字段结构后再写条件。',
             parameters: { type: 'object', properties: {} }
         }
     },
@@ -343,7 +344,7 @@ const BASE_TOOLS: ToolDefinition[] = [
                     condition: {
                         type: 'object',
                         description:
-                            '可选：实例级生效条件；传 null 表示清除条件。{"chains":[{"charIdx":0,"min":3}]} / {"refinements":[{"charIdx":0,"min":3}]}（链阶互斥），兼容 {"chain":3} / {"refinement":3}',
+                            '可选：实例级生效条件；传 null 表示清除条件。{"chains":[{"charIdx":0,"min":3}]} / {"refinements":[{"charIdx":0,"min":3}]}（链阶可并存），{"rules":[...]} 规则列表（规则之间全部 AND），兼容 {"chain":3} / {"refinement":3}',
                         properties: {}
                     },
                     zones: {
@@ -1144,7 +1145,7 @@ function buildDiff(
 function sameBuff(existing: BuffSetRow, p: ProposedBuff): boolean {
     if (existing.scope !== p.scope) return false
     if (!!existing.exclusive !== !!p.exclusive) return false
-    // 条件比较：统一走 whitelist 清洗归一化（链/阶升级为数组形式、链阶互斥、乘区级只留类型·属性）
+    // 条件比较：统一走 whitelist 清洗归一化（链/阶升级为数组形式、链阶可并存、乘区级只留类型·属性）
     const normCond = (c: unknown): string => {
         const clean = sanitizeCondition(c, 'buff')
         if (!clean) return ''
@@ -1152,7 +1153,8 @@ function sameBuff(existing: BuffSetRow, p: ProposedBuff): boolean {
             chains: (clean.chains ?? []).map((x) => `${x.charIdx}:${x.min}`).sort(),
             refinements: (clean.refinements ?? []).map((x) => `${x.charIdx}:${x.min}`).sort(),
             elements: [...(clean.elements ?? [])].sort(),
-            damageTypes: [...(clean.damageTypes ?? [])].sort()
+            damageTypes: [...(clean.damageTypes ?? [])].sort(),
+            rules: (clean.rules ?? []).map((rule) => JSON.stringify(rule)).sort()
         })
     }
     if (normCond(existing.condition) !== normCond(p.condition)) return false
