@@ -1163,7 +1163,7 @@ function sameBuff(existing: BuffSetRow, p: ProposedBuff): boolean {
     if (eZones.length !== pZones.length) return false
     const key = (z: { zoneId?: string; value?: number; override?: boolean; condition?: unknown }) =>
         `${resolveBuffZoneId(String(z.zoneId ?? ''))}:${z.value}:${z.override ? 'o' : 'a'}:${
-            sanitizeZoneCondition(z.condition) ? JSON.stringify(sanitizeZoneCondition(z.condition)) : ''
+            sanitizeZoneCondition(z.condition, z.zoneId) ? JSON.stringify(sanitizeZoneCondition(z.condition, z.zoneId)) : ''
         }`
     const eKeys = [...eZones].map(key).sort().join('|')
     const pKeys = pZones.map(key).sort().join('|')

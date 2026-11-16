@@ -9,7 +9,6 @@ import { WkDropdown, WkIconButton, wkToast } from '@/design'
 import {
     BUFF_ENTITY_LABELS,
     BUFF_ZONE_MAP,
-    ZONE_NO_REF_IDS,
     ZONE_NO_OVERRIDE_IDS,
     BUFF_ZONE_SECTION_VIEWS,
     BUFF_REF_ZONE_MAP,
@@ -988,7 +987,6 @@ export default function BuffEntityEditor({
                                 ) : (
                                     activeZones.map((z, idx) => {
                                         const def = BUFF_ZONE_MAP.get(z.zoneId)
-                                        const noRef = ZONE_NO_REF_IDS.has(z.zoneId)
                                         const noOverride = ZONE_NO_OVERRIDE_IDS.has(z.zoneId)
                                         const badge = zoneConditionBadge(z.condition)
                                         return (
@@ -1021,7 +1019,7 @@ export default function BuffEntityEditor({
                                                             覆盖生效
                                                         </span>
                                                     )}
-                                                    {z.ref && !noRef ? (
+                                                    {z.ref ? (
                                                         (() => {
                                                             const refDef = BUFF_REF_ZONE_MAP.get(z.ref!.targetZoneId)
                                                             const th = Number(z.ref!.threshold ?? 0)
@@ -1078,7 +1076,7 @@ export default function BuffEntityEditor({
                                                             {z.override ? '覆盖' : '追加'}
                                                         </button>
                                                     )}
-                                                    {!noRef && (
+                                                    {true && (
                                                         <button
                                                             onClick={() => setRefTargetIdx(idx)}
                                                             className={`inline-flex h-6 shrink-0 items-center gap-1 whitespace-nowrap rounded-sm border px-1.5 text-[10px] leading-none transition-colors ${

@@ -18,7 +18,7 @@
  */
 
 import type { BuffCondition, BuffSetRow, BuffZoneRef, BuffZoneValue } from '@/lib/types/db'
-import { sanitizeCondition, resolveBuffZoneId, BUFF_ZONE_MAP, ZONE_NO_REF_IDS, ZONE_NO_OVERRIDE_IDS } from '@/lib/consts/buff-zones'
+import { sanitizeCondition, resolveBuffZoneId, BUFF_ZONE_MAP, ZONE_NO_OVERRIDE_IDS } from '@/lib/consts/buff-zones'
 
 export interface BuffSetMigrateResult {
     /** @desc 该行已是 v2，无需改动（幂等：对已是 v2 的行返回 already=true） */
@@ -53,12 +53,11 @@ const mergeZoneConditions = (a: BuffCondition, b: BuffCondition): BuffCondition 
 }
 
 /**
- * @desc 引用清洗：目标必须在引用白名单内，且该乘区允许引用。
+ * @desc 引用清洗：引用目标必须在引用来源白名单内。
  * pct 缺省按 0（离散转模只写 discrete + divisor + multiplier，本就不带 pct，
  * 旧校验要求 pct 必须是数字会把这类转模整条丢掉）。
  */
-function sanitizeRefV2(raw: unknown, zoneId: string): BuffZoneRef | undefined {
-    if (ZONE_NO_REF_IDS.has(zoneId)) return undefined
+function sanitizeRefV2(raw: unknown): BuffZoneRef | undefined {
     const r = asRecord(raw)
     const targetZoneId = typeof r.targetZoneId === 'string' ? r.targetZoneId : ''
     if (!targetZoneId) return undefined
@@ -96,13 +95,9 @@ export function upgradeBuffSetRowV2(input: BuffSetRow): BuffSetMigrateResult {
         if (!BUFF_ZONE_MAP.has(zoneId)) continue
         if (zoneId !== rawZoneId) changes.add('buff_set[].zoneId(旧 id 重映射)')
 
-        const ref = sanitizeRefV2(entry.ref, zoneId)
+        const ref = sanitizeRefV2(entry.ref)
         if (entry.ref && !ref) {
-            changes.add(
-                ZONE_NO_REF_IDS.has(zoneId)
-                    ? 'buff_set[].ref(层数类乘区不支持引用)'
-                    : 'buff_set[].ref(非法引用已剔除)'
-            )
+            changes.add('buff_set[].ref(非法引用已剔除)')
         }
 
         let override = entry.override === true

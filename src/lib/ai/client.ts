@@ -5,7 +5,6 @@
 import type { GeneratedBuff, GeneratedZone, GeneratedZoneRef } from '@/lib/ai/types'
 import {
     BUFF_ZONE_MAP,
-    ZONE_NO_REF_IDS,
     ZONE_NO_OVERRIDE_IDS,
     BUFF_REF_ZONE_MAP,
     BUFF_SCOPES,
@@ -329,10 +328,9 @@ function sanitizeZones(zones: GeneratedBuff['zones'] | undefined): GeneratedZone
         // 缺 value 时按 0 处理（转模条目 value 本来就是 0；与服务端 buff-sets.ts 一致，
         // 不能因为模型漏写 value 就把整条乘区（连同 ref）丢掉）
         const value = Number.isFinite(z.value) ? (z.value as number) : 0
-        // 层数类乘区（集谐干涉/同奏增益等）只填固定层数，丢弃模型误输出的引用
-        const ref = !ZONE_NO_REF_IDS.has(zoneId) && sanitizeRef(z.ref) ? sanitizeRef(z.ref) : undefined
+        const ref = sanitizeRef(z.ref)
         const override = !!z.override && !ref && !ZONE_NO_OVERRIDE_IDS.has(zoneId)
-        const condition = sanitizeZoneCondition(z.condition)
+        const condition = sanitizeZoneCondition(z.condition, zoneId)
         const key = `${zoneId}|${override ? 'o' : 'a'}|${condition ? JSON.stringify(condition) : ''}`
         if (seen.has(key)) continue
         seen.add(key)

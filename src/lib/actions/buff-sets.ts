@@ -6,7 +6,6 @@ import { authorizeBuffEntityEdit } from '@/lib/edit-locks'
 import {
     BUFF_ENTITY_TYPES,
     BUFF_ZONE_MAP,
-    ZONE_NO_REF_IDS,
     ZONE_NO_OVERRIDE_IDS,
     BUFF_REF_ZONE_MAP,
     BUFF_SCOPES,
@@ -109,11 +108,10 @@ function sanitizeZones(zones: unknown): ZoneInput[] {
         if (!BUFF_ZONE_MAP.has(zoneId)) continue
         const value = typeof z?.value === 'number' && Number.isFinite(z.value) ? z.value : 0
         const override = !!z?.override && !ZONE_NO_OVERRIDE_IDS.has(zoneId)
-        // 层数类乘区（集谐干涉/同奏增益等）只填固定层数，不保留引用
-        const ref = ZONE_NO_REF_IDS.has(zoneId) ? undefined : sanitizeRef(z?.ref)
+        const ref = sanitizeRef(z?.ref)
         // 带引用的条目覆盖标记由引用接管（与工具箱一致：设引用即清覆盖）
         const finalOverride = ref ? false : override
-        const condition = sanitizeZoneCondition(z?.condition)
+        const condition = sanitizeZoneCondition(z?.condition, zoneId)
         const dedupeKey = `${zoneId}|${finalOverride ? 'o' : 'a'}|${condition ? JSON.stringify(condition) : ''}`
         if (seen.has(dedupeKey)) continue
         seen.add(dedupeKey)

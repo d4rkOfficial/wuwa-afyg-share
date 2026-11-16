@@ -12,47 +12,58 @@ export interface BuffZoneDef {
     id: string
     label: string
     unit: '%' | 'flat'
+    /**
+     * @desc 能否挂「伤害匹配」条件（伤害属性 / 伤害类型）。
+     *
+     * 热熔加成 / 热熔暴击率成立；热熔共鸣效率 / 热熔集谐层数 / 热熔同奏层数不成立。
+     * 与 wuwa-afyg-tool 的 `BUFF_ACTIONS[].damageMatchable` 逐项一致。
+     */
+    damageMatchable: boolean
 }
 
 // 与 wuwa-afyg-tool 的 ZONE_DEFS 保持一致，作为 Buff 集 zoneId 白名单。
 // 编辑器下拉、展示均以此为准，避免脏数据写入。
 export const BUFF_ZONES: BuffZoneDef[] = [
-    { id: 'atkFlat', label: '攻击固定值', unit: 'flat' },
-    { id: 'hpFlat', label: '生命固定值', unit: 'flat' },
-    { id: 'defFlat', label: '防御固定值', unit: 'flat' },
-    { id: 'tuneBreakBoost', label: '谐度破坏增幅', unit: 'flat' },
+    { id: 'atkFlat', label: '攻击固定值', unit: 'flat', damageMatchable: false },
+    { id: 'hpFlat', label: '生命固定值', unit: 'flat', damageMatchable: false },
+    { id: 'defFlat', label: '防御固定值', unit: 'flat', damageMatchable: false },
+    { id: 'tuneBreakBoost', label: '谐度破坏增幅', unit: 'flat', damageMatchable: false },
 
-    { id: 'atkPct', label: '攻击百分比', unit: '%' },
-    { id: 'hpPct', label: '生命百分比', unit: '%' },
-    { id: 'defPct', label: '防御百分比', unit: '%' },
-    { id: 'recharge', label: '共鸣效率', unit: '%' },
-    { id: 'offTuneBuildupRate', label: '偏谐值累积效率', unit: '%' },
+    { id: 'atkPct', label: '攻击百分比', unit: '%', damageMatchable: false },
+    { id: 'hpPct', label: '生命百分比', unit: '%', damageMatchable: false },
+    { id: 'defPct', label: '防御百分比', unit: '%', damageMatchable: false },
+    { id: 'recharge', label: '共鸣效率', unit: '%', damageMatchable: false },
+    { id: 'offTuneBuildupRate', label: '偏谐值累积效率', unit: '%', damageMatchable: false },
 
-    { id: 'critRate', label: '暴击率', unit: '%' },
-    { id: 'critDmg', label: '暴击伤害', unit: '%' },
+    { id: 'critRate', label: '暴击率', unit: '%', damageMatchable: true },
+    { id: 'critDmg', label: '暴击伤害', unit: '%', damageMatchable: true },
 
-    { id: 'bonusDmg', label: '加成(增伤区)', unit: '%' },
-    { id: 'deepenDmg', label: '加深(加深区)', unit: '%' },
-    { id: 'dmgTakenInc', label: '伤害提升(易伤区)', unit: '%' },
-    { id: 'finalDmg', label: '最终伤害(终伤区)', unit: '%' },
+    { id: 'bonusDmg', label: '加成(增伤区)', unit: '%', damageMatchable: true },
+    { id: 'deepenDmg', label: '加深(加深区)', unit: '%', damageMatchable: true },
+    { id: 'dmgTakenInc', label: '伤害提升(易伤区)', unit: '%', damageMatchable: true },
+    { id: 'finalDmg', label: '最终伤害(终伤区)', unit: '%', damageMatchable: true },
 
-    { id: 'specialFinal1', label: '特殊终伤(1)', unit: '%' },
-    { id: 'specialFinal2', label: '特殊终伤(2)', unit: '%' },
+    { id: 'specialFinal1', label: '特殊终伤(1)', unit: '%', damageMatchable: true },
+    { id: 'specialFinal2', label: '特殊终伤(2)', unit: '%', damageMatchable: true },
 
-    { id: 'extraRatio', label: '额外倍率', unit: '%' },
+    { id: 'extraRatio', label: '额外倍率', unit: '%', damageMatchable: true },
 
-    { id: 'defDown', label: '防御降低(减防)', unit: '%' },
-    { id: 'resDown', label: '抗性降低(减抗)', unit: '%' },
+    { id: 'defDown', label: '防御降低(减防)', unit: '%', damageMatchable: true },
+    { id: 'resDown', label: '抗性降低(减抗)', unit: '%', damageMatchable: true },
 
-    { id: 'resPen', label: '属性抗性无视(穿抗)', unit: '%' },
-    { id: 'defPen', label: '防御无视(穿防)', unit: '%' },
-    { id: 'dmgRedPen', label: '免伤无视(穿免)', unit: '%' },
+    { id: 'resPen', label: '属性抗性无视(穿抗)', unit: '%', damageMatchable: true },
+    { id: 'defPen', label: '防御无视(穿防)', unit: '%', damageMatchable: true },
+    { id: 'dmgRedPen', label: '免伤无视(穿免)', unit: '%', damageMatchable: true },
 
-    { id: 'tuneStrainLayer', label: '集谐干涉层数', unit: 'flat' },
-    { id: 'unisonBoonLayer', label: '同奏增益层数', unit: 'flat' }
+    { id: 'tuneStrainLayer', label: '集谐干涉层数', unit: 'flat', damageMatchable: false },
+    { id: 'unisonBoonLayer', label: '同奏增益层数', unit: 'flat', damageMatchable: false }
 ]
 
 export const BUFF_ZONE_MAP = new Map(BUFF_ZONES.map((z) => [z.id, z]))
+
+/** @desc 该作用能否挂「伤害匹配」条件（与工具箱 `actionAllowsCondition` 同口径） */
+export const actionAllowsCondition = (zoneId: string): boolean =>
+    BUFF_ZONE_MAP.get(zoneId)?.damageMatchable === true
 
 // ── 乘区分区（与 wuwa-afyg-tool 的 ZONE_SECTIONS 一致：编辑器按此分区展示）──
 export const BUFF_ZONE_SECTIONS: Array<{ title: string; ids: string[] }> = [
@@ -91,13 +102,7 @@ export const resolveBuffZoneId = (id: string): string => LEGACY_BUFF_ZONE_IDS[id
 /** @desc 覆盖（override）白名单外的乘区：与工具箱一致，百分比类与额外倍率不支持覆盖 */
 export const ZONE_NO_OVERRIDE_IDS = new Set<string>(['atkPct', 'hpPct', 'defPct', 'extraRatio'])
 
-/**
- * @desc 不支持 ref 引用/转模的乘区（对齐 wuwa-afyg-tool 的 ZONE_NO_REF_IDS）。
- *
- * 目前**只有集谐干涉层数**在名单里：它只允许直接填固定层数。同奏增益层数可以引用；
- * 新增乘区默认即可引用。
- */
-export const ZONE_NO_REF_IDS = new Set<string>(['tuneStrainLayer'])
+/** @desc 所有作用都允许引用（转模）：工具箱放开目标侧引用后，集谐干涉层数也可被引用。 */
 
 export const BUFF_ENTITY_TYPES = ['character', 'weapon', 'echo', '1set', '2set', '3set', '4set', '5set'] as const
 
@@ -112,9 +117,8 @@ export const BUFF_ENTITY_LABELS: Record<BuffEntityType, string> = {
     '5set': '套装 5件'
 }
 
-// 引用乘区白名单（对齐 wuwa-afyg-tool 的 ZONE_REF_DEFS）
-// 最后一项是**按角色独立**的层数来源：读被引用角色自己累计的同奏增益层数。
-// 集谐干涉层数挂在目标身上、不属于角色，故不在列。
+// 引用来源清单（对齐 wuwa-afyg-tool 的 ZONE_REF_DEFS）
+// 同奏增益层数是**按角色独立**的层数来源；集谐干涉层数挂在目标面板上（全队一份），同样可引用。
 export const BUFF_REF_ZONES: Array<{ id: string; label: string; unit: '%' | 'flat' }> = [
     { id: 'baseAtk', label: '攻击白值', unit: 'flat' },
     { id: 'totalAtk', label: '当前攻击', unit: 'flat' },
@@ -127,7 +131,8 @@ export const BUFF_REF_ZONES: Array<{ id: string; label: string; unit: '%' | 'fla
     { id: 'offTuneBuildupRate', label: '偏谐值累积效率', unit: '%' },
     { id: 'critRate', label: '暴击率', unit: '%' },
     { id: 'critDmg', label: '暴击伤害', unit: '%' },
-    { id: 'unisonBoonLayer', label: '同奏增益层数', unit: 'flat' }
+    { id: 'unisonBoonLayer', label: '同奏增益层数', unit: 'flat' },
+    { id: 'tuneStrainLayer', label: '集谐干涉层数', unit: 'flat' }
 ]
 
 export const BUFF_REF_ZONE_MAP = new Map(BUFF_REF_ZONES.map((z) => [z.id, z]))
@@ -342,6 +347,7 @@ export const BUFF_DAMAGE_TYPES = [
     '延奏技能伤害',
     '协同攻击伤害',
     '效应伤害',
+    '处决',
     '其它类型伤害'
 ] as const
 
@@ -356,6 +362,7 @@ export const BUFF_DAMAGE_TYPE_SHORT: Record<string, string> = {
     延奏技能伤害: '延奏',
     协同攻击伤害: '协同',
     效应伤害: '效应',
+    处决: '处决',
     其它类型伤害: '其它'
 }
 
@@ -463,8 +470,14 @@ export function sanitizeCondition(cond: unknown, scope: BuffConditionScope = 'bu
     return isConditionEmpty(scoped) ? undefined : scoped
 }
 
-/** @desc 清洗乘区级条件：只保留伤害类型 / 伤害属性 */
-export function sanitizeZoneCondition(cond: unknown): BuffCondition | undefined {
+/**
+ * @desc 清洗乘区级条件：只保留伤害类型 / 伤害属性。
+ *
+ * 传入 `zoneId` 时再校验该作用**能否挂条件** —— 不可挂的作用（共鸣效率 / 层数 / 面板属性）
+ * 一律返回 undefined，库里不会存出「热熔共鸣效率」这类组合。
+ */
+export function sanitizeZoneCondition(cond: unknown, zoneId?: string): BuffCondition | undefined {
+    if (zoneId !== undefined && !actionAllowsCondition(zoneId)) return undefined
     return sanitizeCondition(cond, 'zone')
 }
 
