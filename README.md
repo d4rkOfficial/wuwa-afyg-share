@@ -42,15 +42,20 @@
 
 ## 启动器下载页
 
-首页刊头按钮 → `/launcher` 落地页：版本 / 特性、`.exe` 与 `.msi` 两个下载卡片、三步上手说明、
-以及插件 SDK 的 `git clone` 指引。两个入口路径不变，但实际都返回 zip（内含对应启动器文件 +
-`free-models.js` 免费模型插件产物），由 `/download` / `/download/msi` Route Handler 从
-`public/downloads/` 取压缩包、以附件形式返回。
+首页刊头按钮 → `/launcher` 落地页：特性、Windows / macOS / Linux 下载卡片、三步上手说明、
+以及插件 SDK 的 `git clone` 指引。
 
-换新构建时用新文件重新压缩覆盖 zip（文件名不要改，路由按名字取），并同步落地页的 `LAUNCHER_VERSION`：
+**安装包全部指向 [coconut-app Releases](https://github.com/d4rkOfficial/coconut-app/releases/latest)**：
+由 coconut-app 的 GitHub Actions 构建三平台产物并以固定文件名发布，本站不再托管安装包。
+`/download` 与 `/download/msi` 两个旧路径保留为 302 重定向，兼容历史链接。
 
-- `public/downloads/椰果工具箱启动器-exe.zip`（`coconut-app.exe` + `free-models.js`）← `coconut-app/dist/coconut-app.exe` + `coconut-app-plugin-sdk/dist/free-models.js`
-- `public/downloads/椰果工具箱启动器-msi.zip`（`椰果工具箱_<版本>_x64_zh-CN.msi` + `free-models.js`）← MSI 构建产物 + `coconut-app-plugin-sdk/dist/free-models.js`
+| 发布资产 | 平台 |
+| --- | --- |
+| `coconut-app-windows-x64.exe` / `coconut-app-windows-x64.msi` | Windows x64 |
+| `coconut-app-macos-aarch64.dmg` / `coconut-app-macos-x64.dmg` | macOS |
+| `coconut-app-linux-x64.deb` / `coconut-app-linux-x64.AppImage` | Linux x64 |
+
+更新安装包只需给 coconut-app 打 `v*` tag 触发 release-app.yml；本站无需改动，落地页版本始终以 Release 页面为准。
 
 ## 与椰果工具箱的联动
 

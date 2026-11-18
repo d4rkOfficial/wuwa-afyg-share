@@ -1,14 +1,11 @@
-import { respondWithLauncher } from '@/lib/download/launcher'
+import { NextResponse } from 'next/server'
 
-// 路径保持 /download/msi；实际返回 zip（内含 msi + 免费模型插件）
+// 兼容旧链接：/download/msi 统一跳转到 coconut-app Release 的 Windows 安装包。
 export const dynamic = 'force-dynamic'
 
-const FILE = {
-    fileName: '椰果工具箱启动器-msi.zip',
-    asciiName: 'ye-guo-toolbox-launcher-msi.zip',
-    missingHint: '安装包压缩文件缺失，请稍后重试。'
-}
+const RELEASE_MSI =
+    'https://github.com/d4rkOfficial/coconut-app/releases/latest/download/coconut-app-windows-x64.msi'
 
-export async function GET(request: Request) {
-    return respondWithLauncher(request, FILE)
+export function GET() {
+    return NextResponse.redirect(RELEASE_MSI, 302)
 }

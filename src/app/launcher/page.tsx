@@ -8,7 +8,7 @@ export const metadata: Metadata = {
     description: '下载椰果工具箱启动器：断网可用的本地工具箱，支持插件扩展。附插件开发 SDK 的上手方式。'
 }
 
-const LAUNCHER_VERSION = 'v0.3.0'
+const RELEASE_LATEST = 'https://github.com/d4rkOfficial/coconut-app/releases/latest'
 const SDK_REPO = 'https://github.com/d4rkOfficial/coconut-app-plugin-sdk'
 const CLONE_CMD = `git clone ${SDK_REPO}.git`
 const DEV_CMD = 'cd coconut-app-plugin-sdk && deno task dev <插件id>'
@@ -18,7 +18,7 @@ const FEATURES = ['断网可用', '随时拉表排轴', '支持插件扩展']
 const STEPS = [
     {
         title: '下载并运行',
-        text: '优先用 .exe 便携版；被 SmartScreen 拦下时点「更多信息 → 仍要运行」，或改用 .msi。'
+        text: '按系统选择安装包：Windows 用 .exe / .msi，macOS 用 .dmg，Linux 用 .deb / .AppImage。均以 GitHub Release 为准。'
     },
     {
         title: '启动工具箱',
@@ -44,8 +44,10 @@ export default function LauncherPage() {
                     {/* 刊头 */}
                     <header style={{ display: 'grid', gap: 12, paddingBottom: 24, borderBottom: '1px solid var(--wk-line)' }}>
                         <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 8 }}>
-                            <WkBadge>{LAUNCHER_VERSION}</WkBadge>
-                            <WkBadge>Windows 10 / 11</WkBadge>
+                            <a href={RELEASE_LATEST} target="_blank" rel="noreferrer" className="wk-clear">
+                                <WkBadge>最新版本见 Release</WkBadge>
+                            </a>
+                            <WkBadge>Windows / macOS / Linux</WkBadge>
                         </div>
                         <h1 style={{ fontSize: 'var(--wk-t-display)' }}>椰果工具箱启动器</h1>
                         <p style={{ maxWidth: 680, lineHeight: 1.75, color: 'var(--wk-fg-2)' }}>
@@ -158,8 +160,8 @@ export default function LauncherPage() {
                         <p style={{ fontWeight: 600 }}>安装前须知</p>
                         <ul style={{ margin: '8px 0 0', paddingLeft: 18, display: 'grid', gap: 4 }} className="wk-meta">
                             <li>启动器与工具箱都在本机运行，绝不泄露用户隐私。</li>
-                            <li>首次运行可能被 Windows SmartScreen 提示，这是未签名程序的正常行为。</li>
-                            <li>只从本站或项目仓库下载，别用来路不明的「整合包」。</li>
+                            <li>安装包全部来自 coconut-app 的 GitHub Actions 自动构建 Release，本站只做引导。</li>
+                            <li>未签名程序首次运行会被系统拦截（SmartScreen / Gatekeeper），属正常现象；只从官方 Release 下载。</li>
                         </ul>
                     </section>
                 </div>

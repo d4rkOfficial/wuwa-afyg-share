@@ -1,14 +1,12 @@
-import { respondWithLauncher } from '@/lib/download/launcher'
+import { NextResponse } from 'next/server'
 
-// 路径保持 /download；实际返回 zip（内含 exe + 免费模型插件）
+// 兼容旧链接：/download 统一跳转到 coconut-app Release 的 Windows 便携版。
+// 安装包不再放本站 public/downloads，全部由 coconut-app 的 GitHub Actions 构建并发布。
 export const dynamic = 'force-dynamic'
 
-const FILE = {
-    fileName: '椰果工具箱启动器-exe.zip',
-    asciiName: 'ye-guo-toolbox-launcher-exe.zip',
-    missingHint: '启动器压缩包缺失，请稍后重试。'
-}
+const RELEASE_EXE =
+    'https://github.com/d4rkOfficial/coconut-app/releases/latest/download/coconut-app-windows-x64.exe'
 
-export async function GET(request: Request) {
-    return respondWithLauncher(request, FILE)
+export function GET() {
+    return NextResponse.redirect(RELEASE_EXE, 302)
 }
