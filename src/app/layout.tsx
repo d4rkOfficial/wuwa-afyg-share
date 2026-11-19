@@ -1,6 +1,7 @@
 import type { Metadata } from 'next'
 import './globals.css'
 import WkTopbar from '@/components/wk/topbar'
+import WkDotField from '@/components/wk/dot-field'
 import { WkToaster } from '@/design'
 import { themeInitScript } from '@/lib/theme'
 
@@ -25,6 +26,7 @@ export default function RootLayout({
                 <script dangerouslySetInnerHTML={{ __html: themeInitScript }} />
             </head>
             <body className="flex min-h-dvh flex-col">
+                <WkDotField />
                 <WkTopbar />
                 <main className="flex-1">{children}</main>
                 {/* 页脚只留一行文字：编辑锁已搬到顶栏（原先在这里，被 fixed 外壳盖住） */}

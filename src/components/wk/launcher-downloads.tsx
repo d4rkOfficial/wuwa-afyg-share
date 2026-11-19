@@ -3,9 +3,17 @@
 // 启动器下载卡片：安装包统一从 coconut-app 的 GitHub Release 拉取（三平台）。
 // SSR 先按「支持」渲染，挂载后按真实系统纠正，避免水合不一致。
 import { useEffect, useState } from 'react'
+import { Icon } from '@iconify/react'
 import { WkBadge } from '@/design'
 
 const RELEASE_LATEST = 'https://github.com/d4rkOfficial/coconut-app/releases/latest'
+
+/** 卡片右侧的平台水印图标（放大 + 混合模式，见 wk.css 的 .wk-dl-art） */
+const PLATFORM_ICONS: Record<string, string> = {
+    windows: 'mdi:microsoft-windows',
+    macos: 'mdi:apple',
+    linux: 'mdi:linux'
+}
 
 /** 发布资产用固定 ASCII 名，由 coconut-app 的 release-app.yml 上传。 */
 const FILES = [
@@ -112,16 +120,22 @@ export default function LauncherDownloads() {
                         <a
                             key={file.key}
                             href={file.href}
-                            className="wk-card wk-card-pad"
+                            className="wk-card wk-card-pad wk-dl-card"
                             style={{
                                 display: 'block',
                                 color: 'var(--wk-fg)',
                                 textDecoration: 'none'
                             }}
                         >
-                            {body}
-                            <span className="wk-clear" style={{ display: 'inline-block', marginTop: 10 }}>
-                                从 GitHub Release 下载
+                            {/* 右侧放大平台图标：纸 = 正片叠底，墨夜 = 滤色（见 .wk-dl-art） */}
+                            <span className="wk-dl-art" aria-hidden="true">
+                                <Icon icon={PLATFORM_ICONS[file.platforms[0]]} />
+                            </span>
+                            <span className="wk-dl-card-body">
+                                {body}
+                                <span className="wk-clear" style={{ display: 'inline-block', marginTop: 10 }}>
+                                    从 GitHub Release 下载
+                                </span>
                             </span>
                         </a>
                     )

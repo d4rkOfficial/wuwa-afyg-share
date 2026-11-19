@@ -8,12 +8,15 @@ export const metadata: Metadata = {
     description: '下载椰果工具箱启动器：断网可用的本地工具箱，支持插件扩展。附插件开发 SDK 的上手方式。'
 }
 
-const RELEASE_LATEST = 'https://github.com/d4rkOfficial/coconut-app/releases/latest'
 const SDK_REPO = 'https://github.com/d4rkOfficial/coconut-app-plugin-sdk'
 const CLONE_CMD = `git clone ${SDK_REPO}.git`
 const DEV_CMD = 'cd coconut-app-plugin-sdk && deno task dev <插件id>'
 
-const FEATURES = ['断网可用', '随时拉表排轴', '支持插件扩展']
+// 启动器落地页截图：先用占位图，换成实拍后只替换同名文件即可。
+const SCREENSHOTS = [
+    { src: '/launcher/screenshot-day.png', caption: '启动器落地页截图（日间模式）' },
+    { src: '/launcher/screenshot-night.png', caption: '启动器落地页截图（夜间模式）' }
+]
 
 const STEPS = [
     {
@@ -43,23 +46,44 @@ export default function LauncherPage() {
                 <div style={{ display: 'grid', gap: 40, maxWidth: 860 }}>
                     {/* 刊头 */}
                     <header style={{ display: 'grid', gap: 12, paddingBottom: 24, borderBottom: '1px solid var(--wk-line)' }}>
-                        <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 8 }}>
-                            <a href={RELEASE_LATEST} target="_blank" rel="noreferrer" className="wk-clear">
-                                <WkBadge>最新版本见 Release</WkBadge>
-                            </a>
-                            <WkBadge>Windows / macOS / Linux</WkBadge>
-                        </div>
                         <h1 style={{ fontSize: 'var(--wk-t-display)' }}>椰果工具箱启动器</h1>
                         <p style={{ maxWidth: 680, lineHeight: 1.75, color: 'var(--wk-fg-2)' }}>
-                            把《鸣潮》的拉表排轴工具箱装到本机：本地运行、断网可用、支持插件扩展。
-                            下载后双击即可启动，不需要额外安装 Node、Python 之类的环境。
+                            断网使用椰果工具箱、支持自定义插件。
                         </p>
-                        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
-                            {FEATURES.map((feature) => (
-                                <WkBadge key={feature}>{feature}</WkBadge>
+                    </header>
+
+                    {/* 启动器截图 */}
+                    <section style={{ display: 'grid', gap: 12 }}>
+                        <div
+                            style={{
+                                display: 'grid',
+                                gap: 20,
+                                gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))',
+                                alignItems: 'start'
+                            }}
+                        >
+                            {SCREENSHOTS.map((shot) => (
+                                <figure key={shot.src} style={{ display: 'grid', gap: 10, margin: 0 }}>
+                                    {/* eslint-disable-next-line @next/next/no-img-element -- 静态截图，直接用原生 img 以避开 Workers 上的图片优化 */}
+                                    <img
+                                        src={shot.src}
+                                        alt={shot.caption}
+                                        loading="lazy"
+                                        style={{
+                                            display: 'block',
+                                            width: '100%',
+                                            height: 'auto',
+                                            // 圆角已烘进 PNG，阴影跟着 alpha 走，缩放也不会露出直角
+                                            filter: 'drop-shadow(0 6px 18px rgba(0, 0, 0, 0.28))'
+                                        }}
+                                    />
+                                    <figcaption className="wk-meta" style={{ textAlign: 'center' }}>
+                                        {shot.caption}
+                                    </figcaption>
+                                </figure>
                             ))}
                         </div>
-                    </header>
+                    </section>
 
                     <LauncherDownloads />
 

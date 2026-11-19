@@ -33,6 +33,66 @@ body {
     letter-spacing: 0.01em;
     line-height: 1.7;
     -webkit-font-smoothing: antialiased;
+    /* 让 body 自成一个层叠上下文：下面的点阵用 z-index:-1 挂在它身上，
+       就能画在 body 底色之上、正文之下（否则负层会被 body 底色盖住）。 */
+    isolation: isolate;
+}
+
+/* ──────────────────────────────────────────────────────────────
+   全站点阵底（学工具箱落地页）：整屏点阵 + 越靠屏幕下缘越清楚 +
+   鼠标附近提亮一小块。卡片 / 顶栏 / 页脚都是不透明表面，会把点阵盖回去。
+   光标坐标 --wk-dot-x / --wk-dot-y 由 components/wk/dot-field.tsx 写入。
+   ────────────────────────────────────────────────────────────── */
+body::before,
+body::after {
+    content: '';
+    position: fixed;
+    inset: 0;
+    z-index: -1;
+    pointer-events: none;
+    background-image: radial-gradient(circle, var(--wk-dot) 1.15px, transparent 1.25px);
+    background-size: 17px 17px;
+}
+
+/* 底图：顶部压得很淡，越往下越实，屏幕下缘最明显 */
+body::before {
+    -webkit-mask-image: linear-gradient(
+        to bottom,
+        rgba(0, 0, 0, 0.14) 0%,
+        rgba(0, 0, 0, 0.28) 42%,
+        rgba(0, 0, 0, 0.6) 76%,
+        #000 100%
+    );
+    mask-image: linear-gradient(
+        to bottom,
+        rgba(0, 0, 0, 0.14) 0%,
+        rgba(0, 0, 0, 0.28) 42%,
+        rgba(0, 0, 0, 0.6) 76%,
+        #000 100%
+    );
+}
+
+/* 聚光灯：跟着光标走的一块，把附近的点阵提亮一档；指针离开窗口就淡掉 */
+body::after {
+    opacity: 0;
+    transition: opacity 0.3s ease;
+    background-image: radial-gradient(circle, var(--wk-dot-spot) 1.3px, transparent 1.4px);
+    -webkit-mask-image: radial-gradient(
+        circle 200px at var(--wk-dot-x, -600px) var(--wk-dot-y, -600px),
+        #000 0%,
+        rgba(0, 0, 0, 0.62) 44%,
+        transparent 78%
+    );
+    mask-image: radial-gradient(
+        circle 200px at var(--wk-dot-x, -600px) var(--wk-dot-y, -600px),
+        #000 0%,
+        rgba(0, 0, 0, 0.62) 44%,
+        transparent 78%
+    );
+}
+
+html[data-dot-spotlight] body::after {
+    opacity: 1;
 }
 
 @layer base {

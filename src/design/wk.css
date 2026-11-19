@@ -45,6 +45,15 @@
 
     --wk-focus: #c95762;   /* 墨夜：与 --wk-accent 同值，焦点环即品牌色 */
 
+    /* 全站点阵底的点色（基调来自工具箱落地页：暖白点 / 暖棕点） */
+    --wk-dot: rgba(216, 184, 146, 0.22);
+    /* 光标附近聚光灯用的点色：比底图亮一档，悬停时点阵才「跳出来」 */
+    --wk-dot-spot: rgba(240, 218, 184, 0.62);
+
+    /* 启动器下载卡片右下的平台水印图标：墨夜底用「滤色」才不会糊成黑块 */
+    --wk-art-fg: rgba(240, 226, 205, 0.13);
+    --wk-art-blend: screen;
+
     --wk-scrim: rgba(6, 5, 4, 0.7);
     /* 投影一律「硬」的：模糊半径恒为 0，只用 1–6px 的硬偏移叠出厚度。
        小于 4px 的偏移在深色底上几乎看不见，所以墨夜靠「内阴影高光 + 硬偏移」共同拉出层次。 */
@@ -123,6 +132,14 @@ html.light {
 
     --wk-focus: #a8454f;   /* 纸：与 --wk-accent 同值 */
 
+    /* 纸上用暖棕点，压在奶黄底上不刺眼 */
+    --wk-dot: rgba(157, 123, 82, 0.34);
+    --wk-dot-spot: rgba(120, 86, 48, 0.6);
+
+    /* 纸：暖棕水印 + 正片叠底 */
+    --wk-art-fg: rgba(120, 96, 66, 0.34);
+    --wk-art-blend: multiply;
+
     --wk-scrim: rgba(52, 46, 40, 0.42);
     /* 同上：模糊半径恒为 0。纸上用暖墨色硬阴影，像压了一层纸 */
     --wk-elev-1: 0 1px 0 rgba(35, 33, 30, 0.17), 0 2px 0 rgba(35, 33, 30, 0.06);
@@ -149,7 +166,9 @@ html.light {
 
 /* ── 页面壳 ─────────────────────────────────────────────────────────────── */
 .wk-page {
-    background: var(--wk-bg);
+    /* 不再自铺底色：底色交给 html/body，全站点阵（globals.css 里的 body::before/::after）
+       才能从页面壳底下透出来。颜色同源，视觉上没有差别。 */
+    background: transparent;
 }
 
 .wk-container {
@@ -646,6 +665,40 @@ html.light {
 
 .wk-card-pad { padding: var(--wk-pad); }
 
+/* ── 启动器下载卡片：右侧放大的平台图标（水印式叠加）────────────────────
+   图标走 mix-blend-mode：纸 = 正片叠底、墨夜 = 滤色，两边都是「淡淡一层」，
+   不会把卡面文字压暗。卡片自身 isolation:isolate，混合只作用在卡内。 */
+.wk-dl-card {
+    position: relative;
+    isolation: isolate;
+}
+
+.wk-dl-card-body {
+    position: relative;
+    z-index: 1;
+    display: block;
+}
+
+.wk-dl-art {
+    position: absolute;
+    right: -16px;
+    bottom: -22px;
+    z-index: 0;
+    display: block;
+    font-size: 116px;
+    line-height: 1;
+    color: var(--wk-art-fg);
+    mix-blend-mode: var(--wk-art-blend);
+    pointer-events: none;
+    user-select: none;
+}
+
+.wk-dl-art svg {
+    display: block;
+    width: 1em;
+    height: 1em;
+}
+
 /* ── 工具栏 / 分区 ──────────────────────────────────────────────────────── */
 .wk-toolbar { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
 
@@ -1003,7 +1056,7 @@ html.light {
 }
 
 /* ── 页脚：只留一行文字，不放任何交互控件 ──────────────────────────────── */
-.wk-footer { border-top: 1px solid var(--wk-line); background: var(--wk-bg); }
+.wk-footer { border-top: 1px solid var(--wk-line); background: transparent; }
 
 .wk-footer-in {
     display: flex;
